@@ -52,7 +52,7 @@
 // <h> SPI_CONFIGURATION - Spi configuration
 
 //==========================================================
-// <o> SPI_SCK_PIN  - Pin number
+// <o> SPI0_SCK_PIN  - Pin number
  
 // <0=> 0 (P0.0) 
 // <1=> 1 (P0.1) 
@@ -88,11 +88,11 @@
 // <31=> 31 (P0.31) 
 // <4294967295=> Not connected 
 
-#ifndef SPI_SCK_PIN
-#define SPI_SCK_PIN 25
+#ifndef SPI0_SCK_PIN
+#define SPI0_SCK_PIN 25
 #endif
 
-// <o> SPI_MISO_PIN  - Pin number
+// <o> SPI0_MISO_PIN  - Pin number
  
 // <0=> 0 (P0.0) 
 // <1=> 1 (P0.1) 
@@ -128,11 +128,11 @@
 // <31=> 31 (P0.31) 
 // <4294967295=> Not connected 
 
-#ifndef SPI_MISO_PIN
-#define SPI_MISO_PIN 24
+#ifndef SPI0_MISO_PIN
+#define SPI0_MISO_PIN 24
 #endif
 
-// <o> SPI_MOSI_PIN  - Pin number
+// <o> SPI0_MOSI_PIN  - Pin number
  
 // <0=> 0 (P0.0) 
 // <1=> 1 (P0.1) 
@@ -168,11 +168,11 @@
 // <31=> 31 (P0.31) 
 // <4294967295=> Not connected 
 
-#ifndef SPI_MOSI_PIN
-#define SPI_MOSI_PIN 23
+#ifndef SPI0_MOSI_PIN
+#define SPI0_MOSI_PIN 23
 #endif
 
-// <o> SPI_SS_PIN  - Pin number
+// <o> SPI0_SS_PIN  - Pin number
  
 // <0=> 0 (P0.0) 
 // <1=> 1 (P0.1) 
@@ -208,11 +208,11 @@
 // <31=> 31 (P0.31) 
 // <4294967295=> Not connected 
 
-#ifndef SPI_SS_PIN
-#define SPI_SS_PIN 22
+#ifndef SPI0_SS_PIN
+#define SPI0_SS_PIN 22
 #endif
 
-// <o> SPI_IRQ_PRIORITY  - Interrupt priority
+// <o> SPI0_IRQ_PRIORITY  - Interrupt priority
  
 
 // <i> Priorities 0,2 (nRF51) and 0,1,4,5 (nRF52) are reserved for SoftDevice
@@ -225,9 +225,10 @@
 // <6=> 6 
 // <7=> 7 
 
-#ifndef SPI_IRQ_PRIORITY
-#define SPI_IRQ_PRIORITY 7
+#ifndef SPI0_IRQ_PRIORITY
+#define SPI0_IRQ_PRIORITY 7
 #endif
+
 
 // </h> 
 //==========================================================
@@ -331,7 +332,7 @@
 // <7=> 7 
 
 #ifndef TIMER_DEFAULT_CONFIG_IRQ_PRIORITY
-#define TIMER_DEFAULT_CONFIG_IRQ_PRIORITY 0
+#define TIMER_DEFAULT_CONFIG_IRQ_PRIORITY 7
 #endif
 
 // <q> TIMER0_ENABLED  - Enable TIMER0 instance
@@ -390,7 +391,7 @@
 // <7=> 7 
 
 #ifndef SPI_DEFAULT_CONFIG_IRQ_PRIORITY
-#define SPI_DEFAULT_CONFIG_IRQ_PRIORITY 1
+#define SPI_DEFAULT_CONFIG_IRQ_PRIORITY 7
 #endif
 
 // <o> SPI_DEFAULT_FREQUENCY  - SPI frequency
@@ -404,7 +405,7 @@
 // <2147483648=> 8 MHz 
 
 #ifndef SPI_DEFAULT_FREQUENCY
-#define SPI_DEFAULT_FREQUENCY -2147483648
+#define SPI_DEFAULT_FREQUENCY -1073741824
 #endif
 
 // <o> NRF_SPI_DRV_MISO_PULLUP_CFG  - MISO PIN pull-up configuration.
