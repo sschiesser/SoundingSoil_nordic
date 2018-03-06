@@ -50,12 +50,18 @@
 #include "nrf_drv_timer.h"
 
 /* SPI instance for ADC device */
-#define ADC_SPI_INSTANCE  0 /**< SPI instance index. */
+#define ADC_SPI_INSTANCE  	0 /**< SPI instance index. */
+#define ADC_BUFFER_NUMBER	4
+#define ADC_CHUNK_SIZE		512
 static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);  /**< SPI instance. */
 static volatile bool adc_spi_xfer_done = false;  /**< Flag used to indicate that SPI instance completed the transfer. */
-static uint8_t			m_tx_buf[2] = {0xFF, 0xFF};
+static uint8_t			m_tx_buf[2] = {0xFF, 0xFF};	/**< Dummy TX value to push the 2 ADC bytes. */
 static uint8_t			m_rx_buf[2];
-static const uint8_t	m_length = 2;
+static uint8_t			m_adc_buffer[ADC_BUFFER_NUMBER][ADC_CHUNK_SIZE];
+static const uint8_t	m_adc_len = 2;
+static uint16_t			m_adc_sample_cnt = 0;
+static uint8_t			m_adc_buffer_cnt = 0;
+static uint32_t			m_adc_total_samples = 0;
 
 
 
@@ -73,14 +79,13 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event,
                        void *                    p_context)
 {
     adc_spi_xfer_done = true;
-	bsp_board_led_invert(1);
 }
 
 static void audio_sync_handler(nrf_timer_event_t event_type, void *p_context)
 {
 	bsp_board_led_invert(0);
-	adc_spi_xfer_done = false;
-	nrf_drv_spi_transfer(&spi, m_tx_buf, m_length, m_rx_buf, m_length);
+	nrf_drv_spi_transfer(&spi, m_tx_buf, m_adc_len, m_rx_buf, m_adc_len);
+	bsp_board_led_invert(0);
 }
 
 static void audio_sync_init(void)
@@ -123,6 +128,20 @@ int main(void)
 	
     while (1)
     {
+		if(adc_spi_xfer_done) {
+			bsp_board_led_invert(1);
+			m_adc_buffer[m_adc_buffer_cnt][m_adc_sample_cnt++] = m_rx_buf[0];
+			m_adc_buffer[m_adc_buffer_cnt][m_adc_sample_cnt++] = m_rx_buf[1];
+			if(m_adc_sample_cnt >= ADC_CHUNK_SIZE) {
+				m_adc_total_samples += m_adc_sample_cnt;
+				m_adc_sample_cnt = 0;
+				m_adc_buffer_cnt = (m_adc_buffer_cnt >= (ADC_BUFFER_NUMBER - 1)) ? 0 : m_adc_buffer_cnt + 1;
+			}
+			adc_spi_xfer_done = false;
+			bsp_board_led_invert(1);
+		}
+		else {
 		__WFE();
+		}
     }
 }

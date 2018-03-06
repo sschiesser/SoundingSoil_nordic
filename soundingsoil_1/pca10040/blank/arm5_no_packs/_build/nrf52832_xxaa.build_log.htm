@@ -28,10 +28,13 @@ Project File Date:  03/06/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
+..\..\..\main.c(60): warning:  #550-D: variable "m_adc_buffer"  was set but never used
+  static uint8_t			m_adc_buffer[ADC_BUFFER_NUMBER][ADC_CHUNK_SIZE];
+..\..\..\main.c: 1 warning, 0 errors
 linking...
-Program Size: Code=10196 RO-data=1004 RW-data=204 ZI-data=9940  
+Program Size: Code=5044 RO-data=596 RW-data=36 ZI-data=10676  
 FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 0 Warning(s).
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 1 Warning(s).
 
 <h2>Software Packages used:</h2>
 
