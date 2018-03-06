@@ -27,14 +27,20 @@ Project File Date:  03/06/2018
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
-compiling main.c...
-..\..\..\main.c(60): warning:  #550-D: variable "m_adc_buffer"  was set but never used
-  static uint8_t			m_adc_buffer[ADC_BUFFER_NUMBER][ADC_CHUNK_SIZE];
-..\..\..\main.c: 1 warning, 0 errors
+compiling ble_conn_state.c...
 linking...
-Program Size: Code=5044 RO-data=596 RW-data=36 ZI-data=10676  
-FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 1 Warning(s).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_bulk_update_by_key (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_first_key_index_get (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_get_by_key (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_get_by_key_w_idx (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_key_list_get (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_n_flags_set (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sdk_mapped_flags_update_by_key (referred from ble_conn_state.o).
+.\_build\nrf52832_xxaa.axf: Error: L6218E: Undefined symbol sd_ble_gap_address_get (referred from ble_advdata.o).
+Not enough information to list image symbols.
+Not enough information to list load addresses in the image map.
+Finished: 2 information, 0 warning and 8 error messages.
+".\_build\nrf52832_xxaa.axf" - 8 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -63,7 +69,8 @@ Package Vendor: NordicSemiconductor
       Source file:   Device\Source\arm\arm_startup_nrf52.s
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:01
+Target not created.
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
