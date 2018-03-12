@@ -24,6 +24,7 @@
 ".\_build\hardfault_implementation.o"
 ".\_build\nrf_atfifo.o"
 ".\_build\nrf_pwr_mgmt.o"
+".\_build\sdk_mapped_flags.o"
 ".\_build\nrf_log_backend_rtt.o"
 ".\_build\nrf_log_backend_serial.o"
 ".\_build\nrf_log_backend_uart.o"
