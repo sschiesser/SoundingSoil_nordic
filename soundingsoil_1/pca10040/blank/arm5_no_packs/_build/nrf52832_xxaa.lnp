@@ -12,6 +12,8 @@
 ".\_build\app_button.o"
 ".\_build\app_error.o"
 ".\_build\app_error_weak.o"
+".\_build\app_fifo.o"
+".\_build\app_sdcard.o"
 ".\_build\app_scheduler.o"
 ".\_build\app_timer.o"
 ".\_build\app_util_platform.o"
