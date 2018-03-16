@@ -27,7 +27,20 @@ Project File Date:  03/16/2018
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 0 Warning(s).
+compiling main.c...
+..\..\..\main.c(96): warning:  #177-D: variable "adc_spi"  was declared but never referenced
+  static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
+..\..\..\main.c(99): warning:  #177-D: variable "m_tx_buf"  was declared but never referenced
+  static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
+..\..\..\main.c(100): warning:  #177-D: variable "m_rx_buf"  was declared but never referenced
+  static uint8_t							m_rx_buf[2];
+..\..\..\main.c(101): warning:  #177-D: variable "m_length"  was declared but never referenced
+  static const uint8_t					m_length = 2;
+..\..\..\main.c: 4 warnings, 0 errors
+linking...
+Program Size: Code=22104 RO-data=2160 RW-data=204 ZI-data=13796  
+FromELF: creating hex file...
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 4 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -56,7 +69,7 @@ Package Vendor: NordicSemiconductor
       Source file:   Device\Source\system_nrf52.c
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

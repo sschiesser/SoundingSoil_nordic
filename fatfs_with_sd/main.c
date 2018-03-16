@@ -60,19 +60,21 @@
 #include "app_util_platform.h"
 #include "app_error.h"
 
+#include "nrf_drv_spi.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+
+/* SD card definitions */
 #define FILE_NAME   "NORDIC.TXT"
 #define TEST_STRING "SD card example."
-
 #define SDC_SCK_PIN     28  ///< SDC serial clock (SCK) pin.
 #define SDC_MISO_PIN    29  ///< SDC serial data out (DO) pin.
 #define SDC_MOSI_PIN    30  ///< SDC serial data in (DI) pin.
 #define SDC_CS_PIN      31  ///< SDC chip select (CS) pin.
-#define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
+//#define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
 
 #define DATA_SIZE		2048
 static uint8_t data_buffer[DATA_SIZE];
@@ -89,105 +91,18 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
 
+/* ADC defintions */
+#define ADC_SPI_INSTANCE				1
+static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
+static volatile bool adc_spi_xfer_done = false;
+
+static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
+static uint8_t							m_rx_buf[2];
+static const uint8_t					m_length = 2;
+
 /**
  * @brief Function for demonstrating FAFTS usage.
  */
-static void fatfs_example()
-{
-    static FATFS fs;
-    static DIR dir;
-    static FILINFO fno;
-    static FIL file;
-
-    uint32_t bytes_written;
-    FRESULT ff_result;
-    DSTATUS disk_state = STA_NOINIT;
-
-    // Initialize FATFS disk I/O interface by providing the block device.
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state)
-    {
-        NRF_LOG_INFO("Disk initialization failed. Disk state: %d", disk_state);
-        return;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
-
-    NRF_LOG_INFO("Mounting volume...");
-    ff_result = f_mount(&fs, "", 1);
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Mount failed. Result: %d", ff_result);
-        return;
-    }
-
-    NRF_LOG_INFO("\r\n Listing directory: /");
-    ff_result = f_opendir(&dir, "/");
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Directory listing failed!");
-        return;
-    }
-
-    do
-    {
-        ff_result = f_readdir(&dir, &fno);
-        if (ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("Directory read failed.");
-            return;
-        }
-
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
-            }
-            else
-            {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-            }
-        }
-    }
-    while (fno.fname[0]);
-    NRF_LOG_RAW_INFO("");
-
-    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-    ff_result = f_open(&file, FILE_NAME, FA_READ | FA_WRITE | FA_OPEN_APPEND);
-    if (ff_result != FR_OK)
-    {
-        NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
-        return;
-    }
-
-    ff_result = f_write(&file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
-    if (ff_result != FR_OK)
-    {
-        NRF_LOG_INFO("Write failed\r\n.");
-    }
-    else
-    {
-        NRF_LOG_INFO("%d bytes written.", bytes_written);
-    }
-
-    (void) f_close(&file);
-    return;
-}
-
 
 DSTATUS sd_card_test(void)
 {
