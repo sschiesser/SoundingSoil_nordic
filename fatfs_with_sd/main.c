@@ -77,7 +77,7 @@
 #define SDC_CS_PIN      31  ///< SDC chip select (CS) pin.
 //#define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
 
-#define DATA_SIZE		2048
+#define DATA_SIZE		4096
 static uint8_t 			data_buffer[DATA_SIZE];
 static volatile bool 	sdc_init_ok = false;
 static volatile bool	sdc_rtw = false;
@@ -118,15 +118,16 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 	bsp_board_led_invert(0);
 	m_audio_buf[m_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
 	m_audio_buf[m_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
-	if(adc_spi_xfer_counter < 1023) {
+	if(adc_spi_xfer_counter < 2047) {
 		adc_spi_xfer_counter++;
 	}
 	else {
+//		NRF_LOG_INFO("Read on #%d", m_buf_cnt);
 		adc_spi_xfer_counter = 0;
 		m_buf_cnt = (m_buf_cnt >= 3) ? 0 : (m_buf_cnt + 1);
 		sdc_rtw = true;
 	}
-	nrf_delay_us(1);
+	nrf_delay_us(15);
 	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
@@ -347,14 +348,15 @@ FRESULT sd_card_init(void)
 
 static void write_audio_chunk(uint8_t buffer)
 {
-	NRF_LOG_RAW_INFO("Writing chunk... ");
+	bsp_board_led_invert(1);
+//	NRF_LOG_INFO("Writing to #%d", buffer);
 	static FRESULT res;
 	static UINT byte_written;
 	res = f_write(&recording_fil, (const char *)m_audio_buf[buffer], DATA_SIZE, &byte_written);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
 	}
-	NRF_LOG_INFO("done!");
+//	NRF_LOG_INFO("done!");
 }
 
 
