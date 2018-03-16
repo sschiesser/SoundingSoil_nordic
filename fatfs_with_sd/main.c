@@ -78,7 +78,10 @@
 //#define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
 
 #define DATA_SIZE		2048
-static uint8_t data_buffer[DATA_SIZE];
+static uint8_t 			data_buffer[DATA_SIZE];
+static volatile bool 	sdc_init_ok = false;
+static FIL   			recording_fil;
+
 
 /**
  * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -101,10 +104,12 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 #define ADC_SPI_INSTANCE				1
 static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool adc_spi_xfer_done = false;
+static volatile uint16_t adc_spi_xfer_counter = 0;
 
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
+static uint8_t							m_audio_buf[DATA_SIZE];
 
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
@@ -208,81 +213,53 @@ FRESULT scan_files(char *path, uint16_t *nb_items)
 FRESULT sd_card_init(void)
 {
     static FATFS fs;
-	static FRESULT ff_result;
+	static FRESULT res;
     static DIR dir;
     static FILINFO fno;
+
+	TCHAR root_directory[4];
+	TCHAR file_name[18];
+	TCHAR test_folder_name[13];
+	TCHAR test_folder_location[25];
+	char disk_str_num[2];
+	sprintf(disk_str_num, "%d", 0);
+	sprintf(test_folder_name, "%s", (const char *)"180316");
+	sprintf(root_directory, "%s:/", disk_str_num);
+	sprintf(test_folder_location, "%s%s", root_directory, test_folder_name);
 	
 	NRF_LOG_INFO("Mounting volume...");
-    ff_result = f_mount(&fs, "", 1);
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Mount failed. Result: %d", ff_result);
-        return ff_result;
+    res = f_mount(&fs, "", 1);
+    if (res) {
+        NRF_LOG_INFO("Mount failed. Result: %d", res);
+        return res;
     }
 
     NRF_LOG_INFO("\r\n Listing directory: /");
-    ff_result = f_opendir(&dir, "/");
-    if (ff_result)
-    {
+    res = f_opendir(&dir, "/");
+    if (res) {
         NRF_LOG_INFO("Directory listing failed!");
-        return ff_result;
+        return res;
     }
 
-    do
-    {
-        ff_result = f_readdir(&dir, &fno);
-        if (ff_result != FR_OK)
-        {
+    do {
+        res = f_readdir(&dir, &fno);
+        if (res != FR_OK) {
             NRF_LOG_INFO("Directory read failed.");
-            return ff_result;
+            return res;
         }
 
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
+        if (fno.fname[0]) {
+            if (fno.fattrib & AM_DIR) {
                 NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
             }
-            else
-            {
+            else {
                 NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
             }
         }
     }
     while (fno.fname[0]);
     NRF_LOG_RAW_INFO("");
-	return FR_OK;
-}
-
-
-static uint8_t ss_example(uint32_t disk_dev_num)
-{
-	FRESULT res;
-//    static FATFS fs;
-//    static DIR dir;
-//    static FILINFO fno;
-//    static FIL file;
-
-//    uint32_t bytes_written;
-//    DSTATUS disk_state = STA_NOINIT;
-
-	TCHAR   root_directory[4];
-	TCHAR file_name[18];
-	//UINT file_number;
-	TCHAR test_folder_name[13];
-	TCHAR test_folder_location[25];
-
 	
-	/* Declare these as static to avoid stack usage.
-	 * They each contain an array of maximum sector size.
-	 */
-	char         disk_str_num[2];
-
-	sprintf(disk_str_num, "%d", disk_dev_num);
-	sprintf(test_folder_name, "%s", (const char *)"180314");
-	sprintf(root_directory, "%s:/", disk_str_num);
-	sprintf(test_folder_location, "%s%s", root_directory, test_folder_name);
-
 	
 	/* ===== CHECK DIRECTORY EXISTENCE ===== */
 	FILINFO filinfo;
@@ -298,7 +275,7 @@ static uint8_t ss_example(uint32_t disk_dev_num)
 	}
 	else {
 		NRF_LOG_INFO("-E- f_stat pb: 0x%X\n\r", res);
-		return 1;
+		return res;
 	}
 	
 	/* ===== CREATE DIRECTORY ===== */
@@ -306,7 +283,7 @@ static uint8_t ss_example(uint32_t disk_dev_num)
 		res = f_mkdir(test_folder_name);
 		if (res != FR_OK) {
 			NRF_LOG_INFO("-E- f_mkdir pb: 0x%X\n\r", res);
-			return 1;
+			return res;
 		}
 		else {
 			NRF_LOG_INFO("-I- directory created\n\r");
@@ -329,13 +306,13 @@ static uint8_t ss_example(uint32_t disk_dev_num)
 
 	
 	/* ===== CREATE NEW FILE ===== */
-	static FIL   file_object;
+//	static FIL   file_object;
 	TCHAR new_file[13];
 	for(;;) {
 		sprintf(new_file, "R%04d", scanned_files);
 		sprintf(file_name, "%s/%s.wav", test_folder_location, new_file); /*File path*/
 		NRF_LOG_INFO("-I- Create a file : \"%s\"\n\r", file_name);
-		res = f_open(&file_object, (char const *)file_name, FA_CREATE_NEW | FA_READ | FA_WRITE);
+		res = f_open(&recording_fil, (char const *)file_name, FA_CREATE_NEW | FA_READ | FA_WRITE);
 		if (res == FR_OK) {
 			break;
 		}
@@ -345,72 +322,171 @@ static uint8_t ss_example(uint32_t disk_dev_num)
 		}
 		else {
 			NRF_LOG_INFO("-E- f_open create pb: 0x%X\n\r", res);
-			return 1;
+			return res;
 		}
 	}
 
-	/* ===== READ FILE TO COPY ===== */
-	static FIL file2;
-	static FSIZE_t f2_size;
-	int i;
-	NRF_LOG_INFO("-I- Opening read-only file\n\r");
-	res = f_open(&file2, "0:/song.mp3", FA_READ);
-	if(res != FR_OK) {
-		NRF_LOG_INFO("Opening failed");
-		return 1;
-	}
-
-	f2_size = f_size(&file2);
-	UINT byte_read, byte_written;
-	for(i = 0; i < f2_size; i += DATA_SIZE) {
-//		NRF_LOG_INFO(".");
-		res = f_read(&file2, (char*)data_buffer, DATA_SIZE, &byte_read);
-		if(res == FR_OK) {
-//			NRF_LOG_INFO(".");
-			res = f_write(&file_object, (const char *)data_buffer, DATA_SIZE, &byte_written);
-			if(res == FR_OK) {
-				NRF_LOG_RAW_INFO(".");
-				res = f_sync(&file_object);
-			}
-		}
-	}
-	NRF_LOG_INFO("\n\r");
-	///* Write a checkerboard pattern in the buffer */
-	//int i;
-//
-	//for (i = 0; i < sizeof(data_buffer); i++) {
-		//if ((i & 1) == 0) {
-			//data_buffer[i] = (i & 0x55);
-		//} else {
-			//data_buffer[i] = (i & 0xAA);
-		//}
-	//}
-	//puts("-I- Write file\r");
-	//for (i = 0; i < TEST_SIZE; i += DATA_SIZE) {
-		//res = f_write(&file_object, data_buffer, DATA_SIZE, &byte_written);
-//
-		//if (res != FR_OK) {
-			//printf("-E- f_write pb: 0x%X\n\r", res);
-			//return 0;
-		//}
-	//}
-
-	/* Flush after writing */
-	NRF_LOG_INFO("-I- Syncing file");
-	res = f_sync(&file_object);
-	if (res != FR_OK) {
-		NRF_LOG_INFO("-E- f_sync pb: 0x%X", res);
-		return 1;
-	}
-	/* Close the file */
-	NRF_LOG_INFO("-I- Close file");
-	res = f_close(&file_object);
-	if (res != FR_OK) {
-		NRF_LOG_INFO("-E- f_close pb: 0x%X", res);
-		return 1;
-	}
-	return 0;
+	return FR_OK;
 }
+
+
+//static uint8_t ss_example(uint32_t disk_dev_num)
+//{
+//	FRESULT res;
+//	TCHAR root_directory[4];
+//	TCHAR file_name[18];
+//	TCHAR test_folder_name[13];
+//	TCHAR test_folder_location[25];
+
+//	char disk_str_num[2];
+
+//	sprintf(disk_str_num, "%d", disk_dev_num);
+//	sprintf(test_folder_name, "%s", (const char *)"180314");
+//	sprintf(root_directory, "%s:/", disk_str_num);
+//	sprintf(test_folder_location, "%s%s", root_directory, test_folder_name);
+
+//	
+//	/* ===== CHECK DIRECTORY EXISTENCE ===== */
+//	FILINFO filinfo;
+//	bool makedir = false;
+//	
+//	res = f_stat(test_folder_location, &filinfo);
+//	if(res == FR_OK) {
+//		NRF_LOG_INFO("-I- folder already exist\n\r");
+//	}
+//	else if((res == FR_NO_PATH) || (res == FR_NO_FILE)) {
+//		NRF_LOG_INFO("-W- folder not found... create!\n\r");
+//		makedir = true;
+//	}
+//	else {
+//		NRF_LOG_INFO("-E- f_stat pb: 0x%X\n\r", res);
+//		return 1;
+//	}
+//	
+//	/* ===== CREATE DIRECTORY ===== */
+//	if(makedir) {
+//		res = f_mkdir(test_folder_name);
+//		if (res != FR_OK) {
+//			NRF_LOG_INFO("-E- f_mkdir pb: 0x%X\n\r", res);
+//			return 1;
+//		}
+//		else {
+//			NRF_LOG_INFO("-I- directory created\n\r");
+//			makedir = false;
+//		}
+//	}
+
+//	/* ===== OPEN DIRECTORY ===== */
+//	NRF_LOG_INFO("-I- Opening directory !\r");
+//	DIR	dirinfo;
+//	uint16_t scanned_files;
+//	res = f_opendir(&dirinfo, test_folder_location);
+//	if (res == FR_OK) {
+//		/* Display the file tree */
+//		NRF_LOG_INFO("-I- Display files contained in the memory :\r");
+//		strcpy((char *)data_buffer, test_folder_location);
+//		scan_files((char *)data_buffer, &scanned_files);
+//		NRF_LOG_INFO("Number of found files: %d\n\r", scanned_files);
+//	}
+
+//	
+//	/* ===== CREATE NEW FILE ===== */
+//	static FIL   file_object;
+//	TCHAR new_file[13];
+//	for(;;) {
+//		sprintf(new_file, "R%04d", scanned_files);
+//		sprintf(file_name, "%s/%s.wav", test_folder_location, new_file); /*File path*/
+//		NRF_LOG_INFO("-I- Create a file : \"%s\"\n\r", file_name);
+//		res = f_open(&file_object, (char const *)file_name, FA_CREATE_NEW | FA_READ | FA_WRITE);
+//		if (res == FR_OK) {
+//			break;
+//		}
+//		else if (res != FR_EXIST) {
+//			NRF_LOG_INFO("-E- Filename already exist... increasing iteration\n\r");
+//			scanned_files++;
+//		}
+//		else {
+//			NRF_LOG_INFO("-E- f_open create pb: 0x%X\n\r", res);
+//			return 1;
+//		}
+//	}
+
+//	/* ===== READ FILE TO COPY ===== */
+//	static FIL file2;
+//	static FSIZE_t f2_size;
+//	int i;
+//	NRF_LOG_INFO("-I- Opening read-only file\n\r");
+//	res = f_open(&file2, "0:/song.mp3", FA_READ);
+//	if(res != FR_OK) {
+//		NRF_LOG_INFO("Opening failed");
+//		return 1;
+//	}
+
+//	f2_size = f_size(&file2);
+//	UINT byte_read, byte_written;
+//	for(i = 0; i < f2_size; i += DATA_SIZE) {
+////		NRF_LOG_INFO(".");
+//		res = f_read(&file2, (char*)data_buffer, DATA_SIZE, &byte_read);
+//		if(res == FR_OK) {
+////			NRF_LOG_INFO(".");
+//			res = f_write(&file_object, (const char *)data_buffer, DATA_SIZE, &byte_written);
+//			if(res == FR_OK) {
+//				NRF_LOG_RAW_INFO(".");
+//				res = f_sync(&file_object);
+//			}
+//		}
+//	}
+//	NRF_LOG_INFO("\n\r");
+//	///* Write a checkerboard pattern in the buffer */
+//	//int i;
+////
+//	//for (i = 0; i < sizeof(data_buffer); i++) {
+//		//if ((i & 1) == 0) {
+//			//data_buffer[i] = (i & 0x55);
+//		//} else {
+//			//data_buffer[i] = (i & 0xAA);
+//		//}
+//	//}
+//	//puts("-I- Write file\r");
+//	//for (i = 0; i < TEST_SIZE; i += DATA_SIZE) {
+//		//res = f_write(&file_object, data_buffer, DATA_SIZE, &byte_written);
+////
+//		//if (res != FR_OK) {
+//			//printf("-E- f_write pb: 0x%X\n\r", res);
+//			//return 0;
+//		//}
+//	//}
+
+//	/* Flush after writing */
+//	NRF_LOG_INFO("-I- Syncing file");
+//	res = f_sync(&file_object);
+//	if (res != FR_OK) {
+//		NRF_LOG_INFO("-E- f_sync pb: 0x%X", res);
+//		return 1;
+//	}
+//	/* Close the file */
+//	NRF_LOG_INFO("-I- Close file");
+//	res = f_close(&file_object);
+//	if (res != FR_OK) {
+//		NRF_LOG_INFO("-E- f_close pb: 0x%X", res);
+//		return 1;
+//	}
+//	return 0;
+//}
+
+
+static void write_audio_chunk(void)
+{
+	NRF_LOG_RAW_INFO("Writing chunk... ");
+	static FRESULT res;
+	static UINT byte_written;
+	res = f_write(&recording_fil, (const char *)m_audio_buf, DATA_SIZE, &byte_written);
+	if(res == FR_OK) {
+		res = f_sync(&recording_fil);
+	}
+	NRF_LOG_INFO("done!");
+}
+
 
 /**
  * @brief Function for main application entry.
@@ -425,7 +501,9 @@ int main(void)
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-    NRF_LOG_INFO("=========================\n\rFATFS + SD + SPI example.");
+    NRF_LOG_INFO("=========================")
+	NRF_LOG_INFO("FATFS + SD + SPI example.");
+    NRF_LOG_INFO("-------------------------")
 
 	nrf_drv_spi_config_t adc_spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
 	adc_spi_config.ss_pin = ADC_SPI_CONV_PIN;
@@ -448,24 +526,30 @@ int main(void)
 		}
 		else {
 			NRF_LOG_INFO("\nSD card init OK");
-			if(!ss_example(0)) {
-				NRF_LOG_INFO("SS test passed!");
-			}
-			else {
-				NRF_LOG_INFO("SS test failed!");
-			}
+			sdc_init_ok = true;
 		}
 	}
 
-	NRF_LOG_INFO("Starting SPI xfer");
-	adc_spi_xfer_done = false;
-	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+	if(sdc_init_ok) {
+		NRF_LOG_INFO("Starting SPI xfer");
+		adc_spi_xfer_done = false;
+		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+	}
 
     while (true)
     {
 		if(adc_spi_xfer_done) {
 			adc_spi_xfer_done = false;
-			nrf_delay_us(200);
+			m_audio_buf[2*adc_spi_xfer_counter] = m_rx_buf[0];
+			m_audio_buf[(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
+			if(adc_spi_xfer_counter < 1023) {
+				adc_spi_xfer_counter++;
+			}
+			else {
+				adc_spi_xfer_counter = 0;
+				write_audio_chunk();
+			}
+			nrf_delay_us(2);
 			nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 		}
         __WFE();
