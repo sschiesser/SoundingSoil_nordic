@@ -89,7 +89,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI0_SCK_PIN
-#define SPI0_SCK_PIN 25
+#define SPI0_SCK_PIN 28
 #endif
 
 // <o> SPI0_MISO_PIN  - Pin number
@@ -129,7 +129,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI0_MISO_PIN
-#define SPI0_MISO_PIN 24
+#define SPI0_MISO_PIN 29
 #endif
 
 // <o> SPI0_MOSI_PIN  - Pin number
@@ -169,7 +169,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI0_MOSI_PIN
-#define SPI0_MOSI_PIN 23
+#define SPI0_MOSI_PIN 30
 #endif
 
 // <o> SPI0_SS_PIN  - Pin number
@@ -209,7 +209,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI0_SS_PIN
-#define SPI0_SS_PIN 22
+#define SPI0_SS_PIN 31
 #endif
 
 // <o> SPI0_IRQ_PRIORITY  - Interrupt priority
@@ -272,7 +272,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI1_SCK_PIN
-#define SPI1_SCK_PIN 28
+#define SPI1_SCK_PIN 25
 #endif
 
 // <o> SPI1_MISO_PIN  - Pin number
@@ -312,7 +312,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI1_MISO_PIN
-#define SPI1_MISO_PIN 29
+#define SPI1_MISO_PIN 24
 #endif
 
 // <o> SPI1_MOSI_PIN  - Pin number
@@ -352,7 +352,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI1_MOSI_PIN
-#define SPI1_MOSI_PIN 30
+#define SPI1_MOSI_PIN 23
 #endif
 
 // <o> SPI1_SS_PIN  - Pin number
@@ -392,7 +392,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI1_SS_PIN
-#define SPI1_SS_PIN 31
+#define SPI1_SS_PIN 22
 #endif
 
 // <o> SPI1_IRQ_PRIORITY  - Interrupt priority
@@ -847,7 +847,7 @@
 // <3=> NRF_GPIO_PIN_PULLUP 
 
 #ifndef NRF_SPI_DRV_MISO_PULLUP_CFG
-#define NRF_SPI_DRV_MISO_PULLUP_CFG 1
+#define NRF_SPI_DRV_MISO_PULLUP_CFG 0
 #endif
 
 // <e> SPI0_ENABLED - Enable SPI0 instance
@@ -867,7 +867,7 @@
 // <e> SPI1_ENABLED - Enable SPI1 instance
 //==========================================================
 #ifndef SPI1_ENABLED
-#define SPI1_ENABLED 1
+#define SPI1_ENABLED 0
 #endif
 // <q> SPI1_USE_EASY_DMA  - Use EasyDMA
  
@@ -1263,7 +1263,7 @@
 // <e> NRF_LOG_BACKEND_UART_ENABLED - nrf_log_backend_uart - Log UART backend
 //==========================================================
 #ifndef NRF_LOG_BACKEND_UART_ENABLED
-#define NRF_LOG_BACKEND_UART_ENABLED 0
+#define NRF_LOG_BACKEND_UART_ENABLED 1
 #endif
 // <o> NRF_LOG_BACKEND_UART_TX_PIN - UART TX pin 
 #ifndef NRF_LOG_BACKEND_UART_TX_PIN
@@ -1311,7 +1311,7 @@
 // <e> NRF_LOG_ENABLED - Logging module for nRF5 SDK
 //==========================================================
 #ifndef NRF_LOG_ENABLED
-#define NRF_LOG_ENABLED 0
+#define NRF_LOG_ENABLED 1
 #endif
 // <e> NRF_LOG_USES_COLORS - If enabled then ANSI escape code for colors is prefixed to every string
 //==========================================================
@@ -1386,7 +1386,7 @@
 // <i> Log data is buffered and can be processed in idle.
 
 #ifndef NRF_LOG_DEFERRED
-#define NRF_LOG_DEFERRED 1
+#define NRF_LOG_DEFERRED 0
 #endif
 
 // <o> NRF_LOG_BUFSIZE  - Size of the buffer for storing logs (in bytes).
