@@ -61,6 +61,7 @@
 #include "app_error.h"
 
 #include "nrf_drv_spi.h"
+#include "nrf_delay.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -92,6 +93,11 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 );
 
 /* ADC defintions */
+#define ADC_SPI_CONV_PIN				22
+#define ADC_SPI_MOSI_PIN				23
+#define ADC_SPI_MISO_PIN				24
+#define ADC_SPI_SCK_PIN					25
+
 #define ADC_SPI_INSTANCE				1
 static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool adc_spi_xfer_done = false;
@@ -100,9 +106,11 @@ static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
 
-/**
- * @brief Function for demonstrating FAFTS usage.
- */
+void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
+{
+	adc_spi_xfer_done = true;
+	bsp_board_led_invert(0);
+}
 
 DSTATUS sd_card_test(void)
 {
@@ -413,12 +421,20 @@ int main(void)
 	FRESULT ff_result;
 	
     bsp_board_leds_init();
+	
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-    NRF_LOG_INFO("FATFS example.");
+    NRF_LOG_INFO("=========================\n\rFATFS + SD + SPI example.");
 
-//    fatfs_example();
+	nrf_drv_spi_config_t adc_spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+	adc_spi_config.ss_pin = ADC_SPI_CONV_PIN;
+	adc_spi_config.miso_pin = ADC_SPI_MISO_PIN;
+	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
+	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
+	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
+	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
+	
 
 	card_status = sd_card_test();
 	if(card_status != RES_OK) {
@@ -440,9 +456,18 @@ int main(void)
 			}
 		}
 	}
-	
+
+	NRF_LOG_INFO("Starting SPI xfer");
+	adc_spi_xfer_done = false;
+	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+
     while (true)
     {
+		if(adc_spi_xfer_done) {
+			adc_spi_xfer_done = false;
+			nrf_delay_us(200);
+			nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+		}
         __WFE();
     }
 }
