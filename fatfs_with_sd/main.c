@@ -80,8 +80,8 @@
 #define DATA_SIZE		2048
 static uint8_t 			data_buffer[DATA_SIZE];
 static volatile bool 	sdc_init_ok = false;
+static volatile bool	sdc_rtw = false;
 static FIL   			recording_fil;
-
 
 /**
  * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -109,12 +109,25 @@ static volatile uint16_t adc_spi_xfer_counter = 0;
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
-static uint8_t							m_audio_buf[DATA_SIZE];
+static uint8_t							m_audio_buf[4][DATA_SIZE];
+static uint8_t							m_buf_cnt = 0;
 
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
-	adc_spi_xfer_done = true;
+//	adc_spi_xfer_done = true;
 	bsp_board_led_invert(0);
+	m_audio_buf[m_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
+	m_audio_buf[m_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
+	if(adc_spi_xfer_counter < 1023) {
+		adc_spi_xfer_counter++;
+	}
+	else {
+		adc_spi_xfer_counter = 0;
+		m_buf_cnt = (m_buf_cnt >= 3) ? 0 : (m_buf_cnt + 1);
+		sdc_rtw = true;
+	}
+	nrf_delay_us(1);
+	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
 DSTATUS sd_card_test(void)
@@ -330,157 +343,14 @@ FRESULT sd_card_init(void)
 }
 
 
-//static uint8_t ss_example(uint32_t disk_dev_num)
-//{
-//	FRESULT res;
-//	TCHAR root_directory[4];
-//	TCHAR file_name[18];
-//	TCHAR test_folder_name[13];
-//	TCHAR test_folder_location[25];
-
-//	char disk_str_num[2];
-
-//	sprintf(disk_str_num, "%d", disk_dev_num);
-//	sprintf(test_folder_name, "%s", (const char *)"180314");
-//	sprintf(root_directory, "%s:/", disk_str_num);
-//	sprintf(test_folder_location, "%s%s", root_directory, test_folder_name);
-
-//	
-//	/* ===== CHECK DIRECTORY EXISTENCE ===== */
-//	FILINFO filinfo;
-//	bool makedir = false;
-//	
-//	res = f_stat(test_folder_location, &filinfo);
-//	if(res == FR_OK) {
-//		NRF_LOG_INFO("-I- folder already exist\n\r");
-//	}
-//	else if((res == FR_NO_PATH) || (res == FR_NO_FILE)) {
-//		NRF_LOG_INFO("-W- folder not found... create!\n\r");
-//		makedir = true;
-//	}
-//	else {
-//		NRF_LOG_INFO("-E- f_stat pb: 0x%X\n\r", res);
-//		return 1;
-//	}
-//	
-//	/* ===== CREATE DIRECTORY ===== */
-//	if(makedir) {
-//		res = f_mkdir(test_folder_name);
-//		if (res != FR_OK) {
-//			NRF_LOG_INFO("-E- f_mkdir pb: 0x%X\n\r", res);
-//			return 1;
-//		}
-//		else {
-//			NRF_LOG_INFO("-I- directory created\n\r");
-//			makedir = false;
-//		}
-//	}
-
-//	/* ===== OPEN DIRECTORY ===== */
-//	NRF_LOG_INFO("-I- Opening directory !\r");
-//	DIR	dirinfo;
-//	uint16_t scanned_files;
-//	res = f_opendir(&dirinfo, test_folder_location);
-//	if (res == FR_OK) {
-//		/* Display the file tree */
-//		NRF_LOG_INFO("-I- Display files contained in the memory :\r");
-//		strcpy((char *)data_buffer, test_folder_location);
-//		scan_files((char *)data_buffer, &scanned_files);
-//		NRF_LOG_INFO("Number of found files: %d\n\r", scanned_files);
-//	}
-
-//	
-//	/* ===== CREATE NEW FILE ===== */
-//	static FIL   file_object;
-//	TCHAR new_file[13];
-//	for(;;) {
-//		sprintf(new_file, "R%04d", scanned_files);
-//		sprintf(file_name, "%s/%s.wav", test_folder_location, new_file); /*File path*/
-//		NRF_LOG_INFO("-I- Create a file : \"%s\"\n\r", file_name);
-//		res = f_open(&file_object, (char const *)file_name, FA_CREATE_NEW | FA_READ | FA_WRITE);
-//		if (res == FR_OK) {
-//			break;
-//		}
-//		else if (res != FR_EXIST) {
-//			NRF_LOG_INFO("-E- Filename already exist... increasing iteration\n\r");
-//			scanned_files++;
-//		}
-//		else {
-//			NRF_LOG_INFO("-E- f_open create pb: 0x%X\n\r", res);
-//			return 1;
-//		}
-//	}
-
-//	/* ===== READ FILE TO COPY ===== */
-//	static FIL file2;
-//	static FSIZE_t f2_size;
-//	int i;
-//	NRF_LOG_INFO("-I- Opening read-only file\n\r");
-//	res = f_open(&file2, "0:/song.mp3", FA_READ);
-//	if(res != FR_OK) {
-//		NRF_LOG_INFO("Opening failed");
-//		return 1;
-//	}
-
-//	f2_size = f_size(&file2);
-//	UINT byte_read, byte_written;
-//	for(i = 0; i < f2_size; i += DATA_SIZE) {
-////		NRF_LOG_INFO(".");
-//		res = f_read(&file2, (char*)data_buffer, DATA_SIZE, &byte_read);
-//		if(res == FR_OK) {
-////			NRF_LOG_INFO(".");
-//			res = f_write(&file_object, (const char *)data_buffer, DATA_SIZE, &byte_written);
-//			if(res == FR_OK) {
-//				NRF_LOG_RAW_INFO(".");
-//				res = f_sync(&file_object);
-//			}
-//		}
-//	}
-//	NRF_LOG_INFO("\n\r");
-//	///* Write a checkerboard pattern in the buffer */
-//	//int i;
-////
-//	//for (i = 0; i < sizeof(data_buffer); i++) {
-//		//if ((i & 1) == 0) {
-//			//data_buffer[i] = (i & 0x55);
-//		//} else {
-//			//data_buffer[i] = (i & 0xAA);
-//		//}
-//	//}
-//	//puts("-I- Write file\r");
-//	//for (i = 0; i < TEST_SIZE; i += DATA_SIZE) {
-//		//res = f_write(&file_object, data_buffer, DATA_SIZE, &byte_written);
-////
-//		//if (res != FR_OK) {
-//			//printf("-E- f_write pb: 0x%X\n\r", res);
-//			//return 0;
-//		//}
-//	//}
-
-//	/* Flush after writing */
-//	NRF_LOG_INFO("-I- Syncing file");
-//	res = f_sync(&file_object);
-//	if (res != FR_OK) {
-//		NRF_LOG_INFO("-E- f_sync pb: 0x%X", res);
-//		return 1;
-//	}
-//	/* Close the file */
-//	NRF_LOG_INFO("-I- Close file");
-//	res = f_close(&file_object);
-//	if (res != FR_OK) {
-//		NRF_LOG_INFO("-E- f_close pb: 0x%X", res);
-//		return 1;
-//	}
-//	return 0;
-//}
 
 
-static void write_audio_chunk(void)
+static void write_audio_chunk(uint8_t buffer)
 {
 	NRF_LOG_RAW_INFO("Writing chunk... ");
 	static FRESULT res;
 	static UINT byte_written;
-	res = f_write(&recording_fil, (const char *)m_audio_buf, DATA_SIZE, &byte_written);
+	res = f_write(&recording_fil, (const char *)m_audio_buf[buffer], DATA_SIZE, &byte_written);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
 	}
@@ -511,6 +381,7 @@ int main(void)
 	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
 	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
 	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
+	adc_spi_config.irq_priority = 5;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 	
 
@@ -538,20 +409,25 @@ int main(void)
 
     while (true)
     {
-		if(adc_spi_xfer_done) {
-			adc_spi_xfer_done = false;
-			m_audio_buf[2*adc_spi_xfer_counter] = m_rx_buf[0];
-			m_audio_buf[(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
-			if(adc_spi_xfer_counter < 1023) {
-				adc_spi_xfer_counter++;
-			}
-			else {
-				adc_spi_xfer_counter = 0;
-				write_audio_chunk();
-			}
-			nrf_delay_us(2);
-			nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+		if(sdc_rtw) {
+			sdc_rtw = false;
+			uint8_t w_cnt = (m_buf_cnt == 0) ? 3 : (m_buf_cnt - 1);
+			write_audio_chunk(w_cnt);
 		}
+//		if(adc_spi_xfer_done) {
+//			adc_spi_xfer_done = false;
+//			m_audio_buf[2*adc_spi_xfer_counter] = m_rx_buf[0];
+//			m_audio_buf[(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
+//			if(adc_spi_xfer_counter < 1023) {
+//				adc_spi_xfer_counter++;
+//			}
+//			else {
+//				adc_spi_xfer_counter = 0;
+//				write_audio_chunk();
+//			}
+//			nrf_delay_us(2);
+//			nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+//		}
         __WFE();
     }
 }
