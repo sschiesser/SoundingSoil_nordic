@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri Mar 16 14:42:26 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri Mar 16 16:13:35 2018
 <BR><P>
 <H3>Maximum Stack Usage =        536 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -461,26 +461,27 @@ Global Symbols
 
 <P><STRONG><a name="[131]"></a>__scatterload_zeroinit</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_zeroinit), UNUSED)
 
-<P><STRONG><a name="[37]"></a>adc_spi_event_handler</STRONG> (Thumb, 102 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = adc_spi_event_handler &rArr; nrf_drv_spi_transfer &rArr; nrf_drv_spi_xfer &rArr; spim_xfer
+<P><STRONG><a name="[37]"></a>adc_spi_event_handler</STRONG> (Thumb, 126 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 188<LI>Call Chain = adc_spi_event_handler &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
+<BR>[Calls]<UL><LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
 <LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bsp_board_led_invert
-<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_delay_us
+<LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_delay_us
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.main)
 </UL>
-<P><STRONG><a name="[66]"></a>app_error_fault_handler</STRONG> (Thumb, 170 bytes, Stack size 32 bytes, app_error_weak.o(i.app_error_fault_handler))
+<P><STRONG><a name="[67]"></a>app_error_fault_handler</STRONG> (Thumb, 170 bytes, Stack size 32 bytes, app_error_weak.o(i.app_error_fault_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 236<LI>Call Chain = app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Calls]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
+<LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_strerror_get
-<LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_panic
+<LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_panic
 <LI><a href="#[6e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_4
-<LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
-<LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_save_and_stop
+<LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_save_and_stop
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 </UL>
@@ -488,7 +489,7 @@ Global Symbols
 <P><STRONG><a name="[6f]"></a>app_error_handler</STRONG> (Thumb, 24 bytes, Stack size 16 bytes, app_error.o(i.app_error_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 252<LI>Call Chain = app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Calls]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 <BR>[Called By]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[34]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_handler
@@ -505,10 +506,10 @@ Global Symbols
 <LI><a href="#[43]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
-<P><STRONG><a name="[6b]"></a>app_error_save_and_stop</STRONG> (Thumb, 96 bytes, Stack size 8 bytes, app_error.o(i.app_error_save_and_stop))
+<P><STRONG><a name="[6c]"></a>app_error_save_and_stop</STRONG> (Thumb, 96 bytes, Stack size 8 bytes, app_error.o(i.app_error_save_and_stop))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = app_error_save_and_stop
 </UL>
-<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
 <P><STRONG><a name="[70]"></a>app_sdc_block_read</STRONG> (Thumb, 98 bytes, Stack size 8 bytes, app_sdcard.o(i.app_sdc_block_read))
@@ -543,7 +544,7 @@ Global Symbols
 <P><STRONG><a name="[73]"></a>app_sdc_init</STRONG> (Thumb, 208 bytes, Stack size 48 bytes, app_sdcard.o(i.app_sdc_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 300<LI>Call Chain = app_sdc_init &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
+<BR>[Calls]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_init
 <LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_gpio_pin_set
@@ -565,14 +566,14 @@ Global Symbols
 <P><STRONG><a name="[88]"></a>app_util_critical_region_enter</STRONG> (Thumb, 56 bytes, Stack size 12 bytes, app_util_platform.o(i.app_util_critical_region_enter))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = app_util_critical_region_enter
 </UL>
-<BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
 <LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_alloc
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buf_prealloc
 </UL>
 
 <P><STRONG><a name="[8a]"></a>app_util_critical_region_exit</STRONG> (Thumb, 40 bytes, Stack size 0 bytes, app_util_platform.o(i.app_util_critical_region_exit))
-<BR><BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR><BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
 <LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_alloc
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buf_prealloc
@@ -580,7 +581,7 @@ Global Symbols
 
 <P><STRONG><a name="[63]"></a>bsp_board_led_invert</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, boards.o(i.bsp_board_led_invert))
 <BR><BR>[Called By]<UL><LI><a href="#[37]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_spi_event_handler
-<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_audio_chunk
+<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 </UL>
 
 <P><STRONG><a name="[82]"></a>bsp_board_led_off</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, boards.o(i.bsp_board_led_off))
@@ -607,7 +608,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[f3]"></a>buffer_is_empty</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, nrf_log_frontend.o(i.buffer_is_empty))
-<BR><BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR><BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 </UL>
 
 <P><STRONG><a name="[b9]"></a>disk_initialize</STRONG> (Thumb, 118 bytes, Stack size 16 bytes, diskio_blkdev.o(i.disk_initialize))
@@ -745,7 +746,7 @@ Global Symbols
 <LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_write
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_audio_chunk
+<BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 </UL>
 
 <P><STRONG><a name="[b7]"></a>f_write</STRONG> (Thumb, 418 bytes, Stack size 48 bytes, ff.o(i.f_write))
@@ -758,23 +759,23 @@ Global Symbols
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_write
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_read
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_audio_chunk
+<BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 </UL>
 
-<P><STRONG><a name="[2f]"></a>main</STRONG> (Thumb, 282 bytes, Stack size 24 bytes, main.o(i.main))
+<P><STRONG><a name="[2f]"></a>main</STRONG> (Thumb, 270 bytes, Stack size 24 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 536<LI>Call Chain = main &rArr; sd_card_init &rArr; scan_files &rArr;  scan_files (Cycle)
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_init
-<LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_default_backends_init
-<LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
+<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_init
 <LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bsp_board_leds_init
 <LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_test
 <LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
-<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_audio_chunk
+<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
@@ -821,7 +822,7 @@ Global Symbols
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_init
 </UL>
 
-<P><STRONG><a name="[65]"></a>nrf_drv_spi_transfer</STRONG> (Thumb, 28 bytes, Stack size 24 bytes, nrf_drv_spi.o(i.nrf_drv_spi_transfer))
+<P><STRONG><a name="[66]"></a>nrf_drv_spi_transfer</STRONG> (Thumb, 28 bytes, Stack size 24 bytes, nrf_drv_spi.o(i.nrf_drv_spi_transfer))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = nrf_drv_spi_transfer &rArr; nrf_drv_spi_xfer &rArr; spim_xfer
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_xfer
@@ -845,7 +846,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;spim_xfer
 </UL>
-<BR>[Called By]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
+<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
 </UL>
 
 <P><STRONG><a name="[d8]"></a>nrf_drv_uart_init</STRONG> (Thumb, 104 bytes, Stack size 24 bytes, nrf_drv_uart.o(i.nrf_drv_uart_init))
@@ -956,7 +957,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[68]"></a>nrf_log_frontend_dequeue</STRONG> (Thumb, 530 bytes, Stack size 56 bytes, nrf_log_frontend.o(i.nrf_log_frontend_dequeue))
+<P><STRONG><a name="[69]"></a>nrf_log_frontend_dequeue</STRONG> (Thumb, 530 bytes, Stack size 56 bytes, nrf_log_frontend.o(i.nrf_log_frontend_dequeue))
 <BR><BR>[Stack]<UL><LI>Max Depth = 132<LI>Call Chain = nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_memobj_write
@@ -967,11 +968,11 @@ Global Symbols
 <LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_util_critical_region_enter
 <LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buffer_is_empty
 </UL>
-<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
 
-<P><STRONG><a name="[6c]"></a>nrf_log_frontend_std_0</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_0))
+<P><STRONG><a name="[64]"></a>nrf_log_frontend_std_0</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_0))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
@@ -979,10 +980,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_test
 <LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
 <LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<LI><a href="#[37]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_spi_event_handler
+<LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
-<P><STRONG><a name="[6a]"></a>nrf_log_frontend_std_1</STRONG> (Thumb, 14 bytes, Stack size 8 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_1))
+<P><STRONG><a name="[6b]"></a>nrf_log_frontend_std_1</STRONG> (Thumb, 14 bytes, Stack size 8 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_1))
 <BR><BR>[Stack]<UL><LI>Max Depth = 180<LI>Call Chain = nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
@@ -990,17 +992,17 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_test
 <LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
 <LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
-<P><STRONG><a name="[69]"></a>nrf_log_frontend_std_2</STRONG> (Thumb, 16 bytes, Stack size 16 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_2))
+<P><STRONG><a name="[6a]"></a>nrf_log_frontend_std_2</STRONG> (Thumb, 16 bytes, Stack size 16 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_2))
 <BR><BR>[Stack]<UL><LI>Max Depth = 188<LI>Call Chain = nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
 <BR>[Called By]<UL><LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
 <LI><a href="#[108]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_files
-<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
 <P><STRONG><a name="[6e]"></a>nrf_log_frontend_std_4</STRONG> (Thumb, 24 bytes, Stack size 32 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_4))
@@ -1008,7 +1010,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
-<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
 <P><STRONG><a name="[ef]"></a>nrf_log_hexdump_entry_process</STRONG> (Thumb, 142 bytes, Stack size 32 bytes, nrf_log_str_formatter.o(i.nrf_log_hexdump_entry_process))
@@ -1042,10 +1044,10 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;prefix_process
 </UL>
 
-<P><STRONG><a name="[67]"></a>nrf_log_panic</STRONG> (Thumb, 34 bytes, Stack size 16 bytes, nrf_log_frontend.o(i.nrf_log_panic))
+<P><STRONG><a name="[68]"></a>nrf_log_panic</STRONG> (Thumb, 34 bytes, Stack size 16 bytes, nrf_log_frontend.o(i.nrf_log_panic))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = nrf_log_panic
 </UL>
-<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
 <P><STRONG><a name="[ee]"></a>nrf_log_std_entry_process</STRONG> (Thumb, 182 bytes, Stack size 48 bytes, nrf_log_str_formatter.o(i.nrf_log_std_entry_process))
@@ -1064,7 +1066,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_memobj_free
 <LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_alloc
 </UL>
-<BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 </UL>
 
 <P><STRONG><a name="[fc]"></a>nrf_memobj_free</STRONG> (Thumb, 50 bytes, Stack size 24 bytes, nrf_memobj.o(i.nrf_memobj_free))
@@ -1081,7 +1083,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__asm___12_nrf_memobj_c_9bb9f865__nrf_atomic_internal_add
 </UL>
-<BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_backend_serial_put
 </UL>
 
@@ -1099,7 +1101,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_memobj_free
 <LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__asm___12_nrf_memobj_c_9bb9f865__nrf_atomic_internal_sub
 </UL>
-<BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_backend_serial_put
 </UL>
 
@@ -1116,7 +1118,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;memobj_op
 </UL>
-<BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 </UL>
 
 <P><STRONG><a name="[100]"></a>nrf_strerror_find</STRONG> (Thumb, 52 bytes, Stack size 8 bytes, nrf_strerror.o(i.nrf_strerror_find))
@@ -1130,14 +1132,14 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_strerror_find
 </UL>
-<BR>[Called By]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
 <P><STRONG><a name="[108]"></a>scan_files</STRONG> (Thumb, 130 bytes, Stack size 96 bytes, main.o(i.scan_files))
 <BR><BR>[Stack]<UL><LI>Max Depth = 320 + In Cycle
 <LI>Call Chain = scan_files &rArr;  scan_files (Cycle)
 </UL>
-<BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
+<BR>[Calls]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_readdir
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_opendir
 <LI><a href="#[108]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_files
@@ -1151,9 +1153,9 @@ Global Symbols
 <P><STRONG><a name="[c9]"></a>sd_card_init</STRONG> (Thumb, 530 bytes, Stack size 192 bytes, main.o(i.sd_card_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 512<LI>Call Chain = sd_card_init &rArr; scan_files &rArr;  scan_files (Cycle)
 </UL>
-<BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Calls]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
+<LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[b3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_stat
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_readdir
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_opendir
@@ -1170,8 +1172,8 @@ Global Symbols
 <P><STRONG><a name="[c8]"></a>sd_card_test</STRONG> (Thumb, 118 bytes, Stack size 24 bytes, main.o(i.sd_card_test))
 <BR><BR>[Stack]<UL><LI>Max Depth = 204<LI>Call Chain = sd_card_test &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Calls]<UL><LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[10c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;diskio_blockdev_register
 <LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_initialize
 </UL>
@@ -1215,12 +1217,12 @@ Global Symbols
 <H3>
 Local Symbols
 </H3>
-<P><STRONG><a name="[64]"></a>nrf_delay_us</STRONG> (Thumb, 132 bytes, Stack size 0 bytes, main.o(i.nrf_delay_us))
+<P><STRONG><a name="[65]"></a>nrf_delay_us</STRONG> (Thumb, 132 bytes, Stack size 0 bytes, main.o(i.nrf_delay_us))
 <BR><BR>[Called By]<UL><LI><a href="#[37]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_spi_event_handler
 </UL>
 
-<P><STRONG><a name="[ca]"></a>write_audio_chunk</STRONG> (Thumb, 48 bytes, Stack size 8 bytes, main.o(i.write_audio_chunk))
-<BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = write_audio_chunk &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
+<P><STRONG><a name="[ca]"></a>sdc_fill_queue</STRONG> (Thumb, 64 bytes, Stack size 8 bytes, main.o(i.sdc_fill_queue))
+<BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = sdc_fill_queue &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
 <LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_sync
@@ -1899,7 +1901,7 @@ Local Symbols
 <P><STRONG><a name="[10d]"></a>sdc_spi_transfer</STRONG> (Thumb, 58 bytes, Stack size 24 bytes, app_sdcard.o(i.sdc_spi_transfer))
 <BR><BR>[Stack]<UL><LI>Max Depth = 276<LI>Call Chain = sdc_spi_transfer &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
+<BR>[Calls]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
 <LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 </UL>
 <BR>[Called By]<UL><LI><a href="#[33]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;spi_handler
@@ -2128,12 +2130,12 @@ Local Symbols
 <P><STRONG><a name="[f6]"></a>std_n</STRONG> (Thumb, 138 bytes, Stack size 40 bytes, nrf_log_frontend.o(i.std_n))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
+<BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buf_prealloc
 </UL>
-<BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Called By]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
+<LI><a href="#[6b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[6e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_4
 </UL>
 

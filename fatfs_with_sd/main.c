@@ -95,6 +95,8 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
 
+// TODO!!!
+//NRF_QUEUE_DEF();
 /* ADC defintions */
 #define ADC_SPI_CONV_PIN				22
 #define ADC_SPI_MOSI_PIN				23
@@ -106,28 +108,33 @@ static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool adc_spi_xfer_done = false;
 static volatile uint16_t adc_spi_xfer_counter = 0;
 
+#define AUDIO_BUFFER_MAX				4
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
-static uint8_t							m_audio_buf[4][DATA_SIZE];
-static uint8_t							m_buf_cnt = 0;
+static uint8_t							m_audio_buf[AUDIO_BUFFER_MAX][DATA_SIZE];
+static uint8_t							m_read_buf_cnt = 0; /* Counter for ADC reading */
+static uint8_t							m_write_buf_cnt = 0; /* Counter for SDC writing */
 
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 //	adc_spi_xfer_done = true;
 	bsp_board_led_invert(0);
-	m_audio_buf[m_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
-	m_audio_buf[m_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
+	m_audio_buf[m_read_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
+	m_audio_buf[m_read_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
 	if(adc_spi_xfer_counter < 2047) {
 		adc_spi_xfer_counter++;
 	}
 	else {
-//		NRF_LOG_INFO("Read on #%d", m_buf_cnt);
+//		NRF_LOG_INFO("Read buffer #%d", m_read_buf_cnt);
+		if(m_read_buf_cnt == m_write_buf_cnt) {
+			NRF_LOG_INFO("Buffer collision!!");
+		}
 		adc_spi_xfer_counter = 0;
-		m_buf_cnt = (m_buf_cnt >= 3) ? 0 : (m_buf_cnt + 1);
+		m_read_buf_cnt = (m_read_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_read_buf_cnt + 1);
 		sdc_rtw = true;
 	}
-	nrf_delay_us(15);
+	nrf_delay_us(20);
 	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
@@ -346,13 +353,14 @@ FRESULT sd_card_init(void)
 
 
 
-static void write_audio_chunk(uint8_t buffer)
+static void sdc_fill_queue(void)
 {
 	bsp_board_led_invert(1);
-//	NRF_LOG_INFO("Writing to #%d", buffer);
+//	NRF_LOG_INFO("Write buffer #%d", m_write_buf_cnt);
 	static FRESULT res;
 	static UINT byte_written;
-	res = f_write(&recording_fil, (const char *)m_audio_buf[buffer], DATA_SIZE, &byte_written);
+	res = f_write(&recording_fil, (const char *)m_audio_buf[m_write_buf_cnt], DATA_SIZE, &byte_written);
+	m_write_buf_cnt = (m_write_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_write_buf_cnt + 1);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
 	}
@@ -413,8 +421,7 @@ int main(void)
     {
 		if(sdc_rtw) {
 			sdc_rtw = false;
-			uint8_t w_cnt = (m_buf_cnt == 0) ? 3 : (m_buf_cnt - 1);
-			write_audio_chunk(w_cnt);
+			sdc_fill_queue();
 		}
 //		if(adc_spi_xfer_done) {
 //			adc_spi_xfer_done = false;
