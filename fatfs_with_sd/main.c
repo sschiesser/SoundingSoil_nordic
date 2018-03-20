@@ -54,11 +54,13 @@
 #include "ff.h"
 #include "diskio_blkdev.h"
 #include "nrf_block_dev_sdc.h"
+#include "nrf_queue.h"
 #include <string.h>
 #include <stdio.h>
 /* APP libraries */
 #include "app_util_platform.h"
 #include "app_error.h"
+#include "app_fifo.h"
 
 #include "nrf_drv_spi.h"
 #include "nrf_delay.h"
@@ -67,21 +69,31 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+///* ADC to SDC queue definition */
+//#define QUEUE_DATA_SIZE					4096
+//NRF_QUEUE_DEF(uint8_t, m_adc2sd_queue, QUEUE_DATA_SIZE, NRF_QUEUE_MODE_NO_OVERFLOW);
+/* ADC to SDC FIFO definition */
+#define FIFO_DATA_SIZE					4096
+app_fifo_t								m_adc2sd_fifo;
+uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
+
 
 /* SD card definitions */
 #define FILE_NAME   "NORDIC.TXT"
 #define TEST_STRING "SD card example."
-#define SDC_SCK_PIN     28  ///< SDC serial clock (SCK) pin.
-#define SDC_MISO_PIN    29  ///< SDC serial data out (DO) pin.
-#define SDC_MOSI_PIN    30  ///< SDC serial data in (DI) pin.
-#define SDC_CS_PIN      31  ///< SDC chip select (CS) pin.
-//#define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
+#define SDC_SCK_PIN     				28  ///< SDC serial clock (SCK) pin.
+#define SDC_MISO_PIN    				29  ///< SDC serial data out (DO) pin.
+#define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
+#define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
+//#define SDC_CD_PIN					04  ///< SCD card detect (CD) pin.
 
-#define DATA_SIZE		4096
-static uint8_t 			data_buffer[DATA_SIZE];
-static volatile bool 	sdc_init_ok = false;
-static volatile bool	sdc_rtw = false;
-static FIL   			recording_fil;
+#define SDC_BLOCK_SIZE					SDC_SECTOR_SIZE
+static uint8_t 							data_buffer[FIFO_DATA_SIZE];
+static volatile bool 					sdc_init_ok = false;
+static volatile bool					sdc_rtw = false;
+static volatile bool					sdc_writing = false;
+static uint8_t							sdc_block_cnt = 0;
+static FIL   							recording_fil;
 
 /**
  * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -95,8 +107,6 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
 
-// TODO!!!
-//NRF_QUEUE_DEF();
 /* ADC defintions */
 #define ADC_SPI_CONV_PIN				22
 #define ADC_SPI_MOSI_PIN				23
@@ -104,37 +114,49 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 #define ADC_SPI_SCK_PIN					25
 
 #define ADC_SPI_INSTANCE				1
-static const nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
-static volatile bool adc_spi_xfer_done = false;
-static volatile uint16_t adc_spi_xfer_counter = 0;
+static const 							nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
+static volatile bool 					adc_spi_xfer_done = false;
+static volatile uint16_t 				adc_spi_xfer_counter = 0;
 
 #define AUDIO_BUFFER_MAX				4
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
-static uint8_t							m_audio_buf[AUDIO_BUFFER_MAX][DATA_SIZE];
+//static uint8_t							m_audio_buf[SDC_BLOCK_SIZE];
 static uint8_t							m_read_buf_cnt = 0; /* Counter for ADC reading */
 static uint8_t							m_write_buf_cnt = 0; /* Counter for SDC writing */
 
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 //	adc_spi_xfer_done = true;
-	bsp_board_led_invert(0);
-	m_audio_buf[m_read_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
-	m_audio_buf[m_read_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
-	if(adc_spi_xfer_counter < 2047) {
+	static uint32_t buf_size = 2;
+	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
+//	m_audio_buf[m_read_buf_cnt][2*adc_spi_xfer_counter] = m_rx_buf[0];
+//	m_audio_buf[m_read_buf_cnt][(2*adc_spi_xfer_counter)+1] = m_rx_buf[1];
+//	nrf_queue_in(&m_adc2sd_queue, m_rx_buf, 2);
+	app_fifo_write(&m_adc2sd_fifo, m_rx_buf, &buf_size);
+//	NRF_LOG_INFO("Fifo write pos: %d", p_fifo->write_pos);
+	if(adc_spi_xfer_counter < (SDC_BLOCK_SIZE-1)) {
 		adc_spi_xfer_counter++;
 	}
 	else {
+		bsp_board_led_invert(0);
+		NRF_LOG_INFO("write: %d", p_fifo->write_pos);
 //		NRF_LOG_INFO("Read buffer #%d", m_read_buf_cnt);
-		if(m_read_buf_cnt == m_write_buf_cnt) {
-			NRF_LOG_INFO("Buffer collision!!");
-		}
+//		if(m_read_buf_cnt == m_write_buf_cnt) {
+//			NRF_LOG_INFO("Buffer collision!!");
+//		}
 		adc_spi_xfer_counter = 0;
-		m_read_buf_cnt = (m_read_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_read_buf_cnt + 1);
-		sdc_rtw = true;
+//		m_read_buf_cnt = (m_read_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_read_buf_cnt + 1);
+		if(!sdc_writing) {
+			sdc_rtw = true;
+		}
+		else {
+			sdc_block_cnt++;
+			NRF_LOG_INFO("still writing! counter: %d", sdc_block_cnt);
+		}
 	}
-	nrf_delay_us(20);
+	nrf_delay_us(10);
 	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
@@ -358,13 +380,20 @@ static void sdc_fill_queue(void)
 	bsp_board_led_invert(1);
 //	NRF_LOG_INFO("Write buffer #%d", m_write_buf_cnt);
 	static FRESULT res;
+	uint32_t fifo_res;
 	static UINT byte_written;
-	res = f_write(&recording_fil, (const char *)m_audio_buf[m_write_buf_cnt], DATA_SIZE, &byte_written);
-	m_write_buf_cnt = (m_write_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_write_buf_cnt + 1);
+	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
+	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
+	fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
+	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
+	NRF_LOG_INFO("read: %d", p_fifo->read_pos);
+	sdc_writing = true;
+	res = f_write(&recording_fil, p_buf, SDC_BLOCK_SIZE, &byte_written);
+//	m_write_buf_cnt = (m_write_buf_cnt >= (AUDIO_BUFFER_MAX-1)) ? 0 : (m_write_buf_cnt + 1);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
+		sdc_writing = false;
 	}
-//	NRF_LOG_INFO("done!");
 }
 
 
@@ -390,10 +419,11 @@ int main(void)
 	adc_spi_config.miso_pin = ADC_SPI_MISO_PIN;
 	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
 	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
-	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
+	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_4M;
 	adc_spi_config.irq_priority = 5;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 	
+	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
 
 	card_status = sd_card_test();
 	if(card_status != RES_OK) {
@@ -421,6 +451,11 @@ int main(void)
     {
 		if(sdc_rtw) {
 			sdc_rtw = false;
+			sdc_fill_queue();
+		}
+		else if(sdc_block_cnt > 0) {
+			NRF_LOG_INFO("Decounting FIFO...");
+			sdc_block_cnt--;
 			sdc_fill_queue();
 		}
 //		if(adc_spi_xfer_done) {
