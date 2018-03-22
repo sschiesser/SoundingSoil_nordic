@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Mar 22 09:22:21 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Mar 22 11:01:57 2018
 <BR><P>
 <H3>Maximum Stack Usage =        552 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -67,7 +67,7 @@ Function Pointers
  <LI><a href="#[9]">SysTick_Handler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
  <LI><a href="#[30]">SystemInit</a> from system_nrf52.o(i.SystemInit) referenced from arm_startup_nrf52.o(.text)
  <LI><a href="#[16]">TEMP_IRQHandler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
- <LI><a href="#[12]">TIMER0_IRQHandler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
+ <LI><a href="#[12]">TIMER0_IRQHandler</a> from nrf_drv_timer.o(i.TIMER0_IRQHandler) referenced from arm_startup_nrf52.o(RESET)
  <LI><a href="#[13]">TIMER1_IRQHandler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
  <LI><a href="#[14]">TIMER2_IRQHandler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
  <LI><a href="#[24]">TIMER3_IRQHandler</a> from arm_startup_nrf52.o(.text) referenced from arm_startup_nrf52.o(RESET)
@@ -301,9 +301,6 @@ Global Symbols
 <P><STRONG><a name="[16]"></a>TEMP_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, arm_startup_nrf52.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> arm_startup_nrf52.o(RESET)
 </UL>
-<P><STRONG><a name="[12]"></a>TIMER0_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, arm_startup_nrf52.o(.text))
-<BR>[Address Reference Count : 1]<UL><LI> arm_startup_nrf52.o(RESET)
-</UL>
 <P><STRONG><a name="[13]"></a>TIMER1_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, arm_startup_nrf52.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> arm_startup_nrf52.o(RESET)
 </UL>
@@ -382,6 +379,11 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 20<LI>Call Chain = SystemInit
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> arm_startup_nrf52.o(.text)
+</UL>
+<P><STRONG><a name="[12]"></a>TIMER0_IRQHandler</STRONG> (Thumb, 68 bytes, Stack size 32 bytes, nrf_drv_timer.o(i.TIMER0_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = TIMER0_IRQHandler
+</UL>
+<BR>[Address Reference Count : 1]<UL><LI> arm_startup_nrf52.o(RESET)
 </UL>
 <P><STRONG><a name="[c]"></a>UARTE0_UART0_IRQHandler</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, nrf_drv_uart.o(i.UARTE0_UART0_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = UARTE0_UART0_IRQHandler &rArr; uart_irq_handler &rArr; tx_done_event
@@ -527,16 +529,16 @@ Global Symbols
 <P><STRONG><a name="[75]"></a>app_util_critical_region_enter</STRONG> (Thumb, 64 bytes, Stack size 12 bytes, app_util_platform.o(i.app_util_critical_region_enter))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = app_util_critical_region_enter
 </UL>
-<BR>[Called By]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
-<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
+<BR>[Called By]<UL><LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_alloc
+<LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buf_prealloc
 </UL>
 
 <P><STRONG><a name="[77]"></a>app_util_critical_region_exit</STRONG> (Thumb, 46 bytes, Stack size 0 bytes, app_util_platform.o(i.app_util_critical_region_exit))
-<BR><BR>[Called By]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
-<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
+<BR><BR>[Called By]<UL><LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_free
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_balloc_alloc
+<LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buf_prealloc
 </UL>
 
@@ -846,7 +848,6 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_test
 <LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
 <LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
 
@@ -955,8 +956,8 @@ Global Symbols
 <LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_readdir
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_opendir
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_files
-<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 <LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
+<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sd_card_init
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_files
@@ -975,8 +976,8 @@ Global Symbols
 <LI><a href="#[92]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_mount
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_mkdir
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_files
-<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -1031,11 +1032,10 @@ Local Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[37]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_spi_event_handler
 </UL>
 
-<P><STRONG><a name="[ab]"></a>sdc_fill_queue</STRONG> (Thumb, 86 bytes, Stack size 16 bytes, main.o(i.sdc_fill_queue))
-<BR><BR>[Stack]<UL><LI>Max Depth = 220<LI>Call Chain = sdc_fill_queue &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_alloc &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter
+<P><STRONG><a name="[ab]"></a>sdc_fill_queue</STRONG> (Thumb, 66 bytes, Stack size 16 bytes, main.o(i.sdc_fill_queue))
+<BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = sdc_fill_queue &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
+<BR>[Calls]<UL><LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
 <LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_sync
 <LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bsp_board_led_invert
 <LI><a href="#[5d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_fifo_read
@@ -1729,9 +1729,9 @@ Local Symbols
 <BR>[Address Reference Count : 1]<UL><LI> ble_conn_state.o(sdh_ble_observers0)
 </UL>
 <P><STRONG><a name="[4c]"></a>_printf_core</STRONG> (Thumb, 748 bytes, Stack size 96 bytes, printf6.o(i._printf_core), UNUSED)
-<BR><BR>[Calls]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_pre_padding
+<BR><BR>[Calls]<UL><LI><a href="#[4e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
+<LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_pre_padding
 <LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_post_padding
-<LI><a href="#[4e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__0sprintf$6
 </UL>

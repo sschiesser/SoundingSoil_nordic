@@ -63,6 +63,7 @@
 #include "app_fifo.h"
 
 #include "nrf_drv_spi.h"
+#include "nrf_drv_timer.h"
 #include "nrf_delay.h"
 
 #include "nrf_log.h"
@@ -94,6 +95,11 @@ static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
 static uint8_t							sdc_block_cnt = 0;
 static FIL   							recording_fil;
+
+#define ADC_SYNC_TIMER_INSTANCE			0
+#define ADC_SYNC_44KHZ_US				23
+#define ADC_SYNC_48KHZ_US				20
+const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
 
 /**
  * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -159,6 +165,28 @@ static void adc_config_spi(void)
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 }
 
+
+
+void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
+{
+	bsp_board_led_invert(0);
+}
+
+static void adc_config_timer(void)
+{
+	uint32_t err_code;
+	uint32_t time_ticks;
+	nrf_drv_timer_config_t timer_config = NRF_DRV_TIMER_DEFAULT_CONFIG;
+	err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
+	APP_ERROR_CHECK(err_code);
+	
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
+
+	nrf_drv_timer_extended_compare(
+		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, TIMER_SHORTS_COMPARE0_CLEAR_Msk, true);
+	
+	nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+}
 
 DSTATUS sd_card_test(void)
 {
@@ -384,7 +412,7 @@ static void sdc_fill_queue(void)
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
 	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
-	NRF_LOG_INFO("read: %d", p_fifo->read_pos);
+//	NRF_LOG_INFO("read: %d", p_fifo->read_pos);
 	sdc_writing = true;
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
 	if(res == FR_OK) {
@@ -412,6 +440,7 @@ int main(void)
     NRF_LOG_INFO("-------------------------")
 
 	adc_config_spi();
+//	adc_config_timer();
 	
 	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
 
