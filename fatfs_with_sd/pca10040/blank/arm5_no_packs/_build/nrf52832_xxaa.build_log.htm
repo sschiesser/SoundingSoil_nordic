@@ -28,19 +28,19 @@ Project File Date:  03/22/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
-..\..\..\main.c(191): warning:  #188-D: enumerated type mixed with another type
+..\..\..\main.c(321): warning:  #188-D: enumerated type mixed with another type
   		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
 IMER_SHORTS_COMPARE0_CLEAR_Msk, 
 rue);
-..\..\..\main.c(496): warning:  #177-D: variable "card_status"  was declared but never referenced
-  	DSTATUS card_status;
-..\..\..\main.c(497): warning:  #177-D: variable "ff_result"  was declared but never referenced
-  	FRESULT ff_result;
-..\..\..\main.c(474): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
+..\..\..\main.c(603): warning:  #177-D: variable "cr"  was declared but never referenced
+  		uint8_t cr;
+..\..\..\main.c(634): warning:  #128-D: loop is not reachable
+      while (true)
+..\..\..\main.c(561): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
   static void sdc_fill_queue(void)
 ..\..\..\main.c: 4 warnings, 0 errors
 linking...
-Program Size: Code=11828 RO-data=1924 RW-data=128 ZI-data=19352  
+Program Size: Code=15104 RO-data=2232 RW-data=216 ZI-data=20064  
 FromELF: creating hex file...
 ".\_build\nrf52832_xxaa.axf" - 0 Error(s), 4 Warning(s).
 
