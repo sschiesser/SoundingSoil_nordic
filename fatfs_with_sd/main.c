@@ -138,7 +138,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		adc_spi_xfer_counter++;
 	}
 	else {
-		bsp_board_led_invert(0);
+		bsp_board_led_invert(1);
 //		NRF_LOG_INFO("write: %d", p_fifo->write_pos);
 		adc_spi_xfer_counter = 0;
 		if(!sdc_writing) {
@@ -149,8 +149,9 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 //			NRF_LOG_INFO("still writing! counter: %d", sdc_block_cnt);
 		}
 	}
-	nrf_delay_us(10);
-	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+	adc_spi_xfer_done = true;
+//	nrf_delay_us(10);
+//	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
 static void adc_config_spi(void)
@@ -161,7 +162,7 @@ static void adc_config_spi(void)
 	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
 	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
 	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
-	adc_spi_config.irq_priority = 5;
+	adc_spi_config.irq_priority = 4;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 }
 
@@ -170,6 +171,10 @@ static void adc_config_spi(void)
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	bsp_board_led_invert(0);
+	if(adc_spi_xfer_done) {
+		adc_spi_xfer_done = false;
+		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+	}
 }
 
 static void adc_config_timer(void)
@@ -177,6 +182,7 @@ static void adc_config_timer(void)
 	uint32_t err_code;
 	uint32_t time_ticks;
 	nrf_drv_timer_config_t timer_config = NRF_DRV_TIMER_DEFAULT_CONFIG;
+	timer_config.interrupt_priority = 5;
 	err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
@@ -185,7 +191,7 @@ static void adc_config_timer(void)
 	nrf_drv_timer_extended_compare(
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, TIMER_SHORTS_COMPARE0_CLEAR_Msk, true);
 	
-	nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//	nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 }
 
 DSTATUS sd_card_test(void)
@@ -405,7 +411,7 @@ FRESULT sd_card_init(void)
 
 static void sdc_fill_queue(void)
 {
-	bsp_board_led_invert(1);
+	bsp_board_led_invert(2);
 	static FRESULT res;
 	static UINT byte_written;
 	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
@@ -440,7 +446,7 @@ int main(void)
     NRF_LOG_INFO("-------------------------")
 
 	adc_config_spi();
-//	adc_config_timer();
+	adc_config_timer();
 	
 	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
 
@@ -463,8 +469,9 @@ int main(void)
 
 	if(sdc_init_ok) {
 		NRF_LOG_INFO("Starting SPI xfer");
-		adc_spi_xfer_done = false;
-		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+		adc_spi_xfer_done = true;
+		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 	}
 
     while (true)
