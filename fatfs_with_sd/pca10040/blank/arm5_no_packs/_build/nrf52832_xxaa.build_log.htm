@@ -27,7 +27,22 @@ Project File Date:  03/22/2018
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 0 Warning(s).
+compiling main.c...
+..\..\..\main.c(191): warning:  #188-D: enumerated type mixed with another type
+  		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
+IMER_SHORTS_COMPARE0_CLEAR_Msk, 
+rue);
+..\..\..\main.c(496): warning:  #177-D: variable "card_status"  was declared but never referenced
+  	DSTATUS card_status;
+..\..\..\main.c(497): warning:  #177-D: variable "ff_result"  was declared but never referenced
+  	FRESULT ff_result;
+..\..\..\main.c(474): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
+  static void sdc_fill_queue(void)
+..\..\..\main.c: 4 warnings, 0 errors
+linking...
+Program Size: Code=11828 RO-data=1924 RW-data=128 ZI-data=19352  
+FromELF: creating hex file...
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 4 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -56,7 +71,7 @@ Package Vendor: NordicSemiconductor
       Include file:  Device\Include\system_nrf52.h
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>

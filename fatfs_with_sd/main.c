@@ -64,20 +64,22 @@
 
 #include "nrf_drv_spi.h"
 #include "nrf_drv_timer.h"
+#include "nrf_drv_gpiote.h"
 #include "nrf_delay.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-///* ADC to SDC queue definition */
-//#define QUEUE_DATA_SIZE					4096
-//NRF_QUEUE_DEF(uint8_t, m_adc2sd_queue, QUEUE_DATA_SIZE, NRF_QUEUE_MODE_NO_OVERFLOW);
+#define DBG0_PIN						9
+#define DBG1_PIN						10
+#define DBG2_PIN						11
+#define DBG3_PIN						12
+
 /* ADC to SDC FIFO definition */
 #define FIFO_DATA_SIZE					4096
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
-
 
 /* SD card definitions */
 #define FILE_NAME   "NORDIC.TXT"
@@ -132,26 +134,22 @@ static const uint8_t					m_length = 2;
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t buf_size = 2;
-//	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
 	app_fifo_write(&m_adc2sd_fifo, m_rx_buf, &buf_size);
 	if(adc_spi_xfer_counter < (SDC_BLOCK_SIZE-1)) {
 		adc_spi_xfer_counter++;
 	}
 	else {
-		bsp_board_led_invert(1);
-//		NRF_LOG_INFO("write: %d", p_fifo->write_pos);
+//		bsp_board_led_invert(1);
+		nrf_drv_gpiote_out_toggle(DBG1_PIN);
 		adc_spi_xfer_counter = 0;
 		if(!sdc_writing) {
 			sdc_rtw = true;
 		}
 		else {
 			sdc_block_cnt++;
-//			NRF_LOG_INFO("still writing! counter: %d", sdc_block_cnt);
 		}
 	}
 	adc_spi_xfer_done = true;
-//	nrf_delay_us(10);
-//	nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 }
 
 static void adc_config_spi(void)
@@ -170,7 +168,8 @@ static void adc_config_spi(void)
 
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
-	bsp_board_led_invert(0);
+//	bsp_board_led_invert(0);
+	nrf_drv_gpiote_out_toggle(DBG0_PIN);
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
@@ -192,6 +191,69 @@ static void adc_config_timer(void)
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, TIMER_SHORTS_COMPARE0_CLEAR_Msk, true);
 	
 //	nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+}
+
+void button0_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	nrf_drv_gpiote_out_toggle(BSP_LED_0);
+}
+void button1_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	nrf_drv_gpiote_out_toggle(BSP_LED_1);
+}
+void button2_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	nrf_drv_gpiote_out_toggle(BSP_LED_2);
+}
+void button3_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	nrf_drv_gpiote_out_toggle(BSP_LED_3);
+}
+
+static void gpio_config(void)
+{
+	ret_code_t err_code;
+	err_code = nrf_drv_gpiote_init();
+	APP_ERROR_CHECK(err_code);
+	
+	nrf_drv_gpiote_out_config_t out_config = GPIOTE_CONFIG_OUT_SIMPLE(true);
+	
+	/* Setting board LED as GPIOTE outputs */
+	err_code = nrf_drv_gpiote_out_init(BSP_LED_0, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(BSP_LED_1, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(BSP_LED_2, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(BSP_LED_3, &out_config);
+	APP_ERROR_CHECK(err_code);
+	
+	/* Setting DBG pins as GPIOTE outputs */
+	err_code = nrf_drv_gpiote_out_init(DBG0_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(DBG1_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(DBG2_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(DBG3_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	
+	/* Setting board buttons as GPIOTE inputs */
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+	in_config.pull = NRF_GPIO_PIN_PULLUP;
+	
+	err_code = nrf_drv_gpiote_in_init(BSP_BUTTON_0, &in_config, button0_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(BSP_BUTTON_0, true);
+	err_code = nrf_drv_gpiote_in_init(BSP_BUTTON_1, &in_config, button1_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(BSP_BUTTON_1, true);
+	err_code = nrf_drv_gpiote_in_init(BSP_BUTTON_2, &in_config, button2_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(BSP_BUTTON_2, true);
+	err_code = nrf_drv_gpiote_in_init(BSP_BUTTON_3, &in_config, button3_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(BSP_BUTTON_3, true);
 }
 
 DSTATUS sd_card_test(void)
@@ -411,16 +473,14 @@ FRESULT sd_card_init(void)
 
 static void sdc_fill_queue(void)
 {
-	bsp_board_led_invert(2);
 	static FRESULT res;
 	static UINT byte_written;
 	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
-	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
-//	NRF_LOG_INFO("read: %d", p_fifo->read_pos);
 	sdc_writing = true;
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
+	nrf_drv_gpiote_out_toggle(DBG3_PIN);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
 		sdc_writing = false;
@@ -447,45 +507,45 @@ int main(void)
 
 	adc_config_spi();
 	adc_config_timer();
-	
 	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
+	gpio_config();
 
-	card_status = sd_card_test();
-	
-	if(card_status != RES_OK) {
-		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
-	}
-	else {
-		NRF_LOG_INFO("SD card check OK");
-		ff_result = sd_card_init();
-		if(ff_result != FR_OK) {
-			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
-		}
-		else {
-			NRF_LOG_INFO("\nSD card init OK");
-			sdc_init_ok = true;
-		}
-	}
+//	card_status = sd_card_test();
+//	
+//	if(card_status != RES_OK) {
+//		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
+//	}
+//	else {
+//		NRF_LOG_INFO("SD card check OK");
+//		ff_result = sd_card_init();
+//		if(ff_result != FR_OK) {
+//			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+//		}
+//		else {
+//			NRF_LOG_INFO("\nSD card init OK");
+//			sdc_init_ok = true;
+//		}
+//	}
 
-	if(sdc_init_ok) {
-		NRF_LOG_INFO("Starting SPI xfer");
-		adc_spi_xfer_done = true;
-		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
-	}
+//	if(sdc_init_ok) {
+//		NRF_LOG_INFO("Starting SPI xfer");
+//		adc_spi_xfer_done = true;
+//		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+////		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+//	}
 
     while (true)
     {
-		if(sdc_rtw) {
-			sdc_rtw = false;
-			sdc_fill_queue();
-		}
-		else if(sdc_block_cnt > 0) {
-			NRF_LOG_INFO("Decounting FIFO...");
-			sdc_block_cnt--;
-			sdc_fill_queue();
-		}
-        __WFE();
+//		if(sdc_rtw) {
+//			sdc_rtw = false;
+//			sdc_fill_queue();
+//		}
+//		else if(sdc_block_cnt > 0) {
+//			NRF_LOG_INFO("Decounting FIFO...");
+//			sdc_block_cnt--;
+//			sdc_fill_queue();
+//		}
+//        __WFE();
     }
 }
 
