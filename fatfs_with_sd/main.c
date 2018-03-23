@@ -151,36 +151,62 @@ static const uint8_t					m_length = 2;
 /* ========================================================================== */
 /*                                   GPS                                      */
 /* ========================================================================== */
-
-#define APP_TIMER_PRESCALER     NRF_SERIAL_APP_TIMER_PRESCALER
-
-static void sleep_handler(void)
-{
-    __WFE();
-    __SEV();
-    __WFE();
-}
-
+#define GPS_NMEA_MAX_SIZE				74
+#define GPS_NMEA_START_CHAR				0x24
+#define GPS_NMEA_STOP_CHAR				0x0A
+#define GPS_GGA_SIZE					74
+#define GPS_GGA_TIME_POS				7
+#define GPS_GGA_TIME_LEN				10
+#define GPS_GGA_LAT_POS					(GPS_GGA_TIME_POS + \
+										GPS_GGA_TIME_LEN + 1) 			// 18
+#define GPS_GGA_LAT_LEN					9
+#define GPS_GGA_LAT_N_S_POS				(GPS_GGA_LAT_POS + \
+										GPS_GGA_LAT_LEN + 1) 			// 28
+#define GPS_GGA_LONG_POS				(GPS_GGA_LAT_N_S_POS + 2) 		// 30
+#define GPS_GGA_LONG_LEN				10
+#define GPS_GGA_LONG_E_W_POS			(GPS_GGA_LONG_POS + \
+										GPS_GGA_LONG_LEN + 1)			// 41
+#define GPS_GGA_QUAL_POS				(GPS_GGA_LONG_E_W_POS + 2)		// 43
+#define GPS_GGA_DIL_POS					(GPS_GGA_QUAL_POS + 5)			// 48
+#define GPS_GGA_DIL_LEN					3
+#define GPS_GGA_ALT_POS					(GPS_GGA_DIL_POS + \
+										GPS_GGA_DIL_LEN + 1)			// 52
+#define GPS_GGA_ALT_LEN					5
+struct gps_time {
+	uint8_t h;
+	uint8_t min;
+	uint8_t sec;
+	uint16_t msec;
+};
+struct gps_lat {
+	uint8_t deg;
+	uint8_t min;
+	uint16_t sec;
+	bool north;
+};
+struct gps_long {
+	uint8_t deg;
+	uint8_t min;
+	uint16_t sec;
+	bool east;
+};
+struct gps_tag {
+	struct gps_time time;
+	struct gps_lat latitude;
+	struct gps_long longitude;
+	uint8_t quality;
+	float dilution;
+	int16_t altitude;
+};
 NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uart0_drv_config,
 	RX_PIN_NUMBER, TX_PIN_NUMBER,
 	RTS_PIN_NUMBER, CTS_PIN_NUMBER,
-	NRF_UART_HWFC_ENABLED, NRF_UART_PARITY_EXCLUDED,
+	NRF_UART_HWFC_DISABLED, NRF_UART_PARITY_EXCLUDED,
 	NRF_UART_BAUDRATE_9600, UART_DEFAULT_CONFIG_IRQ_PRIORITY);
 
-#define GPS_FIFO_TX_SIZE				32
-#define GPS_FIFO_RX_SIZE				32
-
-NRF_SERIAL_QUEUES_DEF(gps_queues, GPS_FIFO_TX_SIZE, GPS_FIFO_RX_SIZE);
-
-#define GPS_BUF_TX_SIZE					1
-#define GPS_BUF_RX_SIZE					1
-
-NRF_SERIAL_BUFFERS_DEF(gps_buffs, GPS_BUF_TX_SIZE, GPS_BUF_RX_SIZE);
-
 NRF_SERIAL_CONFIG_DEF(gps_config,
-	NRF_SERIAL_MODE_IRQ, &gps_queues,
-	&gps_buffs, NULL,
-	sleep_handler);
+	NRF_SERIAL_MODE_POLLING, NULL,
+	NULL, NULL, NULL);
 
 NRF_SERIAL_UART_DEF(gps_uart, 0);
 
@@ -262,18 +288,6 @@ void button3_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 }
 
 
-// APP UART
-void uart_error_handle(app_uart_evt_t * p_event)
-{
-    if (p_event->evt_type == APP_UART_COMMUNICATION_ERROR)
-    {
-        APP_ERROR_HANDLER(p_event->data.error_communication);
-    }
-    else if (p_event->evt_type == APP_UART_FIFO_ERROR)
-    {
-        APP_ERROR_HANDLER(p_event->data.error_code);
-    }
-}
 
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
@@ -571,26 +585,88 @@ FRESULT sdc_init_audio(void)
 	return FR_OK;
 }
 
+static struct gps_tag gps_get_geotag(void)
+{
+	struct gps_tag tag;
+	ret_code_t ret;
+	char c;
+	uint8_t buffer[GPS_NMEA_MAX_SIZE];
+	uint8_t temp[12];
+	uint8_t cnt = 0;
+	bool reading = true;
+	
+	while(reading) {
+		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+		APP_ERROR_CHECK(ret);
+		buffer[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) {
+			if ((cnt == GPS_GGA_SIZE)) {
+				if(buffer[0] == GPS_NMEA_START_CHAR) {
+					reading = false;
+				}
+			}
+			cnt = 0;
+		}
+	}
+	// Time
+	temp[0] = buffer[GPS_GGA_TIME_POS];
+	temp[1] = buffer[GPS_GGA_TIME_POS + 1];
+	temp[2] = '\0';
+	tag.time.h = atoi(temp);
+	temp[0] = buffer[GPS_GGA_TIME_POS + 2];
+	temp[1] = buffer[GPS_GGA_TIME_POS + 3];
+	tag.time.min = atoi(temp);
+	temp[0] = buffer[GPS_GGA_TIME_POS + 4];
+	temp[1] = buffer[GPS_GGA_TIME_POS + 5];
+	tag.time.sec = atoi(temp);
+	temp[0] = buffer[GPS_GGA_TIME_POS + 7];
+	temp[1] = buffer[GPS_GGA_TIME_POS + 8];
+	temp[2] = buffer[GPS_GGA_TIME_POS + 9];
+	temp[3] = '\0';
+	tag.time.msec = atoi(temp);
+	// Latitude
+	temp[0] = buffer[GPS_GGA_LAT_POS];
+	temp[1] = buffer[GPS_GGA_LAT_POS + 1];
+	temp[2] = '\0';
+	tag.latitude.deg = atoi(temp);
+	temp[0] = buffer[GPS_GGA_LAT_POS + 2];
+	temp[1] = buffer[GPS_GGA_LAT_POS + 3];
+	tag.latitude.min = atoi(temp);
+	temp[0] = buffer[GPS_GGA_LAT_POS + 5];
+	temp[1] = buffer[GPS_GGA_LAT_POS + 6];
+	temp[2] = buffer[GPS_GGA_LAT_POS + 7];
+	temp[3] = buffer[GPS_GGA_LAT_POS + 8];
+	temp[4] = '\0';
+	tag.latitude.sec = atoi(temp);
+	if(buffer[GPS_GGA_LAT_N_S_POS] == 'N') tag.latitude.north = true;
+	else tag.latitude.north = false;
+	// Longitude
+	
+	// Quality
+	
+	// Dilution
+	
+	// Altitude
+	
+	return tag;
+}
+static struct gps_tag gps_get_geodata(uint8_t retries)
+{
+	struct gps_tag cur_tag, avg_tag;
+	cur_tag = gps_get_geotag();
+	avg_tag = cur_tag;
+	return avg_tag;
+}
 void gps_config_uart(void)
 {
 	ret_code_t ret;
+	
+	// app timer used to generate the serial sequence
+    ret = app_timer_init();
+    APP_ERROR_CHECK(ret);
+
 	ret = nrf_serial_init(&gps_uart, &m_uart0_drv_config, &gps_config);
 	APP_ERROR_CHECK(ret);
-//	
-//	nrf_drv_uart_config_t const comm_params = {
-//		.pselrxd			= RX_PIN_NUMBER,
-//		.pseltxd			= TX_PIN_NUMBER,
-//		.pselrts			= RTS_PIN_NUMBER,
-//		.pselcts			= CTS_PIN_NUMBER,
-//		.hwfc				= NRF_UART_HWFC_DISABLED,
-//		.parity				= NRF_UART_PARITY_EXCLUDED,
-//		.baudrate			= NRF_UART_BAUDRATE_9600,
-//		.p_context			= NULL
-//	};
-//	
-//	err_code = nrf_drv_uart_init(&gps_uart, &comm_params, NULL);
-//	APP_ERROR_CHECK(err_code);
-//	nrf_drv_uart_rx_enable(&gps_uart);
 }
 
 static void sdc_fill_queue(void)
@@ -619,12 +695,6 @@ int main(void)
 	FRESULT ff_result;
 	ret_code_t ret;
 
-//    ret = nrf_drv_clock_init();
-//    APP_ERROR_CHECK(ret);
-//    nrf_drv_clock_lfclk_request(NULL);
-    ret = app_timer_init();
-    APP_ERROR_CHECK(ret);
-	
     bsp_board_leds_init();
 	
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
@@ -640,12 +710,45 @@ int main(void)
 	gpio_init();
 	gps_config_uart();
 	
+	uint8_t buf[256];
+	uint8_t cnt = 0;
 	while(true) {
-		char c;
-		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
-		APP_ERROR_CHECK(ret);
-		NRF_LOG_INFO("Ret: %c", c);
-		nrf_serial_flush(&gps_uart, 0);
+		struct gps_tag cur_tag = gps_get_geodata(1);
+		NRF_LOG_INFO("GPS time: %dh%dm%ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec);
+		NRF_LOG_INFO("GPS latitude: %ddeg %d'%d\", %s", 
+			cur_tag.latitude.deg, cur_tag.latitude.min,
+			cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
+		NRF_LOG_INFO("GPS longitude: %ddeg %d'%d\", %s", 
+			cur_tag.longitude.deg, cur_tag.longitude.min, 
+			cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
+//		char c;
+//		struct gps_tag cur_tag;
+//		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+//		APP_ERROR_CHECK(ret);
+//		buf[cnt] = c;
+//		cnt++;
+//		NRF_LOG_RAW_INFO("%02x ", c);
+//		if((c == 0x0A)) {
+//			NRF_LOG_INFO("Counter: %d", cnt)
+//			if((cnt == 74) && (buf[0] == 0x24)) {
+//				NRF_LOG_INFO("GPGGA found!");
+//				char temp[8];
+//				temp[0] = buf[GPS_GGA_TIME_POS];
+//				temp[1] = buf[GPS_GGA_TIME_POS + 1];
+//				temp[2] = '\0';
+//				cur_tag.time.h = atoi(temp);
+//				temp[0] = buf[GPS_GGA_TIME_POS + 2];
+//				temp[1] = buf[GPS_GGA_TIME_POS + 3];
+//				temp[2] = '\0';
+//				cur_tag.time.min = atoi(temp);
+//				temp[0] = buf[GPS_GGA_TIME_POS + 4];
+//				temp[1] = buf[GPS_GGA_TIME_POS + 5];
+//				temp[2] = '\0';
+//				cur_tag.time.sec = atoi(temp);
+//				NRF_LOG_INFO("Current time: %dh%dm%ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec);
+//			}
+//			cnt = 0;
+//		}
 	}
 
 //	card_status = sd_card_test();
