@@ -28,25 +28,21 @@ Project File Date:  03/23/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
-..\..\..\main.c(397): warning:  #188-D: enumerated type mixed with another type
+..\..\..\main.c(531): warning:  #188-D: enumerated type mixed with another type
   		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
 IMER_SHORTS_COMPARE0_CLEAR_Msk, 
 rue);
-..\..\..\main.c(879): warning:  #128-D: loop is not reachable
-      while (true)
-..\..\..\main.c(787): warning:  #177-D: variable "ret"  was declared but never referenced
+..\..\..\main.c(785): warning:  #177-D: variable "ret"  was declared but never referenced
   	ret_code_t ret;
-..\..\..\main.c(804): warning:  #177-D: variable "buf"  was declared but never referenced
-  	uint8_t buf[256];
-..\..\..\main.c(805): warning:  #177-D: variable "cnt"  was declared but never referenced
-  	uint8_t cnt = 0;
-..\..\..\main.c(763): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
+..\..\..\main.c(444): warning:  #177-D: function "gps_get_geodata"  was declared but never referenced
+  static struct gps_tag gps_get_geodata(uint8_t retries)
+..\..\..\main.c(761): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
   static void sdc_fill_queue(void)
-..\..\..\main.c: 6 warnings, 0 errors
+..\..\..\main.c: 4 warnings, 0 errors
 linking...
-Program Size: Code=21272 RO-data=2344 RW-data=244 ZI-data=20412  
+Program Size: Code=24504 RO-data=2272 RW-data=252 ZI-data=20412  
 FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 6 Warning(s).
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 4 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -75,7 +71,7 @@ Package Vendor: NordicSemiconductor
       Source file:   Device\Source\arm\arm_startup_nrf52.s
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:04
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
