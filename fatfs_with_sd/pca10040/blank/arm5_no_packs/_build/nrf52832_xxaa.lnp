@@ -24,6 +24,8 @@
 ".\_build\nrf_strerror.o"
 ".\_build\app_button.o"
 ".\_build\sdk_mapped_flags.o"
+".\_build\nrf_serial.o"
+".\_build\app_timer.o"
 ".\_build\nrf_log_backend_rtt.o"
 ".\_build\nrf_log_backend_serial.o"
 ".\_build\nrf_log_backend_uart.o"

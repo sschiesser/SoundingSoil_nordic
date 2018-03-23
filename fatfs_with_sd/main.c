@@ -59,11 +59,13 @@
 #include "nrf_block_dev_sdc.h"
 #include "nrf_queue.h"
 #include "nrf_delay.h"
+#include "nrf_serial.h"
 /* APP libraries */
 #include "app_util_platform.h"
 #include "app_error.h"
 #include "app_fifo.h"
 #include "app_uart.h"
+#include "app_timer.h"
 /* NRF DRV */
 #include "nrf_drv_spi.h"
 #include "nrf_drv_timer.h"
@@ -149,10 +151,39 @@ static const uint8_t					m_length = 2;
 /* ========================================================================== */
 /*                                   GPS                                      */
 /* ========================================================================== */
-#define UART_TX_BUF_SIZE 				256		/**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE 				256		/**< UART RX buffer size. */
-#define GPS_UART_INSTANCE				0
-static const nrf_drv_uart_t				gps_uart; // = NRF_DRV_UART_DEFAULT_CONFIG(GPS_UART_INSTANCE);
+
+#define APP_TIMER_PRESCALER     NRF_SERIAL_APP_TIMER_PRESCALER
+
+static void sleep_handler(void)
+{
+    __WFE();
+    __SEV();
+    __WFE();
+}
+
+NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uart0_drv_config,
+	RX_PIN_NUMBER, TX_PIN_NUMBER,
+	RTS_PIN_NUMBER, CTS_PIN_NUMBER,
+	NRF_UART_HWFC_ENABLED, NRF_UART_PARITY_EXCLUDED,
+	NRF_UART_BAUDRATE_9600, UART_DEFAULT_CONFIG_IRQ_PRIORITY);
+
+#define GPS_FIFO_TX_SIZE				32
+#define GPS_FIFO_RX_SIZE				32
+
+NRF_SERIAL_QUEUES_DEF(gps_queues, GPS_FIFO_TX_SIZE, GPS_FIFO_RX_SIZE);
+
+#define GPS_BUF_TX_SIZE					1
+#define GPS_BUF_RX_SIZE					1
+
+NRF_SERIAL_BUFFERS_DEF(gps_buffs, GPS_BUF_TX_SIZE, GPS_BUF_RX_SIZE);
+
+NRF_SERIAL_CONFIG_DEF(gps_config,
+	NRF_SERIAL_MODE_IRQ, &gps_queues,
+	&gps_buffs, NULL,
+	sleep_handler);
+
+NRF_SERIAL_UART_DEF(gps_uart, 0);
+
 
 /* ========================================================================== */
 /*                                    UI                                      */
@@ -161,6 +192,8 @@ static volatile bool					ui_rec_start_req = false;
 static volatile bool					ui_rec_stop_req = false;
 static volatile bool					ui_rec_running = false;
 static uint8_t							ui_sdc_init_cnt = 0;
+
+
 
 
 /* ========================================================================== */
@@ -540,22 +573,24 @@ FRESULT sdc_init_audio(void)
 
 void gps_config_uart(void)
 {
-	uint32_t err_code;
-	
-	nrf_drv_uart_config_t const comm_params = {
-		.pselrxd			= RX_PIN_NUMBER,
-		.pseltxd			= TX_PIN_NUMBER,
-		.pselrts			= RTS_PIN_NUMBER,
-		.pselcts			= CTS_PIN_NUMBER,
-		.hwfc				= NRF_UART_HWFC_DISABLED,
-		.parity				= NRF_UART_PARITY_EXCLUDED,
-		.baudrate			= NRF_UART_BAUDRATE_9600,
-		.p_context			= NULL
-	};
-	
-	err_code = nrf_drv_uart_init(&gps_uart, &comm_params, NULL);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_uart_rx_enable(&gps_uart);
+	ret_code_t ret;
+	ret = nrf_serial_init(&gps_uart, &m_uart0_drv_config, &gps_config);
+	APP_ERROR_CHECK(ret);
+//	
+//	nrf_drv_uart_config_t const comm_params = {
+//		.pselrxd			= RX_PIN_NUMBER,
+//		.pseltxd			= TX_PIN_NUMBER,
+//		.pselrts			= RTS_PIN_NUMBER,
+//		.pselcts			= CTS_PIN_NUMBER,
+//		.hwfc				= NRF_UART_HWFC_DISABLED,
+//		.parity				= NRF_UART_PARITY_EXCLUDED,
+//		.baudrate			= NRF_UART_BAUDRATE_9600,
+//		.p_context			= NULL
+//	};
+//	
+//	err_code = nrf_drv_uart_init(&gps_uart, &comm_params, NULL);
+//	APP_ERROR_CHECK(err_code);
+//	nrf_drv_uart_rx_enable(&gps_uart);
 }
 
 static void sdc_fill_queue(void)
@@ -582,6 +617,13 @@ int main(void)
 {
 	DSTATUS card_status;
 	FRESULT ff_result;
+	ret_code_t ret;
+
+//    ret = nrf_drv_clock_init();
+//    APP_ERROR_CHECK(ret);
+//    nrf_drv_clock_lfclk_request(NULL);
+    ret = app_timer_init();
+    APP_ERROR_CHECK(ret);
 	
     bsp_board_leds_init();
 	
@@ -598,13 +640,12 @@ int main(void)
 	gpio_init();
 	gps_config_uart();
 	
-	uint8_t temp_buf[256] = {0};
-	for(;;) {
-		uint8_t cr;
-		nrf_drv_uart_rx(&gps_uart, temp_buf, 92);
-		NRF_LOG_HEXDUMP_INFO(temp_buf, 92);
-		nrf_drv_gpiote_out_toggle(DBG1_PIN);
-		nrf_delay_ms(1000);
+	while(true) {
+		char c;
+		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+		APP_ERROR_CHECK(ret);
+		NRF_LOG_INFO("Ret: %c", c);
+		nrf_serial_flush(&gps_uart, 0);
 	}
 
 //	card_status = sd_card_test();
