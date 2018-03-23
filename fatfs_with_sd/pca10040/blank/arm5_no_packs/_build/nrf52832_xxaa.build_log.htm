@@ -28,39 +28,27 @@ Project File Date:  03/23/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
-..\..\..\main.c(368): warning:  #188-D: enumerated type mixed with another type
+..\..\..\main.c(370): warning:  #188-D: enumerated type mixed with another type
   		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
 IMER_SHORTS_COMPARE0_CLEAR_Msk, 
 rue);
-..\..\..\main.c(615): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.time.h = atoi(temp);
-..\..\..\main.c(618): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.time.min = atoi(temp);
-..\..\..\main.c(621): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.time.sec = atoi(temp);
-..\..\..\main.c(626): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.time.msec = atoi(temp);
-..\..\..\main.c(631): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.latitude.deg = atoi(temp);
-..\..\..\main.c(634): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.latitude.min = atoi(temp);
-..\..\..\main.c(640): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-  	tag.latitude.sec = atoi(temp);
-..\..\..\main.c(778): warning:  #128-D: loop is not reachable
+..\..\..\main.c(618): warning:  #177-D: variable "tok_cnt"  was declared but never referenced
+  	uint8_t tok_cnt = 15;
+..\..\..\main.c(824): warning:  #128-D: loop is not reachable
       while (true)
-..\..\..\main.c(696): warning:  #177-D: variable "ret"  was declared but never referenced
+..\..\..\main.c(742): warning:  #177-D: variable "ret"  was declared but never referenced
   	ret_code_t ret;
-..\..\..\main.c(713): warning:  #177-D: variable "buf"  was declared but never referenced
+..\..\..\main.c(759): warning:  #177-D: variable "buf"  was declared but never referenced
   	uint8_t buf[256];
-..\..\..\main.c(714): warning:  #177-D: variable "cnt"  was declared but never referenced
+..\..\..\main.c(760): warning:  #177-D: variable "cnt"  was declared but never referenced
   	uint8_t cnt = 0;
-..\..\..\main.c(672): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
+..\..\..\main.c(718): warning:  #177-D: function "sdc_fill_queue"  was declared but never referenced
   static void sdc_fill_queue(void)
-..\..\..\main.c: 13 warnings, 0 errors
+..\..\..\main.c: 7 warnings, 0 errors
 linking...
-Program Size: Code=19104 RO-data=2272 RW-data=240 ZI-data=20408  
+Program Size: Code=18756 RO-data=2272 RW-data=244 ZI-data=20412  
 FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 13 Warning(s).
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 7 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -89,7 +77,7 @@ Package Vendor: NordicSemiconductor
       Include file:  Device\Include\system_nrf52.h
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
