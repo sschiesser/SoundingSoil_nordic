@@ -154,6 +154,23 @@ static const uint8_t					m_length = 2;
 #define GPS_NMEA_MAX_SIZE				100
 #define GPS_NMEA_START_CHAR				0x24
 #define GPS_NMEA_STOP_CHAR				0x0A
+#define GPS_GGA_HEADER_TOK				0
+#define GPS_GGA_TIME_TOK				1
+#define GPS_GGA_LAT_TOK					2
+#define GPS_GGA_N_S_TOK					3
+#define GPS_GGA_LONG_TOK				4
+#define GPS_GGA_E_W_TOK					5
+#define GPS_GGA_QUAL_TOK				6
+#define GPS_GGA_SAT_TOK					7
+#define GPS_GGA_DIL_TOK					8
+#define GPS_GGA_ALT_TOK					9
+#define GPS_GGA_ALT_UNIT_TOK			10
+#define GPS_GGA_GEO_TOK					11
+#define GPS_GGA_GEO_UNIT_TOK			12
+#define GPS_GGA_DELTA_TOK				13
+#define GPS_GGA_ST_ID_TOK				14
+#define GPS_GGA_CHKS_TOK				15
+#define GPS_GGA_TOKEN_MAX				16
 //#define GPS_GGA_SIZE					74
 //#define GPS_GGA_TIME_POS				7
 //#define GPS_GGA_TIME_LEN				10
@@ -190,13 +207,23 @@ struct gps_long {
 	uint16_t sec;
 	bool east;
 };
+struct gps_altitude {
+	float number;
+	bool m_unit;
+};
+struct gps_geoid {
+	float number;
+	bool m_unit;
+};
 struct gps_tag {
 	struct gps_time time;
 	struct gps_lat latitude;
 	struct gps_long longitude;
 	uint8_t quality;
+	uint8_t satellites;
 	float dilution;
-	int16_t altitude;
+	struct gps_altitude altitude;
+	struct gps_geoid geoid;
 	char raw_tag[GPS_NMEA_MAX_SIZE];
 	uint8_t length;
 };
@@ -590,118 +617,136 @@ FRESULT sdc_init_audio(void)
 static struct gps_tag gps_get_geotag(void)
 {
 	struct gps_tag tag;
-	ret_code_t ret;
-	char *p_str;
-	char c;
-	char buffer[GPS_NMEA_MAX_SIZE];
 	uint8_t cnt = 0;
-	bool reading = true;
-	
-	while(reading) {
-		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
-		APP_ERROR_CHECK(ret);
-		buffer[cnt++] = c;
-		if(c == GPS_NMEA_STOP_CHAR) {
-			if(buffer[0] == GPS_NMEA_START_CHAR) {
-				static char comp[7] = "$GPGGA";
-				p_str = strstr(buffer, comp);
-				if(p_str != NULL) {
-					strcpy(tag.raw_tag, buffer);
-					tag.length = strlen(buffer);
-					reading = false;
-				}
-			}
-		cnt = 0;
-		}
-	}
-	char tokens[16][16];
-	uint8_t tok_cnt = 15;
-	const char delim[2] = ",";
-	p_str = strtok(tag.raw_tag, delim);
-	while(p_str != NULL) {
-		strcpy(tokens[cnt], p_str+1);
-		NRF_LOG_INFO("str: %s", tokens[cnt]);
-		cnt--;
-		strcpy(buffer, p_str+1);
-		p_str = strtok(buffer, delim);
-	}
-//	for(uint8_t i = 0; i < 16; i++) {
-//		NRF_LOG_INFO("T%d: %s", i, tokens[i]);
+/* REAL UART */
+//	char c; // Read UART character
+//	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
+//	ret_code_t ret; // Return value of the nrf_serial_read function
+//	bool reading = true; // Reading flag
+//	char *p_str; // Pointer on the string comparison result
+//	while(reading) {
+//		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+//		APP_ERROR_CHECK(ret);
+//		uart_buf[cnt++] = c;
+//		if(c == GPS_NMEA_STOP_CHAR) {
+//			if(uart_buf[0] == GPS_NMEA_START_CHAR) {
+//				static char comp[7] = "$GPGGA";
+//				p_str = strstr(uart_buf, comp);
+//				if(p_str != NULL) {
+//					strcpy(tag.raw_tag, uart_buf);
+//					tag.length = strlen(uart_buf);
+//					reading = false;
+//				}
+//			}
+//		cnt = 0;
+//		}
 //	}
-	// Time
-//	p_str = strchr(tag.raw_tag, ',');
-//	if(p_str != NULL) strcpy(buffer, p_str+1);
+/* FAKE UART */
+	strcpy(tag.raw_tag, "$GPGGA,123519.123,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47");
+/* ------------------------ */
+	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
+	char *tokens[GPS_GGA_TOKEN_MAX];
+	cnt = 0;
+	const char delim[2] = ",";
+	tokens[cnt] = strtok(tag.raw_tag, delim);
+	while(tokens[cnt] != NULL) {
+		cnt++;
+		tokens[cnt] = strtok(NULL, delim);
+	}
 	
-//	temp[0] = buffer[GPS_GGA_TIME_POS];
-//	temp[1] = buffer[GPS_GGA_TIME_POS + 1];
-//	temp[2] = '\0';
-//	tag.time.h = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_TIME_POS + 2];
-//	temp[1] = buffer[GPS_GGA_TIME_POS + 3];
-//	tag.time.min = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_TIME_POS + 4];
-//	temp[1] = buffer[GPS_GGA_TIME_POS + 5];
-//	tag.time.sec = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_TIME_POS + 7];
-//	temp[1] = buffer[GPS_GGA_TIME_POS + 8];
-//	temp[2] = buffer[GPS_GGA_TIME_POS + 9];
-//	temp[3] = '\0';
-//	tag.time.msec = atoi(temp);
-//	// Latitude
-//	temp[0] = buffer[GPS_GGA_LAT_POS];
-//	temp[1] = buffer[GPS_GGA_LAT_POS + 1];
-//	temp[2] = '\0';
-//	tag.latitude.deg = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_LAT_POS + 2];
-//	temp[1] = buffer[GPS_GGA_LAT_POS + 3];
-//	tag.latitude.min = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_LAT_POS + 5];
-//	temp[1] = buffer[GPS_GGA_LAT_POS + 6];
-//	temp[2] = buffer[GPS_GGA_LAT_POS + 7];
-//	temp[3] = buffer[GPS_GGA_LAT_POS + 8];
-//	temp[4] = '\0';
-//	tag.latitude.sec = atoi(temp);
-//	if(buffer[GPS_GGA_LAT_N_S_POS] == 'N') tag.latitude.north = true;
-//	else tag.latitude.north = false;
-//	// Longitude
-//	temp[0] = buffer[GPS_GGA_LONG_POS];
-//	temp[1] = buffer[GPS_GGA_LONG_POS + 1];
-//	temp[2] = buffer[GPS_GGA_LONG_POS + 2];
-//	temp[3] = '\0';
-//	tag.longitude.deg = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_LONG_POS + 3];
-//	temp[1] = buffer[GPS_GGA_LONG_POS + 4];
-//	temp[2] = '\0';
-//	tag.longitude.min = atoi(temp);
-//	temp[0] = buffer[GPS_GGA_LONG_POS + 6];
-//	temp[1] = buffer[GPS_GGA_LONG_POS + 7];
-//	temp[2] = buffer[GPS_GGA_LONG_POS + 8];
-//	temp[3] = buffer[GPS_GGA_LONG_POS + 9];
-//	temp[4] = '\0';
-//	tag.longitude.sec = atoi(temp);
-//	if(buffer[GPS_GGA_LONG_E_W_POS] == 'E') tag.longitude.east = true;
-//	else tag.longitude.east = false;
-//	// Quality
-//	temp[0] = buffer[GPS_GGA_QUAL_POS];
-//	temp[1] = '\0';
-//	tag.quality = atoi(temp);
-//	// Dilution
-//	temp[0] = buffer[GPS_GGA_DIL_POS];
-//	temp[1] = '\0';
-//	tag.dilution = atoi(temp);
-//	// Altitude
-//	temp[0] = buffer[GPS_GGA_ALT_POS];
-//	temp[1] = buffer[GPS_GGA_ALT_POS + 1];
-//	temp[2] = buffer[GPS_GGA_ALT_POS + 2];
+	char temp[12];
+	uint8_t len;
+	// Time
+	len = 2;
+	strncpy(temp, tokens[GPS_GGA_TIME_TOK], len);
+	temp[len] = '\0';
+	tag.time.h = atoi(temp);
+	strncpy(temp, tokens[GPS_GGA_TIME_TOK]+2, len);
+	temp[len] = '\0';
+	tag.time.min = atoi(temp);
+	strncpy(temp, tokens[GPS_GGA_TIME_TOK]+4, len);
+	temp[len] = '\0';
+	tag.time.sec = atoi(temp);
+	if(strchr(tokens[GPS_GGA_TIME_TOK], '.') != NULL) {
+		len = 3;
+		strncpy(temp, tokens[GPS_GGA_TIME_TOK]+7, len);
+		temp[len] = '\0';
+		tag.time.msec = atoi(temp);
+	}
+	// Latitude
+	len = 2;
+	strncpy(temp, tokens[GPS_GGA_LAT_TOK], len);
+	temp[len] = '\0';
+	tag.latitude.deg = atoi(temp);
+	strncpy(temp, tokens[GPS_GGA_LAT_TOK]+2, len);
+	temp[len] = '\0';
+	tag.latitude.min = atoi(temp);
+	len = 3;
+	strncpy(temp, tokens[GPS_GGA_LAT_TOK]+5, len);
+	temp[len] = '\0';
+	tag.latitude.sec = atoi(temp);
+	if(strncmp(tokens[GPS_GGA_N_S_TOK], "N", 1) == 0) tag.latitude.north = true;
+	else tag.latitude.north = false;
+	// Longitude
+	len = 3;
+	strncpy(temp, tokens[GPS_GGA_LONG_TOK], len);
+	temp[len] = '\0';
+	tag.longitude.deg = atoi(temp);
+	len = 2;
+	strncpy(temp, tokens[GPS_GGA_LONG_TOK]+3, len);
+	temp[len] = '\0';
+	tag.longitude.min = atoi(temp);
+	len = 3;
+	strncpy(temp, tokens[GPS_GGA_LONG_TOK]+6, len);
+	temp[len] = '\0';
+	tag.longitude.sec = atoi(temp);
+	if(strncmp(tokens[GPS_GGA_E_W_TOK], "E", 1) == 0) tag.longitude.east = true;
+	else tag.longitude.east = false;
+	// Quality
+	strncpy(temp, tokens[GPS_GGA_QUAL_TOK], strlen(tokens[GPS_GGA_QUAL_TOK]));
+	temp[1] = '\0';
+	tag.quality = atoi(temp);
+	// Satellites
+	len = strlen(tokens[GPS_GGA_SAT_TOK]);
+	strncpy(temp, tokens[GPS_GGA_SAT_TOK], len);
+	temp[len] = '\0';
+	tag.satellites = atoi(temp);
+	// Dilution
+	len = strlen(tokens[GPS_GGA_DIL_TOK]);
+	strncpy(temp, tokens[GPS_GGA_DIL_TOK], len);
+	temp[len] = '\0';
+	tag.dilution = atof(temp);
+	// Altitude
+	len = strlen(tokens[GPS_GGA_ALT_TOK]);
+	strncpy(temp, tokens[GPS_GGA_ALT_TOK], len);
+	temp[len] = '\0';
+	tag.altitude.number = atof(temp);
+	if(strncmp(tokens[GPS_GGA_ALT_UNIT_TOK], "M", 1) == 0) tag.altitude.m_unit = true;
+	else tag.altitude.m_unit = false;
+	// Geoid
+	len = strlen(tokens[GPS_GGA_GEO_TOK]);
+	strncpy(temp, tokens[GPS_GGA_GEO_TOK], len);
+	temp[len] = '\0';
+	tag.geoid.number = atof(temp);
+	if(strncmp(tokens[GPS_GGA_GEO_UNIT_TOK], "M", 1) == 0) tag.geoid.m_unit = true;
+	else tag.geoid.m_unit = false;
 	
 	return tag;
 }
 static struct gps_tag gps_get_geodata(uint8_t retries)
 {
-	struct gps_tag cur_tag, avg_tag;
-	cur_tag = gps_get_geotag();
-	avg_tag = cur_tag;
-	return avg_tag;
+	const uint8_t tag_nb = 3;
+	struct gps_tag cur_tag, ret_tag, tags[tag_nb];
+	uint8_t tag_cnt = 0;
+	while(tag_cnt < tag_nb) {
+		cur_tag = gps_get_geotag();
+		if(cur_tag.quality == 1) tags[tag_cnt++] = cur_tag;
+	}
+	for(uint8_t i = 0; i < (tag_nb-1); i++) {
+		if(tags[i].dilution < tags[i+1].dilution) ret_tag = tags[i];
+		else ret_tag = tags[i+1];
+	}
+	return ret_tag;
 }
 void gps_config_uart(void)
 {
@@ -760,13 +805,23 @@ int main(void)
 	uint8_t cnt = 0;
 	while(true) {
 		struct gps_tag cur_tag = gps_get_geodata(1);
-		NRF_LOG_INFO("GPS time: %dh%dm%ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec);
+		NRF_LOG_INFO("GPS time: %dh%dm%d.%ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec, cur_tag.time.msec);
 		NRF_LOG_INFO("GPS latitude: %d°%d'%d\" %s", 
 			cur_tag.latitude.deg, cur_tag.latitude.min,
 			cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
 		NRF_LOG_INFO("GPS longitude: %d°%d'%d\" %s", 
 			cur_tag.longitude.deg, cur_tag.longitude.min, 
 			cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
+		NRF_LOG_INFO("GPS quality: %d", 
+			cur_tag.quality);
+		NRF_LOG_INFO("GPS horiz. dilution: " NRF_LOG_FLOAT_MARKER,
+			NRF_LOG_FLOAT(cur_tag.dilution));
+		NRF_LOG_INFO("GPS altitude: " NRF_LOG_FLOAT_MARKER " %s",
+			NRF_LOG_FLOAT(cur_tag.altitude.number), (cur_tag.altitude.m_unit) ? "m" : "?");
+		NRF_LOG_INFO("GPS geoid: " NRF_LOG_FLOAT_MARKER " %s",
+			NRF_LOG_FLOAT(cur_tag.geoid.number), (cur_tag.geoid.m_unit) ? "m" : "?");
+		
+		nrf_delay_ms(1000);
 //		char c;
 //		struct gps_tag cur_tag;
 //		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
