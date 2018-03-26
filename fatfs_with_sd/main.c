@@ -187,7 +187,7 @@ static const uint8_t					m_length = 2;
 #define GPS_RMC_DATE_TOK				9
 #define GPS_RMC_MVAR_TOK				10
 #define GPS_RMC_MVAR_E_W_TOK			11
-#define GPS_RMC_CHKS_TOK				12
+#define GPS_RMC_INT_CHKS_TOK			12
 #define GPS_RMC_TOKEN_MAX				13
 
 #define GPS_CONV_KNOT_TO_KMH			(1.852)
@@ -258,6 +258,7 @@ struct gps_rmc_tag {
 	float track_angle;
 	struct gps_date date;
 	struct gps_variation mvar;
+	char sig_int;
 	char raw_tag[GPS_NMEA_MAX_SIZE];
 	uint8_t length;
 };
@@ -283,7 +284,30 @@ static volatile bool					ui_rec_running = false;
 static uint8_t							ui_sdc_init_cnt = 0;
 
 
-
+/* ========================================================================== */
+/*                              UTIL FUNCTIONS                                */
+/* ========================================================================== */
+static char * strslice(char * str, char const * delim)
+{
+	static char * src = NULL;
+	char * p, * ret = 0;
+	
+	if(str != NULL) src = str;
+	
+	if (src == NULL) return NULL;
+	
+	if((p = strpbrk(src, delim)) != NULL) {
+		*p = 0;
+		ret = src;
+		src = ++p;
+	}
+	else if(*src) {
+		ret = src;
+		src = NULL;
+	}
+	
+	return ret;
+}
 
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
@@ -361,30 +385,30 @@ static struct gps_gga_tag gps_get_gga_geotag(void)
 	struct gps_gga_tag tag;
 	uint8_t cnt = 0;
 /* REAL UART */
-//	char c; // Read UART character
-//	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
-//	ret_code_t ret; // Return value of the nrf_serial_read function
-//	bool reading = true; // Reading flag
-//	char *p_str; // Pointer on the string comparison result
-//	while(reading) {
-//		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
-//		APP_ERROR_CHECK(ret);
-//		uart_buf[cnt++] = c;
-//		if(c == GPS_NMEA_STOP_CHAR) {
-//			if(uart_buf[0] == GPS_NMEA_START_CHAR) {
-//				static char comp[7] = "$GPGGA";
-//				p_str = strstr(uart_buf, comp);
-//				if(p_str != NULL) {
-//					strcpy(tag.raw_tag, uart_buf);
-//					tag.length = strlen(uart_buf);
-//					reading = false;
-//				}
-//			}
-//		cnt = 0;
-//		}
-//	}
+	char c; // Read UART character
+	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
+	ret_code_t ret; // Return value of the nrf_serial_read function
+	bool reading = true; // Reading flag
+	char *p_str; // Pointer on the string comparison result
+	while(reading) {
+		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+		APP_ERROR_CHECK(ret);
+		uart_buf[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) {
+			if(uart_buf[0] == GPS_NMEA_START_CHAR) {
+				static char comp[7] = "$GPGGA";
+				p_str = strstr(uart_buf, comp);
+				if(p_str != NULL) {
+					strcpy(tag.raw_tag, uart_buf);
+					tag.length = strlen(uart_buf);
+					reading = false;
+				}
+			}
+		cnt = 0;
+		}
+	}
 /* FAKE UART */
-	strcpy(tag.raw_tag, "$GPGGA,123519.123,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47");
+//	strcpy(tag.raw_tag, "$GPGGA,123519.123,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47");
 /* ------------------------ */
 //	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_GGA_TOKEN_MAX];
@@ -481,41 +505,49 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 {
 	struct gps_rmc_tag tag;
 	uint8_t cnt = 0;
+	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-//	char c; // Read UART character
-//	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
-//	ret_code_t ret; // Return value of the nrf_serial_read function
-//	bool reading = true; // Reading flag
-//	char *p_str; // Pointer on the string comparison result
-//	while(reading) {
-//		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
-//		APP_ERROR_CHECK(ret);
-//		uart_buf[cnt++] = c;
-//		if(c == GPS_NMEA_STOP_CHAR) {
-//			if(uart_buf[0] == GPS_NMEA_START_CHAR) {
-//				static char comp[7] = "$GPGGA";
-//				p_str = strstr(uart_buf, comp);
-//				if(p_str != NULL) {
-//					strcpy(tag.raw_tag, uart_buf);
-//					tag.length = strlen(uart_buf);
-//					reading = false;
-//				}
-//			}
-//		cnt = 0;
-//		}
-//	}
+	char c; // Read UART character
+	ret_code_t ret; // Return value of the nrf_serial_read function
+	bool reading = true; // Reading flag
+	char *p_str; // Pointer on the string comparison result
+	while(reading) {
+		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1000);
+		APP_ERROR_CHECK(ret);
+//		NRF_LOG_RAW_INFO("%c", c);
+		uart_buf[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) {
+			NRF_LOG_DEBUG("STOP!")
+			if(uart_buf[0] == GPS_NMEA_START_CHAR) {
+				NRF_LOG_DEBUG("START!");
+				static char comp[7] = "$GPRMC";
+				p_str = strstr(uart_buf, comp);
+				if(p_str != NULL) {
+					strcpy(tag.raw_tag, uart_buf);
+					tag.length = strlen(uart_buf);
+					NRF_LOG_DEBUG("FOUND! %s (%d)", tag.raw_tag, tag.length);
+					reading = false;
+				}
+			}
+		cnt = 0;
+		}
+	}
 /* FAKE UART */
-	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A");
+//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
 /* ------------------------ */
 //	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
 	cnt = 0;
 	const char delim[2] = ",";
-	tokens[cnt] = strtok(tag.raw_tag, delim);
+	strcpy(uart_buf, tag.raw_tag);
+	tokens[cnt] = strslice(uart_buf, delim);
 	while(tokens[cnt] != NULL) {
 		cnt++;
-		tokens[cnt] = strtok(NULL, delim);
+		tokens[cnt] = strslice(NULL, delim);
 	}
+//	for(uint8_t i = 0; i < GPS_RMC_TOKEN_MAX; i++) {
+//		NRF_LOG_INFO("t[%d]: %s", i, tokens[i]);
+//	}
 	
 	char temp[12];
 	uint8_t len;
@@ -530,7 +562,6 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	strncpy(temp, tokens[GPS_RMC_TIME_TOK]+4, len);
 	temp[len] = '\0';
 	tag.time.sec = atoi(temp);
-//	NRF_LOG_INFO("Searching for '.'... %d", strchr(tokens[GPS_RMC_TIME_TOK], '.'));
 	if(strchr(tokens[GPS_RMC_TIME_TOK], '.') != NULL) {
 		len = 3;
 		strncpy(temp, tokens[GPS_RMC_TIME_TOK]+7, len);
@@ -579,7 +610,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	tag.speed.knots = atof(temp);
 	tag.speed.mph = tag.speed.knots * (float)GPS_CONV_KNOT_TO_MPH;
 	tag.speed.kmh = tag.speed.knots * (float)GPS_CONV_KNOT_TO_KMH;
-	// Track angle
+	// Track angle	NRF_LOG_INFO("Tangle len: %d", strlen(tokens[GPS_RMC_TANGLE_TOK]));
 	len = strlen(tokens[GPS_RMC_TANGLE_TOK]);
 	strncpy(temp, tokens[GPS_RMC_TANGLE_TOK], len);
 	temp[len] = '\0';
@@ -602,6 +633,11 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	tag.mvar.angle = atof(temp);
 	if(strncmp(tokens[GPS_RMC_MVAR_E_W_TOK], "E", 1) == 0) tag.mvar.east = true;
 	else tag.mvar.east = false;
+	// Signal integrity
+	len = 1;
+	strncpy(temp, tokens[GPS_RMC_INT_CHKS_TOK], len);
+	temp[len] = '\0';
+	tag.sig_int = temp[0];
 	
 	return tag;
 }
@@ -963,19 +999,25 @@ int main(void)
 	gps_config_uart();
 	
 	while(true) {
-		struct gps_rmc_tag cur_tag = gps_get_geodata(4);
-		NRF_LOG_INFO("GPS data: %02d.%02d.%02d", cur_tag.date.day, cur_tag.date.month, cur_tag.date.year);
-		NRF_LOG_INFO("GPS time: %02dh%02dm%02d.%03ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec, cur_tag.time.msec);
-		NRF_LOG_INFO("GPS latitude: %02d°%02d'%03d\" %s", 
-			cur_tag.latitude.deg, cur_tag.latitude.min,
-			cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
-		NRF_LOG_INFO("GPS longitude: %03d°%02d'%03d\" %s", 
-			cur_tag.longitude.deg, cur_tag.longitude.min, 
-			cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
-		NRF_LOG_INFO("GPS speed: " NRF_LOG_FLOAT_MARKER " km/h", NRF_LOG_FLOAT(cur_tag.speed.kmh));
-		NRF_LOG_RAW_INFO("GPS track angle: " NRF_LOG_FLOAT_MARKER "°, ", NRF_LOG_FLOAT(cur_tag.track_angle));
-		NRF_LOG_RAW_INFO("variation: " NRF_LOG_FLOAT_MARKER " %s\n\r", 
-			NRF_LOG_FLOAT(cur_tag.mvar.angle), (cur_tag.mvar.east) ? "E" : "W");
+		struct gps_rmc_tag cur_tag = gps_get_rmc_geotag();
+		if(cur_tag.status_active) {
+			NRF_LOG_INFO("GPS data: %02d.%02d.%02d", cur_tag.date.day, cur_tag.date.month, cur_tag.date.year);
+			NRF_LOG_INFO("GPS time: %02dh%02dm%02d.%03ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec, cur_tag.time.msec);
+			NRF_LOG_INFO("GPS latitude: %02d°%02d'%03d\" %s", 
+				cur_tag.latitude.deg, cur_tag.latitude.min,
+				cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
+			NRF_LOG_INFO("GPS longitude: %03d°%02d'%03d\" %s", 
+				cur_tag.longitude.deg, cur_tag.longitude.min, 
+				cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
+			NRF_LOG_INFO("GPS speed: " NRF_LOG_FLOAT_MARKER " km/h", NRF_LOG_FLOAT(cur_tag.speed.kmh));
+			NRF_LOG_INFO("GPS track angle: " NRF_LOG_FLOAT_MARKER "°", NRF_LOG_FLOAT(cur_tag.track_angle));
+			NRF_LOG_INFO("Mag variation: " NRF_LOG_FLOAT_MARKER " %s", 
+				NRF_LOG_FLOAT(cur_tag.mvar.angle), (cur_tag.mvar.east) ? "E" : "W");
+			NRF_LOG_INFO("Integrity: %c", cur_tag.sig_int);
+		}
+		else {
+			NRF_LOG_INFO("Signal not valid!!");
+		}
 //		NRF_LOG_INFO("GPS quality: %d", 
 //			cur_tag.quality);
 //		NRF_LOG_INFO("GPS horiz. dilution: " NRF_LOG_FLOAT_MARKER,
@@ -985,7 +1027,7 @@ int main(void)
 //		NRF_LOG_INFO("GPS geoid: " NRF_LOG_FLOAT_MARKER " %s",
 //			NRF_LOG_FLOAT(cur_tag.geoid.number), (cur_tag.geoid.m_unit) ? "m" : "?");
 		
-		nrf_delay_ms(1000);
+//		nrf_delay_ms(1000);
 	}
 
 //	card_status = sd_card_test();
