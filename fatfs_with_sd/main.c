@@ -81,10 +81,8 @@
 /* ========================================================================== */
 /*                                   DEBUG                                    */
 /* ========================================================================== */
-#define DBG0_PIN						9
-#define DBG1_PIN						10
-#define DBG2_PIN						11
-#define DBG3_PIN						12
+#define DBG0_PIN						11
+#define DBG1_PIN						12
 #define DBG_CURRENT_FOLDER				"180322"
 #define DBG_CURRENT_FILE				"R123456.wav"
 #define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
@@ -104,7 +102,7 @@
 /* ========================================================================== */
 /*                              ADC to SDC FIFO                               */
 /* ========================================================================== */
-#define FIFO_DATA_SIZE					4096
+#define FIFO_DATA_SIZE					8192
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
@@ -119,8 +117,8 @@ uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
 
-#define SDC_BLOCK_SIZE					SDC_SECTOR_SIZE
-static uint8_t 							data_buffer[FIFO_DATA_SIZE];
+#define SDC_BLOCK_SIZE					(SDC_SECTOR_SIZE)
+static uint8_t 							data_buffer[FIFO_DATA_SIZE] = {0};
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
@@ -157,7 +155,6 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool 					adc_spi_xfer_done = false;
 static volatile uint16_t 				adc_spi_xfer_counter = 0;
-static volatile uint32_t				adc_frame_cnt = 0;
 static volatile uint32_t				adc_total_samples = 0;
 
 // Audio buffer
@@ -705,19 +702,20 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t buf_size = 2;
 	app_fifo_write(&m_adc2sd_fifo, m_rx_buf, &buf_size);
+	
 	if(adc_spi_xfer_counter < (SDC_BLOCK_SIZE-1)) {
 		adc_spi_xfer_counter++;
 	}
 	else {
-//		DBG_TOGGLE(DBG1_PIN);
+		DBG_TOGGLE(DBG0_PIN);
 		adc_total_samples += (2*adc_spi_xfer_counter);
-		adc_spi_xfer_counter = 0;
 		if(!sdc_writing) {
 			sdc_rtw = true;
 		}
 		else {
 			sdc_block_cnt++;
 		}
+		adc_spi_xfer_counter = 0;
 	}
 	adc_spi_xfer_done = true;
 }
@@ -726,7 +724,6 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 // TIMER for ADC
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
-//	DBG_TOGGLE(DBG0_PIN);
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
@@ -781,11 +778,7 @@ static void gpio_init(void)
 	APP_ERROR_CHECK(err_code);
 	err_code = nrf_drv_gpiote_out_init(DBG1_PIN, &out_config);
 	APP_ERROR_CHECK(err_code);
-	err_code = nrf_drv_gpiote_out_init(DBG2_PIN, &out_config);
-	APP_ERROR_CHECK(err_code);
-	err_code = nrf_drv_gpiote_out_init(DBG3_PIN, &out_config);
-	APP_ERROR_CHECK(err_code);
-	
+
 	/* Setting board buttons as GPIOTE inputs */
 	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
 	in_config.pull = NRF_GPIO_PIN_PULLUP;	
@@ -976,7 +969,13 @@ FRESULT sdc_init_audio(void)
 			NRF_LOG_INFO("Error while creating new file: #%d", res);
 			return res;
 		}
+		NRF_LOG_INFO("Writing 0s...");
+		for(uint32_t i = 0; i < (16 * SDC_BLOCK_SIZE); i++) {
+			f_write(&recording_fil, data_buffer, SDC_BLOCK_SIZE, (UINT *)&bytes);
+		}
+		NRF_LOG_INFO("Done!");
 			
+		f_lseek(&recording_fil, 0);
 		res = f_write(&recording_fil, wave_header, 44, (UINT *)&bytes);
 		if(res != FR_OK) {
 			NRF_LOG_INFO("Error while writing WAV header: #%d", res);
@@ -991,7 +990,7 @@ FRESULT sdc_init_audio(void)
 FRESULT sdc_close_audio(void)
 {
 	FRESULT res;
-//	UINT bytes;
+	UINT bytes;
 	
 	((uint16_t *)&wave_header)[WAVE_FORMAT_NUM_CHANNEL_OFFSET/2] = AUDIO_NUM_CHANNELS;
 	((uint16_t *)&wave_header)[WAVE_FORMAT_BITS_PER_SAMPLE_OFFSET/2] = AUDIO_BITS_PER_SAMPLE;
@@ -1002,6 +1001,7 @@ FRESULT sdc_close_audio(void)
 	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = (adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
 	
 	res = f_lseek(&recording_fil, 0);
+	res = f_write(&recording_fil, wave_header, 44, &bytes);
 	if(res == FR_OK) {
 		res = f_close(&recording_fil);
 	}
@@ -1028,8 +1028,8 @@ static void sdc_fill_queue(void)
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
 	sdc_writing = true;
+	DBG_TOGGLE(DBG1_PIN);
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
-	nrf_drv_gpiote_out_toggle(DBG3_PIN);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
 		sdc_writing = false;
@@ -1112,7 +1112,6 @@ int main(void)
 
     while (true)
     {
-		
 		if(ui_rec_start_req) {
 			NRF_LOG_INFO("Start request received");
 			card_status = sdc_init();
@@ -1125,6 +1124,7 @@ int main(void)
 					if(ff_result == FR_OK) {
 						NRF_LOG_INFO("Audio file ready to record.");
 						LED_ON(BSP_LED_0);
+//						DBG_TOGGLE(DBG0_PIN);
 						ui_rec_start_req = false;
 						ui_rec_running = true;
 						sdc_init_ok = true;
@@ -1159,6 +1159,7 @@ int main(void)
 			NRF_LOG_INFO("Stop request received");
 			ff_result = sdc_close_audio();
 			LED_OFF(BSP_LED_0);
+//			DBG_TOGGLE(DBG0_PIN);
 			if(ff_result == FR_OK) {
 				NRF_LOG_INFO("Done!");
 			}
@@ -1176,16 +1177,17 @@ int main(void)
 			adc_spi_xfer_done = true;
 			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 		}
+		
 		if(sdc_rtw) {
-			bsp_board_led_invert(BSP_BOARD_LED_3);
 			sdc_rtw = false;
 			sdc_fill_queue();
 		}
 		else if(sdc_block_cnt > 0) {
-			NRF_LOG_INFO("Decounting FIFO...");
+//			NRF_LOG_INFO("Decounting FIFO...");
 			sdc_block_cnt--;
 			sdc_fill_queue();
 		}
+		
         __WFE();
     }
 }
