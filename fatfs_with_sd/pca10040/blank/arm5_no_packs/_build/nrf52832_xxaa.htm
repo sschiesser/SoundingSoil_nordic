@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 10 10:16:17 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 10 10:45:28 2018
 <BR><P>
 <H3>Maximum Stack Usage =        928 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -729,6 +729,7 @@ Global Symbols
 <LI><a href="#[106]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_init
 <LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_config_timer
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_config_spi
+<LI><a href="#[3a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_handler
 <LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_init
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_block_write
 <LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_block_read
@@ -737,7 +738,6 @@ Global Symbols
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_pt_write
 <LI><a href="#[192]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_pt_read
 <LI><a href="#[18f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_pt_identification
-<LI><a href="#[3a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_handler
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
@@ -816,8 +816,8 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_uninit
 <LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_gpio_cfg
 </UL>
-<BR>[Called By]<UL><LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;spi_handler
-<LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;block_dev_sdc_uninit
+<BR>[Called By]<UL><LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;block_dev_sdc_uninit
+<LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;spi_handler
 </UL>
 
 <P><STRONG><a name="[ab]"></a>app_timer_init</STRONG> (Thumb, 70 bytes, Stack size 8 bytes, app_timer.o(i.app_timer_init))
@@ -2809,8 +2809,8 @@ Local Symbols
 <P><STRONG><a name="[41]"></a>block_dev_sdc_init</STRONG> (Thumb, 120 bytes, Stack size 40 bytes, nrf_block_dev_sdc.o(i.block_dev_sdc_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 448<LI>Call Chain = block_dev_sdc_init &rArr; app_sdc_init &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_init
-<LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
+<BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
+<LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_init
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> nrf_block_dev_sdc.o(.constdata)
 </UL>
@@ -2822,9 +2822,9 @@ Local Symbols
 <P><STRONG><a name="[43]"></a>block_dev_sdc_read_req</STRONG> (Thumb, 126 bytes, Stack size 40 bytes, nrf_block_dev_sdc.o(i.block_dev_sdc_read_req))
 <BR><BR>[Stack]<UL><LI>Max Depth = 496<LI>Call Chain = block_dev_sdc_read_req &rArr; app_sdc_block_read &rArr; sdc_cmd &rArr; sdc_spi_transfer &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
+<BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
+<LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
 <LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_block_read
-<LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> nrf_block_dev_sdc.o(.constdata)
 </UL>
@@ -2839,9 +2839,9 @@ Local Symbols
 <P><STRONG><a name="[44]"></a>block_dev_sdc_write_req</STRONG> (Thumb, 126 bytes, Stack size 40 bytes, nrf_block_dev_sdc.o(i.block_dev_sdc_write_req))
 <BR><BR>[Stack]<UL><LI>Max Depth = 488<LI>Call Chain = block_dev_sdc_write_req &rArr; app_sdc_block_write &rArr; sdc_cmd &rArr; sdc_spi_transfer &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
+<BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
+<LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_block_write
-<LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_wait
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> nrf_block_dev_sdc.o(.constdata)
 </UL>
@@ -2856,8 +2856,8 @@ Local Symbols
 <P><STRONG><a name="[c0]"></a>sdc_wait</STRONG> (Thumb, 18 bytes, Stack size 8 bytes, nrf_block_dev_sdc.o(i.sdc_wait))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = sdc_wait
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
-<LI><a href="#[194]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wait_func
+<BR>[Calls]<UL><LI><a href="#[194]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wait_func
+<LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_sdc_busy_check
 </UL>
 <BR>[Called By]<UL><LI><a href="#[44]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;block_dev_sdc_write_req
 <LI><a href="#[43]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;block_dev_sdc_read_req
