@@ -780,7 +780,37 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 //{
 //	LED_TOGGLE(LED_MONITOR);
 //}
+// BLE connection parameter event reception
+static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
+{
+    ret_code_t err_code;
 
+    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
+    {
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        APP_ERROR_CHECK(err_code);
+    }
+}
+// BLE connection parameters error
+static void conn_params_error_handler(uint32_t nrf_error)
+{
+    APP_ERROR_HANDLER(nrf_error);
+}
+
+// BLE LED write
+static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
+{
+    if (led_state)
+    {
+        bsp_board_led_on(LEDBUTTON_LED);
+        NRF_LOG_INFO("Received LED ON!");
+    }
+    else
+    {
+        bsp_board_led_off(LEDBUTTON_LED);
+        NRF_LOG_INFO("Received LED OFF!");
+    }
+}
 
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
@@ -1082,9 +1112,117 @@ void gps_config_uart(void)
 
 
 
+// BLE GAP parameters
+static void gap_params_init(void)
+{
+    ret_code_t              err_code;
+    ble_gap_conn_params_t   gap_conn_params;
+    ble_gap_conn_sec_mode_t sec_mode;
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
+
+    err_code = sd_ble_gap_device_name_set(&sec_mode,
+                                          (const uint8_t *)DEVICE_NAME,
+                                          strlen(DEVICE_NAME));
+    APP_ERROR_CHECK(err_code);
+
+    memset(&gap_conn_params, 0, sizeof(gap_conn_params));
+
+    gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
+    gap_conn_params.max_conn_interval = MAX_CONN_INTERVAL;
+    gap_conn_params.slave_latency     = SLAVE_LATENCY;
+    gap_conn_params.conn_sup_timeout  = CONN_SUP_TIMEOUT;
+
+    err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
+    APP_ERROR_CHECK(err_code);
+}
+
+
+// BLE GATT
+static void gatt_init(void)
+{
+    ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+// BLE services
+static void services_init(void)
+{
+    ret_code_t     err_code;
+    ble_lbs_init_t init;
+
+    init.led_write_handler = led_write_handler;
+
+    err_code = ble_lbs_init(&m_lbs, &init);
+    APP_ERROR_CHECK(err_code);
+}
+// BLE connection parameters
+static void conn_params_init(void)
+{
+    ret_code_t             err_code;
+    ble_conn_params_init_t cp_init;
+
+    memset(&cp_init, 0, sizeof(cp_init));
+
+    cp_init.p_conn_params                  = NULL;
+    cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
+    cp_init.disconnect_on_fail             = false;
+    cp_init.evt_handler                    = on_conn_params_evt;
+    cp_init.error_handler                  = conn_params_error_handler;
+
+    err_code = ble_conn_params_init(&cp_init);
+    APP_ERROR_CHECK(err_code);
+}
+// BLE advertisement
+static void advertising_init(void)
+{
+    ret_code_t    err_code;
+    ble_advdata_t advdata;
+    ble_advdata_t srdata;
+
+    ble_uuid_t adv_uuids[] = {{LBS_UUID_SERVICE, m_lbs.uuid_type}};
+
+    // Build and set advertising data
+    memset(&advdata, 0, sizeof(advdata));
+
+    advdata.name_type          = BLE_ADVDATA_FULL_NAME;
+    advdata.include_appearance = true;
+    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+
+
+    memset(&srdata, 0, sizeof(srdata));
+    srdata.uuids_complete.uuid_cnt = sizeof(adv_uuids) / sizeof(adv_uuids[0]);
+    srdata.uuids_complete.p_uuids  = adv_uuids;
+
+    err_code = ble_advdata_set(&advdata, &srdata);
+    APP_ERROR_CHECK(err_code);
+}
+
 /* ========================================================================== */
 /*                               APP FUNCTIONS                                */
 /* ========================================================================== */
+static void advertising_start(void)
+{
+    ret_code_t           err_code;
+    ble_gap_adv_params_t adv_params;
+
+    // Start advertising
+    memset(&adv_params, 0, sizeof(adv_params));
+
+    adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
+    adv_params.p_peer_addr = NULL;
+    adv_params.fp          = BLE_GAP_ADV_FP_ANY;
+    adv_params.interval    = APP_ADV_INTERVAL;
+    adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
+
+    err_code = sd_ble_gap_adv_start(&adv_params, APP_BLE_CONN_CFG_TAG);
+    APP_ERROR_CHECK(err_code);
+    bsp_board_led_on(ADVERTISING_LED);
+}
+
 static void sdc_fill_queue(void)
 {
 	static FRESULT res;
@@ -1109,31 +1247,39 @@ int main(void)
 {
 //	DSTATUS card_status;
 //	FRESULT ff_result;
-	log_init();
-    NRF_LOG_INFO("=========================")
-	NRF_LOG_INFO("FATFS + SD + SPI example.");
-    NRF_LOG_INFO("-------------------------")
 
-	adc_config_spi();
-	adc_config_timer();
-//	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
+	/* Board settings */
 	leds_init();
 	timer_init();
 	buttons_init();
+	log_init();
 #ifdef DEBUG
 	gpio_dbg_init();
 #endif
+	
+	/* SPI, DRV_TIMER, FIFO for ADC */
+	adc_config_spi();
+	adc_config_timer();
+	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
 
-//	gps_config_uart();
+	/* UART for GPS */
+	gps_config_uart();
 	
+	/* BLE */
 	ble_stack_init();
-//	gap_params_init();
-//	gatt_init();
-//	services_init();
-//	advertising_init();
-//	conn_params_init();
+	gap_params_init();
+	gatt_init();
+	services_init();
+	advertising_init();
+	conn_params_init();
 	
+	/* Starting application */
+	/* -------------------- */
+    NRF_LOG_INFO("=========================")
+	NRF_LOG_INFO("FATFS + SD + SPI example.");
+    NRF_LOG_INFO("-------------------------")
 	app_button_enable();
+	advertising_start();
 	for (;;)
     {
 		__WFE();
