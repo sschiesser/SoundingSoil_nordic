@@ -58,8 +58,8 @@
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
-///*                                  SD card                                   */
-///* -------------------------------------------------------------------------- */
+/*                                  SD card                                   */
+/* -------------------------------------------------------------------------- */
 static uint8_t 							data_buffer[FIFO_DATA_SIZE] = {0};
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
@@ -182,11 +182,18 @@ static volatile bool					ui_rec_running = false;
 static uint8_t							ui_sdc_init_cnt = 0;
 
 
+/*                                    BLE                                     */
+/* -------------------------------------------------------------------------- */
+BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
+NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
+
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+
 
 /* ========================================================================== */
 /*                              UTIL FUNCTIONS                                */
 /* ========================================================================== */
-// Slice string into tokens with 1-char delimiter (improvement of strtok());
+/* Slice string into tokens with 1-char delimiter (improvement of strtok()); */
 static char * strslice(char * str, char const * delim)
 {
 	static char * src = NULL;
@@ -210,7 +217,7 @@ static char * strslice(char * str, char const * delim)
 }
 
 
-// Scan & list files and directories in an SD card
+/* Scan & list files and directories in an SD card */
 FRESULT scan_files(char *path, uint16_t *nb_items)
 {
 	FRESULT res;
@@ -268,7 +275,7 @@ FRESULT scan_files(char *path, uint16_t *nb_items)
 }
 
 
-// Get GGA GPS tag
+/* Get GGA GPS tag */
 static struct gps_gga_tag gps_get_gga_geotag(void)
 {
 	struct gps_gga_tag tag;
@@ -390,7 +397,7 @@ static struct gps_gga_tag gps_get_gga_geotag(void)
 }
 
 
-// Get RMC GPS tag
+/* Get RMC GPS tag */
 static struct gps_rmc_tag gps_get_rmc_geotag(void)
 {
 	NRF_LOG_DEBUG("Fetching current date&time from GPS");
@@ -535,7 +542,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 }
 
 
-// Get geodata
+/* Get geodata */
 void * gps_get_geodata(enum gps_tag_type tag_type, uint8_t retries)
 {
 	uint8_t tag_cnt = 0;
@@ -576,7 +583,7 @@ void * gps_get_geodata(enum gps_tag_type tag_type, uint8_t retries)
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
 /* ========================================================================== */
-// SPI for ADC
+/* SPI for ADC */
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t buf_size = 2;
@@ -601,7 +608,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 }
 
 
-// TIMER for ADC
+/* TIMER for ADC */
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	if(adc_spi_xfer_done) {
@@ -611,65 +618,219 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 }
 
 
+/* BLE event handler */
+static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+    ret_code_t err_code;
+
+    switch (p_ble_evt->header.evt_id)
+    {
+        case BLE_GAP_EVT_CONNECTED:
+            NRF_LOG_INFO("Connected");
+            bsp_board_led_on(CONNECTED_LED);
+            bsp_board_led_off(ADVERTISING_LED);
+            m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+
+//            err_code = app_button_enable();
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GAP_EVT_DISCONNECTED:
+            NRF_LOG_INFO("Disconnected");
+            bsp_board_led_off(CONNECTED_LED);
+            m_conn_handle = BLE_CONN_HANDLE_INVALID;
+//            err_code = app_button_disable();
+//            APP_ERROR_CHECK(err_code);
+//            advertising_start();
+            break;
+
+        case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+            // Pairing not supported
+            err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
+                                                   BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
+                                                   NULL,
+                                                   NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+#ifndef S140
+        case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
+        {
+            NRF_LOG_DEBUG("PHY update request.");
+            ble_gap_phys_t const phys =
+            {
+                .rx_phys = BLE_GAP_PHY_AUTO,
+                .tx_phys = BLE_GAP_PHY_AUTO,
+            };
+            err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
+            APP_ERROR_CHECK(err_code);
+        } break;
+#endif
+
+        case BLE_GATTS_EVT_SYS_ATTR_MISSING:
+            // No system attributes have been stored.
+            err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTC_EVT_TIMEOUT:
+            // Disconnect on GATT Client timeout event.
+            NRF_LOG_DEBUG("GATT Client Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTS_EVT_TIMEOUT:
+            // Disconnect on GATT Server timeout event.
+            NRF_LOG_DEBUG("GATT Server Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_EVT_USER_MEM_REQUEST:
+            err_code = sd_ble_user_mem_reply(p_ble_evt->evt.gattc_evt.conn_handle, NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST:
+        {
+            ble_gatts_evt_rw_authorize_request_t  req;
+            ble_gatts_rw_authorize_reply_params_t auth_reply;
+
+            req = p_ble_evt->evt.gatts_evt.params.authorize_request;
+
+            if (req.type != BLE_GATTS_AUTHORIZE_TYPE_INVALID)
+            {
+                if ((req.request.write.op == BLE_GATTS_OP_PREP_WRITE_REQ)     ||
+                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_NOW) ||
+                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_CANCEL))
+                {
+                    if (req.type == BLE_GATTS_AUTHORIZE_TYPE_WRITE)
+                    {
+                        auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_WRITE;
+                    }
+                    else
+                    {
+                        auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_READ;
+                    }
+                    auth_reply.params.write.gatt_status = APP_FEATURE_NOT_SUPPORTED;
+                    err_code = sd_ble_gatts_rw_authorize_reply(p_ble_evt->evt.gatts_evt.conn_handle,
+                                                               &auth_reply);
+                    APP_ERROR_CHECK(err_code);
+                }
+            }
+        } break; // BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST
+
+        default:
+            // No implementation needed.
+            break;
+    }
+}
+
 // BUTTONS
-void button_rec_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
-	nrf_delay_ms(50);
-	if(!nrf_drv_gpiote_in_is_set(BUTTON_RECORD)) {
-		NRF_LOG_INFO("Button pressed");
-	}
-	if(ui_rec_running || ui_rec_start_req) {
-		ui_rec_stop_req = true;
-		ui_rec_start_req = false;
-		ui_rec_running = false;
-	}
-	else {
-		ui_sdc_init_cnt = 0;
-		ui_rec_start_req = true;
-	}
+//    ret_code_t err_code;
+
+    switch (pin_no)
+    {
+        case BUTTON_RECORD:
+			NRF_LOG_INFO("REC");
+			break;
+		case BUTTON_MONITOR:
+			NRF_LOG_INFO("MON");
+//            err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
+//            if (err_code != NRF_SUCCESS &&
+//                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+//                err_code != NRF_ERROR_INVALID_STATE &&
+//                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+//            {
+//                APP_ERROR_CHECK(err_code);
+//            }
+            break;
+
+        default:
+            APP_ERROR_HANDLER(pin_no);
+            break;
+    }
 }
-void button_mon_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{
-	LED_TOGGLE(LED_MONITOR);
-}
+//static void button_monitor_handler(uint8_t pin_no, uint8_t button_action)
+//{
+//	NRF_LOG_INFO("MONITOR BUTTON");
+//}
+//void button_rec_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+//{
+//	nrf_delay_ms(50);
+//	if(!nrf_drv_gpiote_in_is_set(BUTTON_RECORD)) {
+//		NRF_LOG_INFO("Button pressed");
+//	}
+//	if(ui_rec_running || ui_rec_start_req) {
+//		ui_rec_stop_req = true;
+//		ui_rec_start_req = false;
+//		ui_rec_running = false;
+//	}
+//	else {
+//		ui_sdc_init_cnt = 0;
+//		ui_rec_start_req = true;
+//	}
+//}
+//void button_mon_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+//{
+//	LED_TOGGLE(LED_MONITOR);
+//}
 
 
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
-// GPIO
-static void gpio_init(void)
+// LED
+static void leds_init(void)
+{
+	bsp_board_leds_init();
+}
+
+// TIMER
+static void timer_init(void)
+{
+    ret_code_t ret = app_timer_init();
+    APP_ERROR_CHECK(ret);
+}
+
+// BUTTON
+static void buttons_init(void)
+{
+    ret_code_t err_code;
+
+    //The array must be static because a pointer to it will be saved in the button handler module.
+    static app_button_cfg_t buttons[] =
+    {
+        {BUTTON_RECORD, false, BUTTON_PULL, button_event_handler},
+		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler}
+    };
+
+    err_code = app_button_init(buttons, sizeof(buttons) / sizeof(buttons[0]), BUTTON_DETECTION_DELAY);
+    APP_ERROR_CHECK(err_code);
+}
+
+// LOG
+static void log_init(void)
+{
+	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+}
+
+// GPIO OUT for DBG
+static void gpio_dbg_init(void)
 {
 	ret_code_t err_code;
-	err_code = nrf_drv_gpiote_init();
-	APP_ERROR_CHECK(err_code);
-	
 	nrf_drv_gpiote_out_config_t out_config = GPIOTE_CONFIG_OUT_SIMPLE(true);
-	
-	/* Setting board LED as GPIOTE outputs */
-	err_code = nrf_drv_gpiote_out_init(LED_RECORD, &out_config);
-	APP_ERROR_CHECK(err_code);
-	err_code = nrf_drv_gpiote_out_init(LED_MONITOR, &out_config);
-	APP_ERROR_CHECK(err_code);
-	
-	/* Setting DBG pins as GPIOTE outputs */
 	err_code = nrf_drv_gpiote_out_init(DBG0_PIN, &out_config);
 	APP_ERROR_CHECK(err_code);
 	err_code = nrf_drv_gpiote_out_init(DBG1_PIN, &out_config);
 	APP_ERROR_CHECK(err_code);
-
-	/* Setting board buttons as GPIOTE inputs */
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
-	in_config.pull = NRF_GPIO_PIN_PULLUP;	
-	err_code = nrf_drv_gpiote_in_init(BUTTON_RECORD, &in_config, button_rec_handler);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_gpiote_in_event_enable(BUTTON_RECORD, true);
-	err_code = nrf_drv_gpiote_in_init(BUTTON_MONITOR, &in_config, button_mon_handler);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_gpiote_in_event_enable(BUTTON_MONITOR, true);
 }
-
-
 // SPI for ADC
 static void adc_config_spi(void)
 {
@@ -679,7 +840,7 @@ static void adc_config_spi(void)
 	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
 	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
 	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
-	adc_spi_config.irq_priority = 4;
+	adc_spi_config.irq_priority = 2;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 }
 
@@ -689,14 +850,36 @@ static void adc_config_timer(void)
 	uint32_t err_code;
 	uint32_t time_ticks;
 	nrf_drv_timer_config_t timer_config = NRF_DRV_TIMER_DEFAULT_CONFIG;
-	timer_config.interrupt_priority = 5;
+	timer_config.interrupt_priority = 3;
 	err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
 	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
 
 	nrf_drv_timer_extended_compare(
-		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, TIMER_SHORTS_COMPARE0_CLEAR_Msk, true);
+		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
+}
+
+// BLE stack
+static void ble_stack_init(void)
+{
+    ret_code_t err_code;
+
+    err_code = nrf_sdh_enable_request();
+    APP_ERROR_CHECK(err_code);
+
+    // Configure the BLE stack using the default settings.
+    // Fetch the start address of the application RAM.
+    uint32_t ram_start = 0;
+    err_code = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
+    APP_ERROR_CHECK(err_code);
+
+    // Enable BLE stack.
+    err_code = nrf_sdh_ble_enable(&ram_start);
+    APP_ERROR_CHECK(err_code);
+
+    // Register a handler for BLE events.
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
 
 // Init SD card #0
@@ -773,6 +956,7 @@ FRESULT sdc_mount(void)
 	return FR_OK;
 }
 
+// Init audio recording
 FRESULT sdc_init_audio(void)
 {	
 	FRESULT res;
@@ -866,6 +1050,7 @@ FRESULT sdc_init_audio(void)
 	return FR_OK;
 }
 
+// Close audio recording
 FRESULT sdc_close_audio(void)
 {
 	FRESULT res;
@@ -887,18 +1072,19 @@ FRESULT sdc_close_audio(void)
 	
 	return res;
 }
+
+// UART for GPS
 void gps_config_uart(void)
 {
-	ret_code_t ret;
-	
-	// app timer used to generate the serial sequence
-    ret = app_timer_init();
-    APP_ERROR_CHECK(ret);
-
-	ret = nrf_serial_init(&gps_uart, &m_uart0_drv_config, &gps_config);
+	ret_code_t ret = nrf_serial_init(&gps_uart, &m_uart0_drv_config, &gps_config);
 	APP_ERROR_CHECK(ret);
 }
 
+
+
+/* ========================================================================== */
+/*                               APP FUNCTIONS                                */
+/* ========================================================================== */
 static void sdc_fill_queue(void)
 {
 	static FRESULT res;
@@ -921,23 +1107,39 @@ static void sdc_fill_queue(void)
  */
 int main(void)
 {
-	DSTATUS card_status;
-	FRESULT ff_result;
-
-    bsp_board_leds_init();
-	
-    APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-
+//	DSTATUS card_status;
+//	FRESULT ff_result;
+	log_init();
     NRF_LOG_INFO("=========================")
 	NRF_LOG_INFO("FATFS + SD + SPI example.");
     NRF_LOG_INFO("-------------------------")
 
 	adc_config_spi();
 	adc_config_timer();
-	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
-	gpio_init();
-	gps_config_uart();
+//	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
+	leds_init();
+	timer_init();
+	buttons_init();
+#ifdef DEBUG
+	gpio_dbg_init();
+#endif
+
+//	gps_config_uart();
+	
+	ble_stack_init();
+//	gap_params_init();
+//	gatt_init();
+//	services_init();
+//	advertising_init();
+//	conn_params_init();
+	
+	app_button_enable();
+	for (;;)
+    {
+		__WFE();
+	}
+
+
 //	bool cont = true;
 //	while(cont) {
 //		NRF_LOG_DEBUG("Reading...");
@@ -989,101 +1191,101 @@ int main(void)
 ////		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
 //	}
 
-    while (true)
-    {
-		/* REC button pressed! (starting) */
-		if(ui_rec_start_req) {
-			NRF_LOG_INFO("Start request received");
-			card_status = sdc_init();
-			if(card_status == RES_OK) {
-				NRF_LOG_INFO("SD card init done.");
-				ff_result = sdc_mount();
-				if(ff_result == FR_OK) {
-					NRF_LOG_INFO("SD card mounted.");
-					ff_result = sdc_init_audio();
-					if(ff_result == FR_OK) {
-						NRF_LOG_INFO("Audio file ready to record.");
-						LED_ON(BSP_LED_0);
-//						DBG_TOGGLE(DBG0_PIN);
-						ui_rec_start_req = false;
-						ui_rec_running = true;
-						sdc_init_ok = true;
-					}
-					else {
-						NRF_LOG_INFO("Unable to initialize audio file.");
-						ui_sdc_init_cnt++;
-						nrf_delay_ms(500);
-					}
-				}
-				else {
-					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
-					ui_sdc_init_cnt++;
-					nrf_delay_ms(500);
-				}
-			}
-			else {
-				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
-				ui_sdc_init_cnt++;
-				nrf_delay_ms(500);
-			}
+//    while (true)
+//    {
+//		/* REC button pressed! (starting) */
+//		if(ui_rec_start_req) {
+//			NRF_LOG_INFO("Start request received");
+//			card_status = sdc_init();
+//			if(card_status == RES_OK) {
+//				NRF_LOG_INFO("SD card init done.");
+//				ff_result = sdc_mount();
+//				if(ff_result == FR_OK) {
+//					NRF_LOG_INFO("SD card mounted.");
+//					ff_result = sdc_init_audio();
+//					if(ff_result == FR_OK) {
+//						NRF_LOG_INFO("Audio file ready to record.");
+//						LED_ON(BSP_LED_0);
+////						DBG_TOGGLE(DBG0_PIN);
+//						ui_rec_start_req = false;
+//						ui_rec_running = true;
+//						sdc_init_ok = true;
+//					}
+//					else {
+//						NRF_LOG_INFO("Unable to initialize audio file.");
+//						ui_sdc_init_cnt++;
+//						nrf_delay_ms(500);
+//					}
+//				}
+//				else {
+//					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+//					ui_sdc_init_cnt++;
+//					nrf_delay_ms(500);
+//				}
+//			}
+//			else {
+//				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
+//				ui_sdc_init_cnt++;
+//				nrf_delay_ms(500);
+//			}
 
-			
-			/* If SDC init failed, retry some times then fail */
-			if(!sdc_init_ok) {
-				if(ui_sdc_init_cnt < 10) {
-					NRF_LOG_INFO("Retrying...");
-					ui_rec_start_req = true;
-					sdc_init_ok = false;
-				}
-				else {
-					NRF_LOG_INFO("SDC init failed!");
-					ui_rec_start_req = false;
-					sdc_init_ok = false;
-					LED_OFF(BSP_LED_0);
-				}
-			}
-		}
-		
-		/* REC button pressed! (stopping) */
-		if(ui_rec_stop_req) {
-			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-			NRF_LOG_INFO("Stop request received");
-			ff_result = sdc_close_audio();
-//			DBG_TOGGLE(DBG0_PIN);
-			if(ff_result == FR_OK) {
-				NRF_LOG_INFO("Done!");
-			}
-			else {
-				NRF_LOG_INFO("ERROR while closing audio file");
-			}
-			LED_OFF(BSP_LED_0);
-			ui_rec_start_req = false;
-			ui_rec_stop_req = false;
-			sdc_init_ok = false;
-		}
+//			
+//			/* If SDC init failed, retry some times then fail */
+//			if(!sdc_init_ok) {
+//				if(ui_sdc_init_cnt < 10) {
+//					NRF_LOG_INFO("Retrying...");
+//					ui_rec_start_req = true;
+//					sdc_init_ok = false;
+//				}
+//				else {
+//					NRF_LOG_INFO("SDC init failed!");
+//					ui_rec_start_req = false;
+//					sdc_init_ok = false;
+//					LED_OFF(BSP_LED_0);
+//				}
+//			}
+//		}
+//		
+//		/* REC button pressed! (stopping) */
+//		if(ui_rec_stop_req) {
+////			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+//			NRF_LOG_INFO("Stop request received");
+//			ff_result = sdc_close_audio();
+////			DBG_TOGGLE(DBG0_PIN);
+//			if(ff_result == FR_OK) {
+//				NRF_LOG_INFO("Done!");
+//			}
+//			else {
+//				NRF_LOG_INFO("ERROR while closing audio file");
+//			}
+//			LED_OFF(BSP_LED_0);
+//			ui_rec_start_req = false;
+//			ui_rec_stop_req = false;
+//			sdc_init_ok = false;
+//		}
 
-		/* SD card initialization done */
-		if(sdc_init_ok) {
-			NRF_LOG_INFO("Starting recording");
-			sdc_init_ok = false;
-			adc_spi_xfer_done = true;
-			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-		}
-		
-		if(sdc_rtw) {
-			if(!sdc_writing) {
-				sdc_rtw = false;
-				sdc_fill_queue();
-			}
-			else if(sdc_block_cnt > 0) {
-//				NRF_LOG_INFO("Decounting FIFO...");
-				sdc_block_cnt--;
-				sdc_fill_queue();
-			}
-		}
-		
-        __WFE();
-    }
+//		/* SD card initialization done */
+//		if(sdc_init_ok) {
+//			NRF_LOG_INFO("Starting recording");
+//			sdc_init_ok = false;
+//			adc_spi_xfer_done = true;
+////			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//		}
+//		
+//		if(sdc_rtw) {
+//			if(!sdc_writing) {
+//				sdc_rtw = false;
+//				sdc_fill_queue();
+//			}
+//			else if(sdc_block_cnt > 0) {
+////				NRF_LOG_INFO("Decounting FIFO...");
+//				sdc_block_cnt--;
+//				sdc_fill_queue();
+//			}
+//		}
+//		
+//        __WFE();
+//    }
 }
 
 /** @} */
