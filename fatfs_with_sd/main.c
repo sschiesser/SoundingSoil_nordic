@@ -709,12 +709,13 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 	else {
 		DBG_TOGGLE(DBG0_PIN);
 		adc_total_samples += (2*adc_spi_xfer_counter);
-		if(!sdc_writing) {
-			sdc_rtw = true;
-		}
-		else {
-			sdc_block_cnt++;
-		}
+		sdc_rtw = true;
+//		if(!sdc_writing) {
+//			sdc_rtw = true;
+//		}
+//		else {
+//			sdc_block_cnt++;
+//		}
 		adc_spi_xfer_counter = 0;
 	}
 	adc_spi_xfer_done = true;
@@ -1112,6 +1113,7 @@ int main(void)
 
     while (true)
     {
+		/* REC button pressed! (starting) */
 		if(ui_rec_start_req) {
 			NRF_LOG_INFO("Start request received");
 			card_status = sdc_init();
@@ -1142,23 +1144,33 @@ int main(void)
 				}
 			}
 			else {
-				NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
+				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
 				ui_sdc_init_cnt++;
 				nrf_delay_ms(500);
 			}
 
-			if(ui_sdc_init_cnt >= 10) {
-				ui_rec_start_req = false;
-				sdc_init_ok = false;
-				LED_OFF(BSP_LED_0);
+			
+			/* If SDC init failed, retry some times then fail */
+			if(!sdc_init_ok) {
+				if(ui_sdc_init_cnt < 10) {
+					NRF_LOG_INFO("Retrying...");
+					ui_rec_start_req = true;
+					sdc_init_ok = false;
+				}
+				else {
+					NRF_LOG_INFO("SDC init failed!");
+					ui_rec_start_req = false;
+					sdc_init_ok = false;
+					LED_OFF(BSP_LED_0);
+				}
 			}
 		}
 		
+		/* REC button pressed! (stopping) */
 		if(ui_rec_stop_req) {
 			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			NRF_LOG_INFO("Stop request received");
 			ff_result = sdc_close_audio();
-			LED_OFF(BSP_LED_0);
 //			DBG_TOGGLE(DBG0_PIN);
 			if(ff_result == FR_OK) {
 				NRF_LOG_INFO("Done!");
@@ -1166,11 +1178,13 @@ int main(void)
 			else {
 				NRF_LOG_INFO("ERROR while closing audio file");
 			}
+			LED_OFF(BSP_LED_0);
+			ui_rec_start_req = false;
 			ui_rec_stop_req = false;
 			sdc_init_ok = false;
 		}
 
-		
+		/* SD card initialization done */
 		if(sdc_init_ok) {
 			NRF_LOG_INFO("Starting recording");
 			sdc_init_ok = false;
@@ -1179,13 +1193,15 @@ int main(void)
 		}
 		
 		if(sdc_rtw) {
-			sdc_rtw = false;
-			sdc_fill_queue();
-		}
-		else if(sdc_block_cnt > 0) {
-//			NRF_LOG_INFO("Decounting FIFO...");
-			sdc_block_cnt--;
-			sdc_fill_queue();
+			if(!sdc_writing) {
+				sdc_rtw = false;
+				sdc_fill_queue();
+			}
+			else if(sdc_block_cnt > 0) {
+//				NRF_LOG_INFO("Decounting FIFO...");
+				sdc_block_cnt--;
+				sdc_fill_queue();
+			}
 		}
 		
         __WFE();
