@@ -157,6 +157,9 @@
 #define GPS_CONV_MPH_TO_KNOT			(1/GPS_CONV_KNOT_TO_MPH)
 #define GPS_CONV_KMH_TO_MPH				(1/GPS_CONV_MPH_TO_KMH)
 
+#define GPS_UART_INSTANCE				0
+#define GPS_UART_RX_PIN					27
+
 
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
