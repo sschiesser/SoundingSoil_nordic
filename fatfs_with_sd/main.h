@@ -71,14 +71,14 @@
 
 /*                             LED/BUTTON MACROS                              */
 /* -------------------------------------------------------------------------- */
-#define LED_RECORD						(BSP_LED_0)
+#define LED_RECORD						(BSP_LED_2)
 #define LED_MONITOR						(BSP_LED_3)
 #define LED_ON(led)						(nrf_drv_gpiote_out_clear(led))
 #define LED_OFF(led)					(nrf_drv_gpiote_out_set(led))
 #define LED_TOGGLE(led)					(nrf_drv_gpiote_out_toggle(led))
 
-#define BUTTON_RECORD					(BSP_BUTTON_0)
-#define BUTTON_MONITOR					(BSP_BUTTON_1)
+#define BUTTON_RECORD					(BSP_BUTTON_2)
+#define BUTTON_MONITOR					(BSP_BUTTON_3)
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
@@ -168,8 +168,8 @@
 
 #define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
 #define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
-#define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
-#define LEDBUTTON_BUTTON                BSP_BUTTON_0                            /**< Button that will trigger the notification event with the LED Button Service */
+//#define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
+//#define LEDBUTTON_BUTTON                BSP_BUTTON_0                            /**< Button that will trigger the notification event with the LED Button Service */
 
 #define DEVICE_NAME                     "Nordic_Blinky"                         /**< Name of device. Will be included in the advertising data. */
 
@@ -192,5 +192,8 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
+
+
+void gps_config_uart(void);
 
 #endif /* MAIN_H__ */

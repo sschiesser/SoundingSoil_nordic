@@ -164,7 +164,6 @@ enum gps_tag_type {
 
 static volatile bool gps_uart_reading = false;
 static volatile bool gps_uart_timeout = false;
-static bool gps_tag_ok = false;
 
 NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uart0_drv_config,
 	GPS_UART_RX_PIN, NRF_UART_PSEL_DISCONNECTED,
@@ -411,17 +410,13 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
 	char c; // Read UART character
-	ret_code_t ret; // Return value of the nrf_serial_read function
 	gps_uart_reading = true; // Reading flag
 	gps_uart_timeout = false; // Timeout flag
 	char *p_str; // Pointer on the string comparison result
 	APP_ERROR_CHECK(app_timer_start(gps_uart_timer, APP_TIMER_TICKS(1500), NULL));
 	DBG_TOGGLE(DBG0_PIN);
 	while(gps_uart_reading) {
-		ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1600);
-//		NRF_LOG_DEBUG("RX done!");
-//		APP_ERROR_CHECK(ret);
-//		NRF_LOG_RAW_INFO("%c", c);
+		nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1600);
 		uart_buf[cnt++] = c;
 		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
 //			NRF_LOG_DEBUG("STOP!")
@@ -591,6 +586,78 @@ void * gps_get_geodata(enum gps_tag_type tag_type, uint8_t retries)
 }
 
 /* ========================================================================== */
+/*                               APP FUNCTIONS                                */
+/* ========================================================================== */
+// Start advertising
+static void advertising_start(void)
+{
+    ret_code_t           err_code;
+    ble_gap_adv_params_t adv_params;
+
+    // Start advertising
+    memset(&adv_params, 0, sizeof(adv_params));
+
+    adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
+    adv_params.p_peer_addr = NULL;
+    adv_params.fp          = BLE_GAP_ADV_FP_ANY;
+    adv_params.interval    = APP_ADV_INTERVAL;
+    adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
+
+    err_code = sd_ble_gap_adv_start(&adv_params, APP_BLE_CONN_CFG_TAG);
+    APP_ERROR_CHECK(err_code);
+    bsp_board_led_on(ADVERTISING_LED);
+}
+// Fill SDC write queue
+static void sdc_fill_queue(void)
+{
+	static FRESULT res;
+	static UINT byte_written;
+	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
+	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
+	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
+	sdc_writing = true;
+	DBG_TOGGLE(DBG1_PIN);
+	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
+	if(res == FR_OK) {
+		res = f_sync(&recording_fil);
+		sdc_writing = false;
+	}
+}
+
+
+
+static bool gps_get_tag(void)
+{
+	bool retval = false;
+	
+	for(uint8_t i = 0; i < 3; i++) {
+		NRF_LOG_DEBUG("Reading...");
+		struct gps_rmc_tag cur_tag = gps_get_rmc_geotag();
+		NRF_LOG_DEBUG("GPS tag read!");
+		if(cur_tag.status_active) {
+			NRF_LOG_INFO("GPS data: %02d.%02d.%02d", cur_tag.date.day, cur_tag.date.month, cur_tag.date.year);
+			NRF_LOG_INFO("GPS time: %02dh%02dm%02d.%03ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec, cur_tag.time.msec);
+			NRF_LOG_INFO("GPS latitude: %02d°%02d'%03d\" %s", 
+				cur_tag.latitude.deg, cur_tag.latitude.min,
+				cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
+			NRF_LOG_INFO("GPS longitude: %03d°%02d'%03d\" %s", 
+				cur_tag.longitude.deg, cur_tag.longitude.min, 
+				cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
+			NRF_LOG_INFO("GPS speed: " NRF_LOG_FLOAT_MARKER " km/h", NRF_LOG_FLOAT(cur_tag.speed.kmh));
+			NRF_LOG_INFO("GPS track angle: " NRF_LOG_FLOAT_MARKER "°", NRF_LOG_FLOAT(cur_tag.track_angle));
+			NRF_LOG_INFO("Mag variation: " NRF_LOG_FLOAT_MARKER " %s", 
+				NRF_LOG_FLOAT(cur_tag.mvar.angle), (cur_tag.mvar.east) ? "E" : "W");
+			NRF_LOG_INFO("Integrity: %c", cur_tag.sig_int);
+			retval = true;
+		}
+		else {
+			NRF_LOG_INFO("Signal not valid!!");
+			retval = false;
+		}
+	}
+	return retval;
+}
+/* ========================================================================== */
 /*                              EVENT HANDLERS                                */
 /* ========================================================================== */
 /* SPI for ADC */
@@ -744,27 +811,38 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
 //    ret_code_t err_code;
 
-    switch (pin_no)
-    {
-        case BUTTON_RECORD:
-			NRF_LOG_INFO("REC");
-			break;
-		case BUTTON_MONITOR:
-			NRF_LOG_INFO("MON");
-//            err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
-//            if (err_code != NRF_SUCCESS &&
-//                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-//                err_code != NRF_ERROR_INVALID_STATE &&
-//                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-//            {
-//                APP_ERROR_CHECK(err_code);
-//            }
-            break;
+	if(button_action) {
+		switch (pin_no)
+		{
+			case BUTTON_RECORD:
+				NRF_LOG_INFO("REC: state = %d", button_action);
+				if(ui_rec_running || ui_rec_start_req) {
+					ui_rec_stop_req = true;
+					ui_rec_start_req = false;
+					ui_rec_running = false;
+				}
+				else {
+					ui_sdc_init_cnt = 0;
+					ui_rec_start_req = true;
+				}
+				break;
+			case BUTTON_MONITOR:
+				NRF_LOG_INFO("MON");
+	//            err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
+	//            if (err_code != NRF_SUCCESS &&
+	//                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+	//                err_code != NRF_ERROR_INVALID_STATE &&
+	//                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+	//            {
+	//                APP_ERROR_CHECK(err_code);
+	//            }
+				break;
 
-        default:
-            APP_ERROR_HANDLER(pin_no);
-            break;
-    }
+			default:
+				APP_ERROR_HANDLER(pin_no);
+				break;
+		}
+	}
 }
 //static void button_monitor_handler(uint8_t pin_no, uint8_t button_action)
 //{
@@ -819,12 +897,12 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
 {
     if (led_state)
     {
-        bsp_board_led_on(LEDBUTTON_LED);
+        LED_ON(LED_RECORD);
         NRF_LOG_INFO("Received LED ON!");
     }
     else
     {
-        bsp_board_led_off(LEDBUTTON_LED);
+        LED_OFF(LED_RECORD);
         NRF_LOG_INFO("Received LED OFF!");
     }
 }
@@ -833,14 +911,14 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
 // LFCLK (only debug mode without SoftDevice)
-static void lfclk_init(void)
-{
-    uint32_t err_code;
-    err_code = nrf_drv_clock_init();
-    APP_ERROR_CHECK(err_code);
+//static void lfclk_init(void)
+//{
+//    uint32_t err_code;
+//    err_code = nrf_drv_clock_init();
+//    APP_ERROR_CHECK(err_code);
 
-    nrf_drv_clock_lfclk_request(NULL);
-}
+//    nrf_drv_clock_lfclk_request(NULL);
+//}
 // LED
 static void leds_init(void)
 {
@@ -1024,6 +1102,16 @@ FRESULT sdc_init_audio(void)
 	/* ===== GET GPS DATA TO CREATE DIRECTORY ===== */
 	struct gps_rmc_tag cur_tag;
 	NRF_LOG_DEBUG("Reading...");
+//	if(!gps_get_tag()) {
+//		NRF_LOG_INFO("Failed to get GPS tag");
+//		nrf_serial_uninit(&gps_uart);
+//		nrf_delay_ms(1000);
+//		gps_config_uart();
+//	}
+//	else {
+//		NRF_LOG_INFO("Success with GPS tag");
+//		nrf_delay_ms(1000);
+//	}
 	cur_tag = gps_get_rmc_geotag();
 	NRF_LOG_DEBUG("Done!");
 	if(!cur_tag.status_active) {
@@ -1111,7 +1199,9 @@ FRESULT sdc_close_audio(void)
 {
 	FRESULT res;
 	UINT bytes;
-	
+
+	nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+
 	((uint16_t *)&wave_header)[WAVE_FORMAT_NUM_CHANNEL_OFFSET/2] = AUDIO_NUM_CHANNELS;
 	((uint16_t *)&wave_header)[WAVE_FORMAT_BITS_PER_SAMPLE_OFFSET/2] = AUDIO_BITS_PER_SAMPLE;
 	((uint16_t *)&wave_header)[WAVE_FORMAT_BLOCK_ALIGN_OFFSET/2] = AUDIO_BITS_PER_SAMPLE/8 * AUDIO_NUM_CHANNELS;
@@ -1230,83 +1320,13 @@ static void advertising_init(void)
 }
 
 /* ========================================================================== */
-/*                               APP FUNCTIONS                                */
-/* ========================================================================== */
-// Start advertising
-static void advertising_start(void)
-{
-    ret_code_t           err_code;
-    ble_gap_adv_params_t adv_params;
-
-    // Start advertising
-    memset(&adv_params, 0, sizeof(adv_params));
-
-    adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
-    adv_params.p_peer_addr = NULL;
-    adv_params.fp          = BLE_GAP_ADV_FP_ANY;
-    adv_params.interval    = APP_ADV_INTERVAL;
-    adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
-
-    err_code = sd_ble_gap_adv_start(&adv_params, APP_BLE_CONN_CFG_TAG);
-    APP_ERROR_CHECK(err_code);
-    bsp_board_led_on(ADVERTISING_LED);
-}
-// Fill SDC write queue
-static void sdc_fill_queue(void)
-{
-	static FRESULT res;
-	static UINT byte_written;
-	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
-	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
-	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
-	sdc_writing = true;
-	DBG_TOGGLE(DBG1_PIN);
-	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
-	if(res == FR_OK) {
-		res = f_sync(&recording_fil);
-		sdc_writing = false;
-	}
-}
-
-
-
-static bool gps_get_tag(void)
-{
-	for(uint8_t i = 0; i < 3; i++) {
-		NRF_LOG_DEBUG("Reading...");
-		struct gps_rmc_tag cur_tag = gps_get_rmc_geotag();
-		NRF_LOG_DEBUG("GPS tag read!");
-		if(cur_tag.status_active) {
-			NRF_LOG_INFO("GPS data: %02d.%02d.%02d", cur_tag.date.day, cur_tag.date.month, cur_tag.date.year);
-			NRF_LOG_INFO("GPS time: %02dh%02dm%02d.%03ds", cur_tag.time.h, cur_tag.time.min, cur_tag.time.sec, cur_tag.time.msec);
-			NRF_LOG_INFO("GPS latitude: %02d°%02d'%03d\" %s", 
-				cur_tag.latitude.deg, cur_tag.latitude.min,
-				cur_tag.latitude.sec, (cur_tag.latitude.north) ? "N" : "S");
-			NRF_LOG_INFO("GPS longitude: %03d°%02d'%03d\" %s", 
-				cur_tag.longitude.deg, cur_tag.longitude.min, 
-				cur_tag.longitude.sec, (cur_tag.longitude.east) ? "E" : "W");
-			NRF_LOG_INFO("GPS speed: " NRF_LOG_FLOAT_MARKER " km/h", NRF_LOG_FLOAT(cur_tag.speed.kmh));
-			NRF_LOG_INFO("GPS track angle: " NRF_LOG_FLOAT_MARKER "°", NRF_LOG_FLOAT(cur_tag.track_angle));
-			NRF_LOG_INFO("Mag variation: " NRF_LOG_FLOAT_MARKER " %s", 
-				NRF_LOG_FLOAT(cur_tag.mvar.angle), (cur_tag.mvar.east) ? "E" : "W");
-			NRF_LOG_INFO("Integrity: %c", cur_tag.sig_int);
-			return true;
-		}
-		else {
-			NRF_LOG_INFO("Signal not valid!!");
-			return false;
-		}
-	}
-}
-/* ========================================================================== */
 /*                                    MAIN                                    */
 /* ========================================================================== */
 int main(void)
 {
-//	DSTATUS card_status;
-//	FRESULT ff_result;
+	DSTATUS card_status;
+	FRESULT ff_result;
 
-//	lfclk_init();
 	// Board settings
 	leds_init();
 	timer_init();
@@ -1326,11 +1346,11 @@ int main(void)
 	
 	// BLE
 	ble_stack_init();
-//	gap_params_init();
-//	gatt_init();
-//	services_init();
-//	advertising_init();
-//	conn_params_init();
+	gap_params_init();
+	gatt_init();
+	services_init();
+	advertising_init();
+	conn_params_init();
 	
 	/* Starting application */
 	/* -------------------- */
@@ -1339,28 +1359,101 @@ int main(void)
     NRF_LOG_INFO("-------------------------")
 	app_button_enable();
 //	advertising_start();
-//	for (;;)
-//    {
-//		__WFE();
-//	}
-
-//	app_timer_start(gps_uart_timer, APP_TIMER_TICKS(2000), NULL);
-//	for(;;) {
-//		__WFE();
-//	}
 
 	for(;;) {
-		if(!gps_get_tag()) {
-			NRF_LOG_INFO("Failed to get GPS tag");
-			nrf_serial_uninit(&gps_uart);
-			nrf_delay_ms(1000);
-			gps_config_uart();
+		/* REC button pressed! (starting) */
+		if(ui_rec_start_req) {
+			NRF_LOG_INFO("Start request received");
+			card_status = sdc_init();
+			if(card_status == RES_OK) {
+				NRF_LOG_INFO("SD card init done.");
+				ff_result = sdc_mount();
+				if(ff_result == FR_OK) {
+					NRF_LOG_INFO("SD card mounted.");
+					ff_result = sdc_init_audio();
+					if(ff_result == FR_OK) {
+						NRF_LOG_INFO("Audio file ready to record.");
+						LED_ON(LED_RECORD);
+//						DBG_TOGGLE(DBG0_PIN);
+						ui_rec_start_req = false;
+						ui_rec_running = true;
+						sdc_init_ok = true;
+					}
+					else {
+						NRF_LOG_INFO("Unable to initialize audio file.");
+						ui_sdc_init_cnt++;
+						nrf_delay_ms(500);
+					}
+				}
+				else {
+					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+					ui_sdc_init_cnt++;
+					nrf_delay_ms(500);
+				}
+			}
+			else {
+				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
+				ui_sdc_init_cnt++;
+				nrf_delay_ms(500);
+			}
+			
+			/* If SDC init failed, retry some times then fail */
+			if(!sdc_init_ok) {
+				if(ui_sdc_init_cnt < 10) {
+					NRF_LOG_INFO("Retrying...");
+					ui_rec_start_req = true;
+					sdc_init_ok = false;
+				}
+				else {
+					NRF_LOG_INFO("SDC init failed!");
+					ui_rec_start_req = false;
+					sdc_init_ok = false;
+					LED_OFF(LED_RECORD);
+				}
+			}
 		}
-		else {
-			NRF_LOG_INFO("Success with GPS tag");
-			nrf_delay_ms(1000);
+		
+		/* REC button pressed! (stopping) */
+		if(ui_rec_stop_req) {
+			NRF_LOG_INFO("Stop request received");
+			ff_result = sdc_close_audio();
+			if(ff_result == FR_OK) {
+				NRF_LOG_INFO("Done!");
+			}
+			else {
+				NRF_LOG_INFO("ERROR while closing audio file");
+			}
+			LED_OFF(BSP_LED_0);
+			ui_rec_start_req = false;
+			ui_rec_stop_req = false;
+			sdc_init_ok = false;
 		}
-	}
+
+		/* SD card initialization done */
+		if(sdc_init_ok) {
+			NRF_LOG_INFO("Starting recording");
+			sdc_init_ok = false;
+			adc_spi_xfer_done = true;
+			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+		}
+		
+		if(sdc_rtw) {
+			if(!sdc_writing) {
+				sdc_rtw = false;
+				sdc_fill_queue();
+			}
+			else if(sdc_block_cnt > 0) {
+//				NRF_LOG_INFO("Decounting FIFO...");
+				sdc_block_cnt--;
+				sdc_fill_queue();
+			}
+		}
+		
+        __WFE();
+    }
+}
+
+//	}
 
 //	card_status = sd_card_test();
 //	
@@ -1387,100 +1480,7 @@ int main(void)
 //	}
 
 //    while (true)
-//    {
-//		/* REC button pressed! (starting) */
-//		if(ui_rec_start_req) {
-//			NRF_LOG_INFO("Start request received");
-//			card_status = sdc_init();
-//			if(card_status == RES_OK) {
-//				NRF_LOG_INFO("SD card init done.");
-//				ff_result = sdc_mount();
-//				if(ff_result == FR_OK) {
-//					NRF_LOG_INFO("SD card mounted.");
-//					ff_result = sdc_init_audio();
-//					if(ff_result == FR_OK) {
-//						NRF_LOG_INFO("Audio file ready to record.");
-//						LED_ON(BSP_LED_0);
-////						DBG_TOGGLE(DBG0_PIN);
-//						ui_rec_start_req = false;
-//						ui_rec_running = true;
-//						sdc_init_ok = true;
-//					}
-//					else {
-//						NRF_LOG_INFO("Unable to initialize audio file.");
-//						ui_sdc_init_cnt++;
-//						nrf_delay_ms(500);
-//					}
-//				}
-//				else {
-//					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
-//					ui_sdc_init_cnt++;
-//					nrf_delay_ms(500);
-//				}
-//			}
-//			else {
-//				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
-//				ui_sdc_init_cnt++;
-//				nrf_delay_ms(500);
-//			}
 
-//			
-//			/* If SDC init failed, retry some times then fail */
-//			if(!sdc_init_ok) {
-//				if(ui_sdc_init_cnt < 10) {
-//					NRF_LOG_INFO("Retrying...");
-//					ui_rec_start_req = true;
-//					sdc_init_ok = false;
-//				}
-//				else {
-//					NRF_LOG_INFO("SDC init failed!");
-//					ui_rec_start_req = false;
-//					sdc_init_ok = false;
-//					LED_OFF(BSP_LED_0);
-//				}
-//			}
-//		}
-//		
-//		/* REC button pressed! (stopping) */
-//		if(ui_rec_stop_req) {
-////			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-//			NRF_LOG_INFO("Stop request received");
-//			ff_result = sdc_close_audio();
-////			DBG_TOGGLE(DBG0_PIN);
-//			if(ff_result == FR_OK) {
-//				NRF_LOG_INFO("Done!");
-//			}
-//			else {
-//				NRF_LOG_INFO("ERROR while closing audio file");
-//			}
-//			LED_OFF(BSP_LED_0);
-//			ui_rec_start_req = false;
-//			ui_rec_stop_req = false;
-//			sdc_init_ok = false;
-//		}
-
-//		/* SD card initialization done */
-//		if(sdc_init_ok) {
-//			NRF_LOG_INFO("Starting recording");
-//			sdc_init_ok = false;
-//			adc_spi_xfer_done = true;
-////			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-//		}
-//		
-//		if(sdc_rtw) {
-//			if(!sdc_writing) {
-//				sdc_rtw = false;
-//				sdc_fill_queue();
-//			}
-//			else if(sdc_block_cnt > 0) {
-////				NRF_LOG_INFO("Decounting FIFO...");
-//				sdc_block_cnt--;
-//				sdc_fill_queue();
-//			}
-//		}
-//		
-//        __WFE();
-//    }
-}
+//}
 
 /** @} */
