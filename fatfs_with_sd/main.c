@@ -184,6 +184,7 @@ static volatile bool					ui_rec_start_req = false;
 static volatile bool					ui_rec_stop_req = false;
 static volatile bool					ui_rec_running = false;
 static uint8_t							ui_sdc_init_cnt = 0;
+APP_TIMER_DEF(led_blink_timer);
 
 
 /*                                    BLE                                     */
@@ -433,6 +434,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	}
 	if(gps_uart_timeout) {
 		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+		gps_uart_timeout = false;
 	}
 /* FAKE UART */
 //	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
@@ -801,38 +803,29 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
+/* LED */
+static void led_blink_handler(void * p_context)
+{
+	LED_TOGGLE(LED_RECORD);
+}
 /* BUTTONS */
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
-    ret_code_t err_code;
+//    ret_code_t err_code;
 
 	if(button_action) {
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-				NRF_LOG_DEBUG("REC: state = %d", button_action);
+				NRF_LOG_DEBUG("REC: rec_running = %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
-					ui_rec_running = false;
-					err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 0);
-					if (err_code != NRF_SUCCESS &&
-						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-						err_code != NRF_ERROR_INVALID_STATE &&
-						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-						APP_ERROR_CHECK(err_code);
-					}
 				}
 				else {
 					ui_sdc_init_cnt = 0;
 					ui_rec_start_req = true;
-					err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 1);
-					if (err_code != NRF_SUCCESS &&
-						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-						err_code != NRF_ERROR_INVALID_STATE &&
-						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-						APP_ERROR_CHECK(err_code);
-					}
+					APP_ERROR_CHECK(app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL));
 				}
 				break;
 			case BUTTON_MONITOR:
@@ -845,6 +838,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		}
 	}
 }
+/* TIMER for GPS */
 static void gps_timeout_handler(void * p_context)
 {
 	NRF_LOG_INFO("GPS TIMEOUT");
@@ -907,17 +901,18 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
 
 //    nrf_drv_clock_lfclk_request(NULL);
 //}
-// LED
-static void leds_init(void)
-{
-	bsp_board_leds_init();
-}
-
 // TIMER
 static void timer_init(void)
 {
     ret_code_t ret = app_timer_init();
     APP_ERROR_CHECK(ret);
+}
+
+// LED
+static void leds_init(void)
+{
+	bsp_board_leds_init();
+	ret_code_t ret = app_timer_create(&led_blink_timer, APP_TIMER_MODE_REPEATED, led_blink_handler);
 }
 
 // BUTTON
@@ -1314,10 +1309,11 @@ int main(void)
 {
 	DSTATUS card_status;
 	FRESULT ff_result;
+	ret_code_t err_code;
 
 	// Board settings
-	leds_init();
 	timer_init();
+	leds_init();
 	buttons_init();
 	log_init();
 #ifdef DEBUG
@@ -1347,7 +1343,7 @@ int main(void)
     NRF_LOG_INFO("-------------------------")
 	app_button_enable();
 	advertising_start();
-
+	
 	for(;;) {
 		/* REC button pressed! (starting) */
 		if(ui_rec_start_req) {
@@ -1358,14 +1354,25 @@ int main(void)
 				ff_result = sdc_mount();
 				if(ff_result == FR_OK) {
 					NRF_LOG_INFO("SD card mounted.");
+//					while(true) {
+//						mytag = gps_get_rmc_geotag();
+//						NRF_LOG_INFO("Tag received");
+//					}
 					ff_result = sdc_init_audio();
 					if(ff_result == FR_OK) {
 						NRF_LOG_INFO("Audio file ready to record.");
+						app_timer_stop(led_blink_timer);
 						LED_ON(LED_RECORD);
-//						DBG_TOGGLE(DBG0_PIN);
 						ui_rec_start_req = false;
 						ui_rec_running = true;
 						sdc_init_ok = true;
+						err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 1);
+						if (err_code != NRF_SUCCESS &&
+							err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+							err_code != NRF_ERROR_INVALID_STATE &&
+							err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+							APP_ERROR_CHECK(err_code);
+						}
 					}
 					else {
 						NRF_LOG_INFO("Unable to initialize audio file.");
@@ -1411,10 +1418,18 @@ int main(void)
 			else {
 				NRF_LOG_INFO("ERROR while closing audio file");
 			}
-			LED_OFF(BSP_LED_0);
+			LED_OFF(LED_RECORD);
+			ui_rec_running = false;
 			ui_rec_start_req = false;
 			ui_rec_stop_req = false;
 			sdc_init_ok = false;
+			err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 0);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 		}
 
 		/* SD card initialization done */
