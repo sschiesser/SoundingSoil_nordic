@@ -809,7 +809,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 // BUTTONS
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
-//    ret_code_t err_code;
+    ret_code_t err_code;
 
 	if(button_action) {
 		switch (pin_no)
@@ -820,10 +820,24 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
 					ui_rec_running = false;
+					err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 0);
+					if (err_code != NRF_SUCCESS &&
+						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+						err_code != NRF_ERROR_INVALID_STATE &&
+						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+					}
 				}
 				else {
 					ui_sdc_init_cnt = 0;
 					ui_rec_start_req = true;
+					err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 1);
+					if (err_code != NRF_SUCCESS &&
+						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+						err_code != NRF_ERROR_INVALID_STATE &&
+						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+					}
 				}
 				break;
 			case BUTTON_MONITOR:
@@ -895,16 +909,27 @@ static void conn_params_error_handler(uint32_t nrf_error)
 // BLE LED write
 static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
 {
-    if (led_state)
-    {
-        LED_ON(LED_RECORD);
-        NRF_LOG_INFO("Received LED ON!");
-    }
-    else
-    {
-        LED_OFF(LED_RECORD);
-        NRF_LOG_INFO("Received LED OFF!");
-    }
+	if(led_state) {
+		NRF_LOG_INFO("REC START requested");
+		if(!ui_rec_running && !ui_rec_start_req) {
+			ui_sdc_init_cnt = 0;
+			ui_rec_start_req = true;
+		}
+		else {
+			NRF_LOG_INFO("REC already running...");
+		}
+	}
+	else {
+		NRF_LOG_INFO("REC STOP requested");
+		if(ui_rec_running || ui_rec_start_req) {
+			ui_rec_stop_req = true;
+			ui_rec_start_req = false;
+			ui_rec_running = false;
+		}
+		else {
+			NRF_LOG_INFO("No REC running...");
+		}
+	}
 }
 
 /* ========================================================================== */
@@ -1358,7 +1383,7 @@ int main(void)
 	NRF_LOG_INFO("FATFS + SD + SPI example.");
     NRF_LOG_INFO("-------------------------")
 	app_button_enable();
-//	advertising_start();
+	advertising_start();
 
 	for(;;) {
 		/* REC button pressed! (starting) */
