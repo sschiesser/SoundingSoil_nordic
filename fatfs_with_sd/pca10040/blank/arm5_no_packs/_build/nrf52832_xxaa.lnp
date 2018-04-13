@@ -43,6 +43,7 @@
 ".\_build\ble_srv_common.o"
 ".\_build\nrf_ble_gatt.o"
 ".\_build\ble_lbs.o"
+".\_build\ble_bas.o"
 ".\_build\nrf_sdh.o"
 ".\_build\nrf_sdh_ble.o"
 ".\_build\nrf_sdh_soc.o"

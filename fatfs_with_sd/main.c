@@ -188,10 +188,9 @@ static uint8_t							ui_sdc_init_cnt = 0;
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
-BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
-NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
-
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+BLE_LBS_DEF(m_lbs);																// LED Button Service instance.
+NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
 
 
 /* ========================================================================== */
@@ -404,7 +403,6 @@ static struct gps_gga_tag gps_get_gga_geotag(void)
 /* Get RMC GPS tag */
 static struct gps_rmc_tag gps_get_rmc_geotag(void)
 {
-//	NRF_LOG_DEBUG("Fetching current date&time from GPS");
 	struct gps_rmc_tag tag;
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
@@ -419,15 +417,12 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 		nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1600);
 		uart_buf[cnt++] = c;
 		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-//			NRF_LOG_DEBUG("STOP!")
 			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-//				NRF_LOG_DEBUG("START!");
 				static char comp[7] = "$GPRMC";
 				p_str = strstr(uart_buf, comp);
 				if(p_str != NULL) {
 					strcpy(tag.raw_tag, uart_buf);
 					tag.length = strlen(uart_buf);
-//					NRF_LOG_DEBUG("FOUND! %s (%d)", tag.raw_tag, tag.length);
 					app_timer_stop(gps_uart_timer);
 					DBG_TOGGLE(DBG0_PIN);
 					gps_uart_reading = false;
@@ -436,12 +431,12 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 			cnt = 0;
 		}
 	}
-/* FAKE UART */
-//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
-/* ------------------------ */
 	if(gps_uart_timeout) {
 		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
 	}
+/* FAKE UART */
+//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+/* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
 	cnt = 0;
@@ -588,7 +583,7 @@ void * gps_get_geodata(enum gps_tag_type tag_type, uint8_t retries)
 /* ========================================================================== */
 /*                               APP FUNCTIONS                                */
 /* ========================================================================== */
-// Start advertising
+/* Start advertising */
 static void advertising_start(void)
 {
     ret_code_t           err_code;
@@ -607,7 +602,7 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
     bsp_board_led_on(ADVERTISING_LED);
 }
-// Fill SDC write queue
+/* Fill SDC write queue */
 static void sdc_fill_queue(void)
 {
 	static FRESULT res;
@@ -806,7 +801,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-// BUTTONS
+/* BUTTONS */
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
     ret_code_t err_code;
@@ -815,7 +810,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-				NRF_LOG_INFO("REC: state = %d", button_action);
+				NRF_LOG_DEBUG("REC: state = %d", button_action);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
@@ -841,15 +836,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				}
 				break;
 			case BUTTON_MONITOR:
-				NRF_LOG_INFO("MON");
-	//            err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
-	//            if (err_code != NRF_SUCCESS &&
-	//                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-	//                err_code != NRF_ERROR_INVALID_STATE &&
-	//                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-	//            {
-	//                APP_ERROR_CHECK(err_code);
-	//            }
+				NRF_LOG_DEBUG("MON");
 				break;
 
 			default:
@@ -858,31 +845,6 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		}
 	}
 }
-//static void button_monitor_handler(uint8_t pin_no, uint8_t button_action)
-//{
-//	NRF_LOG_INFO("MONITOR BUTTON");
-//}
-//void button_rec_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-//{
-//	nrf_delay_ms(50);
-//	if(!nrf_drv_gpiote_in_is_set(BUTTON_RECORD)) {
-//		NRF_LOG_INFO("Button pressed");
-//	}
-//	if(ui_rec_running || ui_rec_start_req) {
-//		ui_rec_stop_req = true;
-//		ui_rec_start_req = false;
-//		ui_rec_running = false;
-//	}
-//	else {
-//		ui_sdc_init_cnt = 0;
-//		ui_rec_start_req = true;
-//	}
-//}
-//void button_mon_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-//{
-//	LED_TOGGLE(LED_MONITOR);
-//}
-// BLE connection parameter event reception
 static void gps_timeout_handler(void * p_context)
 {
 	NRF_LOG_INFO("GPS TIMEOUT");
@@ -890,6 +852,7 @@ static void gps_timeout_handler(void * p_context)
 	gps_uart_reading = false;
 	gps_uart_timeout = true;
 }
+/* BLE connection parameter event reception */
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     ret_code_t err_code;
@@ -900,34 +863,34 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
         APP_ERROR_CHECK(err_code);
     }
 }
-// BLE connection parameters error
+/* BLE connection parameters error */
 static void conn_params_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
-// BLE LED write
+/* BLE LED write */
 static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
 {
 	if(led_state) {
-		NRF_LOG_INFO("REC START requested");
+		NRF_LOG_DEBUG("REC START requested");
 		if(!ui_rec_running && !ui_rec_start_req) {
 			ui_sdc_init_cnt = 0;
 			ui_rec_start_req = true;
 		}
 		else {
-			NRF_LOG_INFO("REC already running...");
+			NRF_LOG_DEBUG("REC already running...");
 		}
 	}
 	else {
-		NRF_LOG_INFO("REC STOP requested");
+		NRF_LOG_DEBUG("REC STOP requested");
 		if(ui_rec_running || ui_rec_start_req) {
 			ui_rec_stop_req = true;
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 		}
 		else {
-			NRF_LOG_INFO("No REC running...");
+			NRF_LOG_DEBUG("No REC running...");
 		}
 	}
 }
