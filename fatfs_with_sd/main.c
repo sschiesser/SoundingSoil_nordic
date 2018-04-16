@@ -60,6 +60,7 @@ uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
+static FATFS *							sdc_fs;
 static uint8_t 							data_buffer[FIFO_DATA_SIZE] = {0};
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
@@ -412,10 +413,17 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	gps_uart_reading = true; // Reading flag
 	gps_uart_timeout = false; // Timeout flag
 	char *p_str; // Pointer on the string comparison result
-	APP_ERROR_CHECK(app_timer_start(gps_uart_timer, APP_TIMER_TICKS(1500), NULL));
-	DBG_TOGGLE(DBG0_PIN);
+//	APP_ERROR_CHECK(app_timer_start(gps_uart_timer, APP_TIMER_TICKS(2000), NULL));
+//	DBG_TOGGLE(DBG0_PIN);
 	while(gps_uart_reading) {
-		nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 1600);
+		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+		DBG_TOGGLE(DBG1_PIN);
+		if(ret == NRF_ERROR_TIMEOUT) {
+			NRF_LOG_DEBUG("UART timeout!");
+			gps_uart_reading = false;
+			gps_uart_timeout = true;
+			break;
+		}
 		uart_buf[cnt++] = c;
 		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
 			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
@@ -425,7 +433,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 					strcpy(tag.raw_tag, uart_buf);
 					tag.length = strlen(uart_buf);
 					app_timer_stop(gps_uart_timer);
-					DBG_TOGGLE(DBG0_PIN);
+//					DBG_TOGGLE(DBG0_PIN);
 					gps_uart_reading = false;
 				}
 			}
@@ -613,7 +621,7 @@ static void sdc_fill_queue(void)
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
 	sdc_writing = true;
-	DBG_TOGGLE(DBG1_PIN);
+//	DBG_TOGGLE(DBG1_PIN);
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
 	if(res == FR_OK) {
 		res = f_sync(&recording_fil);
@@ -667,7 +675,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		adc_spi_xfer_counter++;
 	}
 	else {
-		DBG_TOGGLE(DBG0_PIN);
+//		DBG_TOGGLE(DBG0_PIN);
 		adc_total_samples += (2*adc_spi_xfer_counter);
 		sdc_rtw = true;
 //		if(!sdc_writing) {
@@ -842,7 +850,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 static void gps_timeout_handler(void * p_context)
 {
 	NRF_LOG_INFO("GPS TIMEOUT");
-	DBG_TOGGLE(DBG1_PIN);
+//	DBG_TOGGLE(DBG1_PIN);
 	gps_uart_reading = false;
 	gps_uart_timeout = true;
 }
@@ -893,14 +901,14 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
 // LFCLK (only debug mode without SoftDevice)
-//static void lfclk_init(void)
-//{
-//    uint32_t err_code;
-//    err_code = nrf_drv_clock_init();
-//    APP_ERROR_CHECK(err_code);
+static void lfclk_init(void)
+{
+    uint32_t err_code;
+    err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
 
-//    nrf_drv_clock_lfclk_request(NULL);
-//}
+    nrf_drv_clock_lfclk_request(NULL);
+}
 // TIMER
 static void timer_init(void)
 {
@@ -1002,7 +1010,7 @@ static void ble_stack_init(void)
 // Init SD card #0
 DSTATUS sdc_init(void)
 {
-    DSTATUS disk_state = STA_NOINIT;
+    volatile DSTATUS disk_state = STA_NOINIT;
 
     // Initialize FATFS disk I/O interface by providing the block device.
     static diskio_blkdev_t drives[] =
@@ -1033,13 +1041,13 @@ DSTATUS sdc_init(void)
 // Mount SD card and list content
 FRESULT sdc_mount(void)
 {
-    static FATFS fs;
 	static FRESULT res;
     static DIR dir;
     static FILINFO fno;
 	
 	NRF_LOG_DEBUG("Mounting volume...");
-    res = f_mount(&fs, "", 1);
+ 	sdc_fs = malloc(sizeof(FATFS));
+	res = f_mount(sdc_fs, "", 1);
     if (res) {
         NRF_LOG_INFO("Mount failed. Result: %d", res);
         return res;
@@ -1310,25 +1318,26 @@ int main(void)
 	DSTATUS card_status;
 	FRESULT ff_result;
 	ret_code_t err_code;
-
+	
 	// Board settings
-	timer_init();
-	leds_init();
-	buttons_init();
-	log_init();
+	timer_init(); 		// app_timer_init()
+	leds_init(); 		// bsp_board_leds_init() + app_timer_create((&led_blink_timer,...)
+	buttons_init(); 	// config + app_button_init()
+	log_init();			// NRF_LOG_INIT(NULL) + NRF_LOG_DEFAULT_BACKENDS_INIT()
 #ifdef DEBUG
-	gpio_dbg_init();
+	gpio_dbg_init();	// config + nrf_drv_gpiote_out_init() for two debug pins
 #endif
 	
-	// SPI, DRV_TIMER, FIFO for ADC
+	// SPI, DRV_TIMER, FIFO for LTC1864L ADC
 	adc_config_spi();
 	adc_config_timer();
 	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
 
 	// UART for GPS
-	gps_config_uart();
+	gps_config_uart();	// nrf_serial_init()
 	
 	// BLE
+//	lfclk_init(); 		// nrf_drv_clock_init() + nrf_drv_clock_lfclk_request(NULL)... comment when ble stack active
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
@@ -1344,6 +1353,13 @@ int main(void)
 	app_button_enable();
 	advertising_start();
 	
+//	struct gps_rmc_tag mytag;
+//	while(true) {
+//		mytag = gps_get_rmc_geotag();
+//		NRF_LOG_INFO("Tag received");
+//	}
+//}
+	
 	for(;;) {
 		/* REC button pressed! (starting) */
 		if(ui_rec_start_req) {
@@ -1351,13 +1367,11 @@ int main(void)
 			card_status = sdc_init();
 			if(card_status == RES_OK) {
 				NRF_LOG_INFO("SD card init done.");
+				nrf_delay_ms(100);
 				ff_result = sdc_mount();
 				if(ff_result == FR_OK) {
 					NRF_LOG_INFO("SD card mounted.");
-//					while(true) {
-//						mytag = gps_get_rmc_geotag();
-//						NRF_LOG_INFO("Tag received");
-//					}
+					nrf_delay_ms(100);
 					ff_result = sdc_init_audio();
 					if(ff_result == FR_OK) {
 						NRF_LOG_INFO("Audio file ready to record.");
@@ -1381,7 +1395,9 @@ int main(void)
 					}
 				}
 				else {
-					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+					NRF_LOG_INFO("SD card mounting failed. Result: %d", ff_result);
+					f_mount(0, "", 1);
+					free(sdc_fs);
 					ui_sdc_init_cnt++;
 					nrf_delay_ms(500);
 				}
@@ -1401,6 +1417,7 @@ int main(void)
 				}
 				else {
 					NRF_LOG_INFO("SDC init failed!");
+					app_timer_stop(led_blink_timer);
 					ui_rec_start_req = false;
 					sdc_init_ok = false;
 					LED_OFF(LED_RECORD);
