@@ -93,8 +93,8 @@ NRF_SDH_BLE_OBSERVER(_name ## _obs,                                             
 								0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00}
 #define SSS_UUID_SERVICE     	0x1523
 #define SSS_UUID_BUTTON1_CHAR 	0x1524
-#define SSS_UUID_BUTTON2_CHAR	0x1525
-#define SSS_UUID_LED1_CHAR    	0x1526
+#define SSS_UUID_LED1_CHAR    	0x1525
+#define SSS_UUID_BUTTON2_CHAR	0x1526
 #define SSS_UUID_LED2_CHAR		0x1527
 
 

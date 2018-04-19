@@ -184,6 +184,9 @@ APP_TIMER_DEF(gps_uart_timer);
 static volatile bool					ui_rec_start_req = false;
 static volatile bool					ui_rec_stop_req = false;
 static volatile bool					ui_rec_running = false;
+static volatile bool					ui_mon_start_req = false;
+static volatile bool					ui_mon_stop_req = false;
+static volatile bool					ui_mon_running = false;
 static uint8_t							ui_sdc_init_cnt = 0;
 APP_TIMER_DEF(led_blink_timer);
 
@@ -840,7 +843,14 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				}
 				break;
 			case BUTTON_MONITOR:
-				NRF_LOG_DEBUG("MON");
+				NRF_LOG_DEBUG("MON: mon_running = %d", ui_mon_running);
+				if(ui_mon_running || ui_mon_start_req) {
+					ui_mon_stop_req = true;
+					ui_mon_start_req = false;
+				}
+				else {
+					ui_mon_start_req = true;
+				}
 				break;
 
 			default:
@@ -904,9 +914,23 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("MON START requested");
+		if(!ui_mon_running && !ui_mon_start_req) {
+			ui_mon_start_req = true;
+		}
+		else {
+			NRF_LOG_DEBUG("MON already running...");
+		}
 	}
 	else {
 		NRF_LOG_DEBUG("MON STOP requested");
+		if(ui_mon_running || ui_mon_start_req) {
+			ui_mon_stop_req = true;
+			ui_mon_start_req = false;
+			ui_mon_running = false;
+		}
+		else {
+			NRF_LOG_DEBUG("No MON running...");
+		}
 	}
 }
 
@@ -1376,7 +1400,7 @@ int main(void)
 	for(;;) {
 		/* REC button pressed! (starting) */
 		if(ui_rec_start_req) {
-			NRF_LOG_INFO("Start request received");
+			NRF_LOG_INFO("REC Start request received");
 //			card_status = sdc_init();
 //			if(card_status == RES_OK) {
 //				NRF_LOG_INFO("SD card init done.");
@@ -1444,7 +1468,7 @@ int main(void)
 		
 		/* REC button pressed! (stopping) */
 		if(ui_rec_stop_req) {
-			NRF_LOG_INFO("Stop request received");
+			NRF_LOG_INFO("REC Stop request received");
 //			ff_result = sdc_close_audio();
 //			if(ff_result == FR_OK) {
 //				NRF_LOG_INFO("Done!");
@@ -1459,6 +1483,37 @@ int main(void)
 			sdc_init_ok = false;
 			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
 			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
+		}
+		
+		/* MON button pressedè (starting) */
+		if(ui_mon_start_req) {
+			NRF_LOG_INFO("MON Start request received");
+			LED_ON(LED_MONITOR);
+			ui_mon_running = true;
+			ui_mon_start_req = false;
+			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
+		}
+		
+		/* MON button pressed! (stopping) */
+		if(ui_mon_stop_req) {
+			NRF_LOG_INFO("MON Stop request received");
+			LED_OFF(LED_MONITOR);
+			ui_mon_running = false;
+			ui_mon_start_req = false;
+			ui_mon_stop_req = false;
+			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
+			if( err_code != NRF_SUCCESS &&
 				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 				err_code != NRF_ERROR_INVALID_STATE &&
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
