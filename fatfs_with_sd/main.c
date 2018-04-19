@@ -729,7 +729,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 //            err_code = app_button_disable();
 //            APP_ERROR_CHECK(err_code);
-//            advertising_start();
+            advertising_start();
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
