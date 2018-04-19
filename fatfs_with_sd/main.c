@@ -190,7 +190,7 @@ APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
-BLE_LBS_DEF(m_lbs);																// LED Button Service instance.
+BLE_SSS_DEF(m_sss);																// LED Button Service instance.
 NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
 
@@ -874,8 +874,8 @@ static void conn_params_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
-/* BLE LED write */
-static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
+/* BLE LED REC */
+static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("REC START requested");
@@ -897,6 +897,16 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
 		else {
 			NRF_LOG_DEBUG("No REC running...");
 		}
+	}
+}
+/* BLE LED MON */
+static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
+{
+	if(led_state) {
+		NRF_LOG_DEBUG("MON START requested");
+	}
+	else {
+		NRF_LOG_DEBUG("MON STOP requested");
 	}
 }
 
@@ -1268,11 +1278,11 @@ static void gatt_init(void)
 static void services_init(void)
 {
     ret_code_t     err_code;
-    ble_lbs_init_t init;
+    ble_sss_init_t init;
 
-    init.led_write_handler = led_write_handler;
-
-    err_code = ble_lbs_init(&m_lbs, &init);
+    init.led1_write_handler = led_rec_handler;
+	init.led2_write_handler = led_mon_handler;
+    err_code = ble_sss_init(&m_sss, &init);
     APP_ERROR_CHECK(err_code);
 }
 // BLE connection parameters
@@ -1302,7 +1312,7 @@ static void advertising_init(void)
     ble_advdata_t advdata;
     ble_advdata_t srdata;
 
-    ble_uuid_t adv_uuids[] = {{LBS_UUID_SERVICE, m_lbs.uuid_type}};
+    ble_uuid_t adv_uuids[] = {{SSS_UUID_SERVICE, m_sss.uuid_type}};
 
     // Build and set advertising data
     memset(&advdata, 0, sizeof(advdata));
@@ -1363,27 +1373,20 @@ int main(void)
 	app_button_enable();
 	advertising_start();
 	
-//	struct gps_rmc_tag mytag;
-//	while(true) {
-//		mytag = gps_get_rmc_geotag();
-//		NRF_LOG_INFO("Tag received");
-//	}
-//}
-	
 	for(;;) {
 		/* REC button pressed! (starting) */
 		if(ui_rec_start_req) {
 			NRF_LOG_INFO("Start request received");
-			card_status = sdc_init();
-			if(card_status == RES_OK) {
-				NRF_LOG_INFO("SD card init done.");
-				nrf_delay_ms(100);
-				ff_result = sdc_mount();
-				if(ff_result == FR_OK) {
-					NRF_LOG_INFO("SD card mounted.");
-					nrf_delay_ms(100);
-					ff_result = sdc_init_audio();
-					if(ff_result == FR_OK) {
+//			card_status = sdc_init();
+//			if(card_status == RES_OK) {
+//				NRF_LOG_INFO("SD card init done.");
+//				nrf_delay_ms(100);
+//				ff_result = sdc_mount();
+//				if(ff_result == FR_OK) {
+//					NRF_LOG_INFO("SD card mounted.");
+//					nrf_delay_ms(100);
+//					ff_result = sdc_init_audio();
+//					if(ff_result == FR_OK) {
 						NRF_LOG_INFO("Audio file ready to record.");
 						app_timer_stop(led_blink_timer);
 						LED_ON(LED_RECORD);
@@ -1391,70 +1394,70 @@ int main(void)
 						ui_rec_start_req = false;
 						ui_rec_running = true;
 						sdc_init_ok = true;
-						err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 1);
+						err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
 						if (err_code != NRF_SUCCESS &&
 							err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 							err_code != NRF_ERROR_INVALID_STATE &&
 							err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 							APP_ERROR_CHECK(err_code);
 						}
-					}
-					else {
-						NRF_LOG_INFO("Unable to initialize audio file.");
-						f_mount(0, "", 1);
-						free(sdc_fs);
-						ui_sdc_init_cnt++;
-						nrf_delay_ms(500);
-					}
-				}
-				else {
-					NRF_LOG_INFO("SD card mounting failed. Result: %d", ff_result);
-					f_mount(0, "", 1);
-					free(sdc_fs);
-					ui_sdc_init_cnt++;
-					nrf_delay_ms(500);
-				}
-			}
-			else {
-				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
-				sdc_uninit();
-				ui_sdc_init_cnt++;
-				nrf_delay_ms(500);
-			}
+//					}
+//					else {
+//						NRF_LOG_INFO("Unable to initialize audio file.");
+//						f_mount(0, "", 1);
+//						free(sdc_fs);
+//						ui_sdc_init_cnt++;
+//						nrf_delay_ms(500);
+//					}
+//				}
+//				else {
+//					NRF_LOG_INFO("SD card mounting failed. Result: %d", ff_result);
+//					f_mount(0, "", 1);
+//					free(sdc_fs);
+//					ui_sdc_init_cnt++;
+//					nrf_delay_ms(500);
+//				}
+//			}
+//			else {
+//				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
+//				sdc_uninit();
+//				ui_sdc_init_cnt++;
+//				nrf_delay_ms(500);
+//			}
 			
 			/* If SDC init failed, retry some times then fail */
-			if(!sdc_init_ok) {
-				if(ui_sdc_init_cnt < 10) {
-					NRF_LOG_INFO("Retrying...");
-					ui_rec_start_req = true;
-					sdc_init_ok = false;
-				}
-				else {
-					NRF_LOG_INFO("SDC init failed!");
-					app_timer_stop(led_blink_timer);
-					ui_rec_start_req = false;
-					sdc_init_ok = false;
-					LED_OFF(LED_RECORD);
-				}
-			}
+//			if(!sdc_init_ok) {
+//				if(ui_sdc_init_cnt < 10) {
+//					NRF_LOG_INFO("Retrying...");
+//					ui_rec_start_req = true;
+//					sdc_init_ok = false;
+//				}
+//				else {
+//					NRF_LOG_INFO("SDC init failed!");
+//					app_timer_stop(led_blink_timer);
+//					ui_rec_start_req = false;
+//					sdc_init_ok = false;
+//					LED_OFF(LED_RECORD);
+//				}
+//			}
 		}
 		
 		/* REC button pressed! (stopping) */
 		if(ui_rec_stop_req) {
 			NRF_LOG_INFO("Stop request received");
-			ff_result = sdc_close_audio();
-			if(ff_result == FR_OK) {
-				NRF_LOG_INFO("Done!");
-			}
-			else {
-				NRF_LOG_INFO("ERROR while closing audio file");
-			}
+//			ff_result = sdc_close_audio();
+//			if(ff_result == FR_OK) {
+//				NRF_LOG_INFO("Done!");
+//			}
+//			else {
+//				NRF_LOG_INFO("ERROR while closing audio file");
+//			}
 			LED_OFF(LED_RECORD);
 			ui_rec_running = false;
 			ui_rec_start_req = false;
 			ui_rec_stop_req = false;
 			sdc_init_ok = false;
-			err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, 0);
+			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
 			if (err_code != NRF_SUCCESS &&
 				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 				err_code != NRF_ERROR_INVALID_STATE &&
@@ -1464,26 +1467,26 @@ int main(void)
 		}
 
 		/* SD card initialization done */
-		if(sdc_init_ok) {
-			NRF_LOG_INFO("Starting recording");
-			sdc_init_ok = false;
-			adc_spi_xfer_done = true;
-			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-		}
-		
-		if(sdc_rtw) {
-			DBG_TOGGLE(DBG1_PIN);
-			sdc_rtw = false;
-			if(!sdc_writing) {
-				sdc_fill_queue();
-			}
-			else {
-				sdc_block_cnt++;
-//				NRF_LOG_INFO("Decounting FIFO...");
-//				sdc_block_cnt--;
+//		if(sdc_init_ok) {
+//			NRF_LOG_INFO("Starting recording");
+//			sdc_init_ok = false;
+//			adc_spi_xfer_done = true;
+//			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//		}
+//		
+//		if(sdc_rtw) {
+//			DBG_TOGGLE(DBG1_PIN);
+//			sdc_rtw = false;
+//			if(!sdc_writing) {
 //				sdc_fill_queue();
-			}
-		}
+//			}
+//			else {
+//				sdc_block_cnt++;
+////				NRF_LOG_INFO("Decounting FIFO...");
+////				sdc_block_cnt--;
+////				sdc_fill_queue();
+//			}
+//		}
 		
         __WFE();
     }

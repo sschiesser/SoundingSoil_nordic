@@ -248,7 +248,7 @@
  
 
 #ifndef BLE_LBS_ENABLED
-#define BLE_LBS_ENABLED 1
+#define BLE_LBS_ENABLED 0
 #endif
 
 // <q> BLE_LLS_ENABLED  - ble_lls - Link Loss Service
@@ -284,6 +284,14 @@
 
 #ifndef BLE_RSCS_ENABLED
 #define BLE_RSCS_ENABLED 0
+#endif
+
+
+// <q> BLE_SSS_ENABLED  - ble_sss - Running Sounding Soil Service
+ 
+
+#ifndef BLE_SSS_ENABLED
+#define BLE_SSS_ENABLED 1
 #endif
 
 // <q> BLE_TPS_ENABLED  - ble_tps - TX Power Service
@@ -3393,6 +3401,13 @@
 
 #ifndef BLE_RSCS_C_BLE_OBSERVER_PRIO
 #define BLE_RSCS_C_BLE_OBSERVER_PRIO 2
+#endif
+
+// <o> BLE_RSCS_C_BLE_OBSERVER_PRIO  
+// <i> Priority with which BLE events are dispatched to the Running Speed and Cadence Client.
+
+#ifndef BLE_SSS_BLE_OBSERVER_PRIO
+#define BLE_SSS_BLE_OBSERVER_PRIO 2
 #endif
 
 // <o> BLE_TPS_BLE_OBSERVER_PRIO  

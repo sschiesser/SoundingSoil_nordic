@@ -48,7 +48,7 @@
 #include "ble_srv_common.h"
 #include "ble_advdata.h"
 #include "ble_conn_params.h"
-#include "ble_lbs.h"
+#include "ble_sss.h"
 /* LOG */
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -73,6 +73,7 @@
 /* -------------------------------------------------------------------------- */
 #define LED_RECORD						(BSP_LED_2)
 #define LED_MONITOR						(BSP_LED_3)
+#define LED_ADVERTISE					(BSP_LED_0)
 #define LED_ON(led)						(nrf_drv_gpiote_out_clear(led))
 #define LED_OFF(led)					(nrf_drv_gpiote_out_set(led))
 #define LED_TOGGLE(led)					(nrf_drv_gpiote_out_toggle(led))

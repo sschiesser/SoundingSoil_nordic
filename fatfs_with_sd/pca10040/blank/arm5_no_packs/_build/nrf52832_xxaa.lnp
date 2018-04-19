@@ -44,6 +44,7 @@
 ".\_build\nrf_ble_gatt.o"
 ".\_build\ble_lbs.o"
 ".\_build\ble_bas.o"
+".\_build\ble_sss.o"
 ".\_build\nrf_sdh.o"
 ".\_build\nrf_sdh_ble.o"
 ".\_build\nrf_sdh_soc.o"
