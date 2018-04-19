@@ -417,7 +417,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 //	DBG_TOGGLE(DBG0_PIN);
 	while(gps_uart_reading) {
 		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-		DBG_TOGGLE(DBG1_PIN);
+//		DBG_TOGGLE(DBG1_PIN);
 		if(ret == NRF_ERROR_TIMEOUT) {
 			NRF_LOG_DEBUG("UART timeout!");
 			gps_uart_reading = false;
@@ -621,11 +621,13 @@ static void sdc_fill_queue(void)
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
 	sdc_writing = true;
-//	DBG_TOGGLE(DBG1_PIN);
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
+	NRF_LOG_DEBUG("res: %d");
 	if(res == FR_OK) {
+//		DBG_TOGGLE(DBG1_PIN);
 		res = f_sync(&recording_fil);
 		sdc_writing = false;
+		sdc_block_cnt--;
 	}
 }
 
@@ -693,6 +695,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 /* TIMER for ADC */
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
+//	DBG_TOGGLE(DBG0_PIN);
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
@@ -1036,6 +1039,13 @@ DSTATUS sdc_init(void)
     NRF_LOG_DEBUG("Capacity: %d MB", capacity);
 	return RES_OK;
 }
+// Un-init SD card #0
+DSTATUS sdc_uninit(void)
+{
+	volatile DSTATUS disk_state = STA_NOINIT;
+	disk_state = disk_uninitialize(0);
+	return disk_state;
+}
 
 
 // Mount SD card and list content
@@ -1377,6 +1387,7 @@ int main(void)
 						NRF_LOG_INFO("Audio file ready to record.");
 						app_timer_stop(led_blink_timer);
 						LED_ON(LED_RECORD);
+						DBG_TOGGLE(DBG0_PIN);
 						ui_rec_start_req = false;
 						ui_rec_running = true;
 						sdc_init_ok = true;
@@ -1390,6 +1401,8 @@ int main(void)
 					}
 					else {
 						NRF_LOG_INFO("Unable to initialize audio file.");
+						f_mount(0, "", 1);
+						free(sdc_fs);
 						ui_sdc_init_cnt++;
 						nrf_delay_ms(500);
 					}
@@ -1404,6 +1417,7 @@ int main(void)
 			}
 			else {
 				NRF_LOG_INFO("SD card check failed. Status: %d, Init cnt: %d", card_status, ui_sdc_init_cnt);
+				sdc_uninit();
 				ui_sdc_init_cnt++;
 				nrf_delay_ms(500);
 			}
@@ -1458,14 +1472,16 @@ int main(void)
 		}
 		
 		if(sdc_rtw) {
+			DBG_TOGGLE(DBG1_PIN);
+			sdc_rtw = false;
 			if(!sdc_writing) {
-				sdc_rtw = false;
 				sdc_fill_queue();
 			}
-			else if(sdc_block_cnt > 0) {
+			else {
+				sdc_block_cnt++;
 //				NRF_LOG_INFO("Decounting FIFO...");
-				sdc_block_cnt--;
-				sdc_fill_queue();
+//				sdc_block_cnt--;
+//				sdc_fill_queue();
 			}
 		}
 		
