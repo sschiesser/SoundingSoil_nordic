@@ -55,11 +55,22 @@
 #include "nrf_block_dev_sdc.h"
 #include <string.h>
 #include <stdio.h>
-
+#include "app_button.h"
+#include "app_timer.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+
+#include "ble.h"
+#include "ble_err.h"
+#include "ble_hci.h"
+#include "ble_srv_common.h"
+#include "ble_advdata.h"
+#include "ble_conn_params.h"
+#include "nrf_ble_gatt.h"
+#include "nrf_sdh.h"
+#include "nrf_sdh_ble.h"
 
 #define FILE_NAME   "NORDIC.TXT"
 #define TEST_STRING "SD card example."
@@ -69,9 +80,32 @@
 #define SDC_MOSI_PIN    24  ///< SDC serial data in (DI) pin.
 #define SDC_CS_PIN      25  ///< SDC chip select (CS) pin.
 #define SDC_CD_PIN		04  ///< SCD card detect (CD) pin.
+#define BUTTON_RECORD	(BSP_BUTTON_2)
+#define BUTTON_MONITOR	(BSP_BUTTON_3)
+#define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50)                     /**< Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks). */
 
-#define DATA_SIZE		2048
-static uint8_t data_buffer[DATA_SIZE];
+#define DEVICE_NAME                     "Nordic_Blinky"                         /**< Name of device. Will be included in the advertising data. */
+
+#define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
+#define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
+
+#define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_TIMEOUT_IN_SECONDS      BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
+
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.5 seconds). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1 second). */
+#define SLAVE_LATENCY                   0                                       /**< Slave latency. */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (4 seconds). */
+
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
+#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
+#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
+
+#define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
+
+#define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
+NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
 
 /**
  * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -84,6 +118,208 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
+
+/* ========================================================================== */
+/*                              EVENT HANDLERS                                */
+/* ========================================================================== */
+// BLE
+static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+    ret_code_t err_code;
+
+    switch (p_ble_evt->header.evt_id)
+    {
+        case BLE_GAP_EVT_CONNECTED:
+            NRF_LOG_INFO("Connected");
+//            bsp_board_led_on(CONNECTED_LED);
+//            bsp_board_led_off(ADVERTISING_LED);
+            m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+
+//            err_code = app_button_enable();
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GAP_EVT_DISCONNECTED:
+            NRF_LOG_INFO("Disconnected");
+//            bsp_board_led_off(CONNECTED_LED);
+            m_conn_handle = BLE_CONN_HANDLE_INVALID;
+//            err_code = app_button_disable();
+//            APP_ERROR_CHECK(err_code);
+//            advertising_start();
+            break;
+
+        case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+            // Pairing not supported
+            err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
+                                                   BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
+                                                   NULL,
+                                                   NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTS_EVT_SYS_ATTR_MISSING:
+            // No system attributes have been stored.
+            err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTC_EVT_TIMEOUT:
+            // Disconnect on GATT Client timeout event.
+            NRF_LOG_DEBUG("GATT Client Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTS_EVT_TIMEOUT:
+            // Disconnect on GATT Server timeout event.
+            NRF_LOG_DEBUG("GATT Server Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_EVT_USER_MEM_REQUEST:
+            err_code = sd_ble_user_mem_reply(p_ble_evt->evt.gattc_evt.conn_handle, NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST:
+        {
+            ble_gatts_evt_rw_authorize_request_t  req;
+            ble_gatts_rw_authorize_reply_params_t auth_reply;
+
+            req = p_ble_evt->evt.gatts_evt.params.authorize_request;
+
+            if (req.type != BLE_GATTS_AUTHORIZE_TYPE_INVALID)
+            {
+                if ((req.request.write.op == BLE_GATTS_OP_PREP_WRITE_REQ)     ||
+                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_NOW) ||
+                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_CANCEL))
+                {
+                    if (req.type == BLE_GATTS_AUTHORIZE_TYPE_WRITE)
+                    {
+                        auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_WRITE;
+                    }
+                    else
+                    {
+                        auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_READ;
+                    }
+                    auth_reply.params.write.gatt_status = APP_FEATURE_NOT_SUPPORTED;
+                    err_code = sd_ble_gatts_rw_authorize_reply(p_ble_evt->evt.gatts_evt.conn_handle,
+                                                               &auth_reply);
+                    APP_ERROR_CHECK(err_code);
+                }
+            }
+        } break; // BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST
+
+        default:
+            // No implementation needed.
+            break;
+    }
+}
+
+
+// BUTTONS
+static void button_event_handler(uint8_t pin_no, uint8_t button_action)
+{
+	if(button_action) {
+		switch (pin_no)
+		{
+			case BUTTON_RECORD:
+				NRF_LOG_DEBUG("REC!");
+//				NRF_LOG_DEBUG("REC: rec_running = %d", ui_rec_running);
+//				if(ui_rec_running || ui_rec_start_req) {
+//					ui_rec_stop_req = true;
+//					ui_rec_start_req = false;
+//				}
+//				else {
+//					ui_sdc_init_cnt = 0;
+//					ui_rec_start_req = true;
+//					APP_ERROR_CHECK(app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL));
+//				}
+				break;
+			case BUTTON_MONITOR:
+				NRF_LOG_DEBUG("MON!");
+//				NRF_LOG_DEBUG("MON: mon_running = %d", ui_mon_running);
+//				if(ui_mon_running || ui_mon_start_req) {
+//					ui_mon_stop_req = true;
+//					ui_mon_start_req = false;
+//				}
+//				else {
+//					ui_mon_start_req = true;
+//				}
+				break;
+
+			default:
+				APP_ERROR_HANDLER(pin_no);
+				break;
+		}
+	}
+}
+// LED
+//static void led_blink_handler(void * p_context)
+//{
+//	LED_TOGGLE(LED_RECORD);
+//}
+
+/* ========================================================================== */
+/*                                INIT/CONFIG                                 */
+/* ========================================================================== */
+// BLE stack
+static void ble_stack_init(void)
+{
+    ret_code_t err_code;
+
+    err_code = nrf_sdh_enable_request();
+    APP_ERROR_CHECK(err_code);
+
+    // Configure the BLE stack using the default settings.
+    // Fetch the start address of the application RAM.
+    uint32_t ram_start = 0;
+    err_code = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
+    APP_ERROR_CHECK(err_code);
+
+    // Enable BLE stack.
+    err_code = nrf_sdh_ble_enable(&ram_start);
+    APP_ERROR_CHECK(err_code);
+
+    // Register a handler for BLE events.
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
+}
+
+// BUTTONS
+static void buttons_init(void)
+{
+    ret_code_t err_code;
+
+    //The array must be static because a pointer to it will be saved in the button handler module.
+    static app_button_cfg_t buttons[] =
+    {
+        {BUTTON_RECORD, false, BUTTON_PULL, button_event_handler},
+		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler}
+    };
+
+	err_code = app_timer_init();
+	APP_ERROR_CHECK(err_code);
+    err_code = app_button_init(buttons, sizeof(buttons) / sizeof(buttons[0]), BUTTON_DETECTION_DELAY);
+    APP_ERROR_CHECK(err_code);
+}
+
+
+// LEDS
+static void leds_init(void)
+{
+	bsp_board_leds_init();
+//	ret_code_t ret = app_timer_create(&led_blink_timer, APP_TIMER_MODE_REPEATED, led_blink_handler);
+}
+
+// LOG
+static void log_init(void)
+{
+	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+}
 
 /**
  * @brief Function for demonstrating FAFTS usage.
@@ -185,305 +421,9 @@ static void fatfs_example()
 }
 
 
-DSTATUS sd_card_test(void)
-{
-//    static FATFS fs;
-//    static DIR dir;
-//    static FILINFO fno;
-//    static FIL file;
-
-//    uint32_t bytes_written;
-//    FRESULT ff_result;
-    DSTATUS disk_state = STA_NOINIT;
-
-    // Initialize FATFS disk I/O interface by providing the block device.
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state)
-    {
-        NRF_LOG_INFO("Disk initialization failed. Disk state: %d", disk_state);
-        return disk_state;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
-	return RES_OK;
-}
 
 
-FRESULT scan_files(char *path, uint16_t *nb_items)
-{
-	FRESULT res;
-	FILINFO fno;
-	DIR     dir;
-	int32_t i;
-	uint16_t items = 0;
-	char *  pc_fn;
-#if _USE_LFN
-	char c_lfn[_MAX_LFN + 1];
-	fno.lfname = c_lfn;
-	fno.lfsize = sizeof(c_lfn);
-#endif
 
-	/* Open the directory */
-	res = f_opendir(&dir, path);
-	if (res == FR_OK) {
-		i = strlen(path);
-		for (;;) {
-			res = f_readdir(&dir, &fno);
-			if (res != FR_OK || fno.fname[0] == 0) {
-				*nb_items = items-2; // removing the '.' and '..' items
-				break;
-			}
-			items++;
-
-
-#if _USE_LFN
-			pc_fn = *fno.lfname ? fno.lfname : fno.fname;
-#else
-			pc_fn = fno.fname;
-#endif
-			if (*pc_fn == '.') {
-				continue;
-			}
-
-			/* Check if it is a directory type */
-			if (fno.fattrib & AM_DIR) {
-				uint16_t sub_items;
-				sprintf(&path[i], "/%s", pc_fn);
-				res = scan_files(path, &sub_items);
-				if (res != FR_OK) {
-					break;
-				}
-				items += sub_items;
-				path[i] = 0;
-			} else {
-				NRF_LOG_INFO("%s/%s\n\r", path, pc_fn);
-			}
-		}
-	}
-
-	return res;
-}
-
-
-FRESULT sd_card_init(void)
-{
-    static FATFS fs;
-	static FRESULT ff_result;
-    static DIR dir;
-    static FILINFO fno;
-	
-	NRF_LOG_INFO("Mounting volume...");
-    ff_result = f_mount(&fs, "", 1);
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Mount failed. Result: %d", ff_result);
-        return ff_result;
-    }
-
-    NRF_LOG_INFO("\r\n Listing directory: /");
-    ff_result = f_opendir(&dir, "/");
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Directory listing failed!");
-        return ff_result;
-    }
-
-    do
-    {
-        ff_result = f_readdir(&dir, &fno);
-        if (ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("Directory read failed.");
-            return ff_result;
-        }
-
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
-            }
-            else
-            {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-            }
-        }
-    }
-    while (fno.fname[0]);
-    NRF_LOG_RAW_INFO("");
-	return FR_OK;
-}
-
-
-static uint8_t ss_example(uint32_t disk_dev_num)
-{
-	FRESULT res;
-//    static FATFS fs;
-//    static DIR dir;
-//    static FILINFO fno;
-//    static FIL file;
-
-//    uint32_t bytes_written;
-//    DSTATUS disk_state = STA_NOINIT;
-
-	TCHAR   root_directory[4];
-	TCHAR file_name[18];
-	//UINT file_number;
-	TCHAR test_folder_name[13];
-	TCHAR test_folder_location[25];
-
-	
-	/* Declare these as static to avoid stack usage.
-	 * They each contain an array of maximum sector size.
-	 */
-	char         disk_str_num[2];
-
-	sprintf(disk_str_num, "%d", disk_dev_num);
-	sprintf(test_folder_name, "%s", (const char *)"180314");
-	sprintf(root_directory, "%s:/", disk_str_num);
-	sprintf(test_folder_location, "%s%s", root_directory, test_folder_name);
-
-	
-	/* ===== CHECK DIRECTORY EXISTENCE ===== */
-	FILINFO filinfo;
-	bool makedir = false;
-	
-	res = f_stat(test_folder_location, &filinfo);
-	if(res == FR_OK) {
-		NRF_LOG_INFO("-I- folder already exist\n\r");
-	}
-	else if((res == FR_NO_PATH) || (res == FR_NO_FILE)) {
-		NRF_LOG_INFO("-W- folder not found... create!\n\r");
-		makedir = true;
-	}
-	else {
-		NRF_LOG_INFO("-E- f_stat pb: 0x%X\n\r", res);
-		return 1;
-	}
-	
-	/* ===== CREATE DIRECTORY ===== */
-	if(makedir) {
-		res = f_mkdir(test_folder_name);
-		if (res != FR_OK) {
-			NRF_LOG_INFO("-E- f_mkdir pb: 0x%X\n\r", res);
-			return 1;
-		}
-		else {
-			NRF_LOG_INFO("-I- directory created\n\r");
-			makedir = false;
-		}
-	}
-
-	/* ===== OPEN DIRECTORY ===== */
-	NRF_LOG_INFO("-I- Opening directory !\r");
-	DIR	dirinfo;
-	uint16_t scanned_files;
-	res = f_opendir(&dirinfo, test_folder_location);
-	if (res == FR_OK) {
-		/* Display the file tree */
-		NRF_LOG_INFO("-I- Display files contained in the memory :\r");
-		strcpy((char *)data_buffer, test_folder_location);
-		scan_files((char *)data_buffer, &scanned_files);
-		NRF_LOG_INFO("Number of found files: %d\n\r", scanned_files);
-	}
-
-	
-	/* ===== CREATE NEW FILE ===== */
-	static FIL   file_object;
-	TCHAR new_file[13];
-	for(;;) {
-		sprintf(new_file, "R%04d", scanned_files);
-		sprintf(file_name, "%s/%s.wav", test_folder_location, new_file); /*File path*/
-		NRF_LOG_INFO("-I- Create a file : \"%s\"\n\r", file_name);
-		res = f_open(&file_object, (char const *)file_name, FA_CREATE_NEW | FA_READ | FA_WRITE);
-		if (res == FR_OK) {
-			break;
-		}
-		else if (res != FR_EXIST) {
-			NRF_LOG_INFO("-E- Filename already exist... increasing iteration\n\r");
-			scanned_files++;
-		}
-		else {
-			NRF_LOG_INFO("-E- f_open create pb: 0x%X\n\r", res);
-			return 1;
-		}
-	}
-
-	/* ===== READ FILE TO COPY ===== */
-	static FIL file2;
-	static FSIZE_t f2_size;
-	int i;
-	NRF_LOG_INFO("-I- Opening read-only file\n\r");
-	res = f_open(&file2, "0:/song.mp3", FA_READ);
-	if(res != FR_OK) {
-		NRF_LOG_INFO("Opening failed");
-		return 1;
-	}
-
-	f2_size = f_size(&file2);
-	UINT byte_read, byte_written;
-	for(i = 0; i < f2_size; i += DATA_SIZE) {
-//		NRF_LOG_INFO(".");
-		res = f_read(&file2, (char*)data_buffer, DATA_SIZE, &byte_read);
-		if(res == FR_OK) {
-//			NRF_LOG_INFO(".");
-			res = f_write(&file_object, (const char *)data_buffer, DATA_SIZE, &byte_written);
-			if(res == FR_OK) {
-				NRF_LOG_RAW_INFO(".");
-				res = f_sync(&file_object);
-			}
-		}
-	}
-	NRF_LOG_INFO("\n\r");
-	///* Write a checkerboard pattern in the buffer */
-	//int i;
-//
-	//for (i = 0; i < sizeof(data_buffer); i++) {
-		//if ((i & 1) == 0) {
-			//data_buffer[i] = (i & 0x55);
-		//} else {
-			//data_buffer[i] = (i & 0xAA);
-		//}
-	//}
-	//puts("-I- Write file\r");
-	//for (i = 0; i < TEST_SIZE; i += DATA_SIZE) {
-		//res = f_write(&file_object, data_buffer, DATA_SIZE, &byte_written);
-//
-		//if (res != FR_OK) {
-			//printf("-E- f_write pb: 0x%X\n\r", res);
-			//return 0;
-		//}
-	//}
-
-	/* Flush after writing */
-	NRF_LOG_INFO("-I- Syncing file");
-	res = f_sync(&file_object);
-	if (res != FR_OK) {
-		NRF_LOG_INFO("-E- f_sync pb: 0x%X", res);
-		return 1;
-	}
-	/* Close the file */
-	NRF_LOG_INFO("-I- Close file");
-	res = f_close(&file_object);
-	if (res != FR_OK) {
-		NRF_LOG_INFO("-E- f_close pb: 0x%X", res);
-		return 1;
-	}
-	return 0;
-}
 
 /**
  * @brief Function for main application entry.
@@ -493,35 +433,16 @@ int main(void)
 	DSTATUS card_status;
 	FRESULT ff_result;
 	
-    bsp_board_leds_init();
-    APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
+	leds_init();
+	log_init();
+	buttons_init();
+	ble_stack_init();
+	app_button_enable();
 
     NRF_LOG_INFO("FATFS example.");
 
     fatfs_example();
 
-//	card_status = sd_card_test();
-//	if(card_status != RES_OK) {
-//		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
-//	}
-//	else {
-//		NRF_LOG_INFO("SD card check OK");
-//		ff_result = sd_card_init();
-//		if(ff_result != FR_OK) {
-//			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
-//		}
-//		else {
-//			NRF_LOG_INFO("\nSD card init OK");
-//			if(!ss_example(0)) {
-//				NRF_LOG_INFO("SS test passed!");
-//			}
-//			else {
-//				NRF_LOG_INFO("SS test failed!");
-//			}
-//		}
-//	}
-//	
     while (true)
     {
         __WFE();
