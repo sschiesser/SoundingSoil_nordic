@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 24 15:46:31 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 24 16:00:18 2018
 <BR><P>
 <H3>Maximum Stack Usage =        512 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -905,7 +905,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[10c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fatfs_example
 </UL>
 
-<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 126 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 242 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 496<LI>Call Chain = main &rArr; advertising_init &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
@@ -1184,7 +1184,6 @@ Global Symbols
 <LI><a href="#[3f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_rec_handler
 <LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_mon_handler
 <LI><a href="#[10c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fatfs_example
-<LI><a href="#[1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;button_event_handler
 <LI><a href="#[4e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[3e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 </UL>
@@ -1196,6 +1195,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 <LI><a href="#[10c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fatfs_example
+<LI><a href="#[1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;button_event_handler
 <LI><a href="#[3e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[12f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
 <LI><a href="#[131]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_request_evt
@@ -1500,10 +1500,10 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 88 bytes, Stack size 16 bytes, main.o(i.button_event_handler))
+<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 158 bytes, Stack size 16 bytes, main.o(i.button_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 376<LI>Call Chain = button_event_handler &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Calls]<UL><LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(.data)

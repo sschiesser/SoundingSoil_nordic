@@ -76,8 +76,12 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 
 /*                                LED/BUTTON                                  */
 /* -------------------------------------------------------------------------- */
-volatile bool button_rec_pressed = false;
-volatile bool button_mon_pressed = false;
+static volatile bool ui_rec_start_req = false;
+static volatile bool ui_rec_stop_req = false;
+static volatile bool ui_rec_running = false;
+static volatile bool ui_mon_start_req = false;
+static volatile bool ui_mon_stop_req = false;
+static volatile bool ui_mon_running = false;
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
@@ -334,30 +338,28 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-				NRF_LOG_DEBUG("REC!");
-				button_rec_pressed = true;
-//				NRF_LOG_DEBUG("REC: rec_running = %d", ui_rec_running);
-//				if(ui_rec_running || ui_rec_start_req) {
-//					ui_rec_stop_req = true;
-//					ui_rec_start_req = false;
-//				}
-//				else {
-//					ui_sdc_init_cnt = 0;
-//					ui_rec_start_req = true;
+				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+				if(ui_rec_running || ui_rec_start_req) {
+					ui_rec_stop_req = true;
+					ui_rec_start_req = false;
+					ui_rec_running = false;
+				}
+				else {
+					ui_rec_start_req = true;
 //					APP_ERROR_CHECK(app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL));
-//				}
+				}
 				break;
+				
 			case BUTTON_MONITOR:
-				NRF_LOG_DEBUG("MON!");
-				button_mon_pressed = true;
-//				NRF_LOG_DEBUG("MON: mon_running = %d", ui_mon_running);
-//				if(ui_mon_running || ui_mon_start_req) {
-//					ui_mon_stop_req = true;
-//					ui_mon_start_req = false;
-//				}
-//				else {
-//					ui_mon_start_req = true;
-//				}
+				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+				if(ui_mon_running || ui_mon_start_req) {
+					ui_mon_stop_req = true;
+					ui_mon_start_req = false;
+					ui_mon_running = false;
+				}
+				else {
+					ui_mon_start_req = true;
+				}
 				break;
 
 			default:
@@ -593,13 +595,30 @@ int main(void)
 	
 	for(;;)
     {
-		if(button_rec_pressed) {
-			button_rec_pressed = false;
+		if(ui_rec_start_req) {
+			NRF_LOG_DEBUG("Starting REC");
 			fatfs_example();
+			ui_rec_start_req = false;
+			ui_rec_running = true;
 		}
-		if(button_mon_pressed) {
-			button_mon_pressed = false;
+		if(ui_rec_stop_req) {
+			NRF_LOG_DEBUG("Stopping REC");
+			ui_rec_stop_req = false;
+			ui_rec_start_req = false;
+			ui_rec_running = false;
 		}
+		if(ui_mon_start_req) {
+			NRF_LOG_DEBUG("Starting MON");
+			ui_mon_start_req = false;
+			ui_mon_running = true;
+		}
+		if(ui_mon_stop_req) {
+			NRF_LOG_DEBUG("Stopping MON");
+			ui_mon_stop_req = false;
+			ui_mon_start_req = false;
+			ui_mon_running = false;
+		}
+		
         __WFE();
     }
 }
