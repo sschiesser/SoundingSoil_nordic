@@ -356,7 +356,6 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				}
 				else {
 					ui_rec_start_req = true;
-//					APP_ERROR_CHECK(app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL));
 				}
 				break;
 				
@@ -391,24 +390,23 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("REC START requested");
-//		if(!ui_rec_running && !ui_rec_start_req) {
-//			ui_sdc_init_cnt = 0;
-//			ui_rec_start_req = true;
-//		}
-//		else {
-//			NRF_LOG_DEBUG("REC already running...");
-//		}
+		if(!ui_rec_running && !ui_rec_start_req) {
+			ui_rec_start_req = true;
+		}
+		else {
+			NRF_LOG_DEBUG("REC already running...");
+		}
 	}
 	else {
 		NRF_LOG_DEBUG("REC STOP requested");
-//		if(ui_rec_running || ui_rec_start_req) {
-//			ui_rec_stop_req = true;
-//			ui_rec_start_req = false;
-//			ui_rec_running = false;
-//		}
-//		else {
-//			NRF_LOG_DEBUG("No REC running...");
-//		}
+		if(ui_rec_running || ui_rec_start_req) {
+			ui_rec_stop_req = true;
+			ui_rec_start_req = false;
+			ui_rec_running = false;
+		}
+		else {
+			NRF_LOG_DEBUG("No REC running...");
+		}
 	}
 }
 // LED MON
@@ -416,23 +414,23 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("MON START requested");
-//		if(!ui_mon_running && !ui_mon_start_req) {
-//			ui_mon_start_req = true;
-//		}
-//		else {
-//			NRF_LOG_DEBUG("MON already running...");
-//		}
+		if(!ui_mon_running && !ui_mon_start_req) {
+			ui_mon_start_req = true;
+		}
+		else {
+			NRF_LOG_DEBUG("MON already running...");
+		}
 	}
 	else {
 		NRF_LOG_DEBUG("MON STOP requested");
-//		if(ui_mon_running || ui_mon_start_req) {
-//			ui_mon_stop_req = true;
-//			ui_mon_start_req = false;
-//			ui_mon_running = false;
-//		}
-//		else {
-//			NRF_LOG_DEBUG("No MON running...");
-//		}
+		if(ui_mon_running || ui_mon_start_req) {
+			ui_mon_stop_req = true;
+			ui_mon_start_req = false;
+			ui_mon_running = false;
+		}
+		else {
+			NRF_LOG_DEBUG("No MON running...");
+		}
 	}
 }
 
@@ -587,6 +585,8 @@ static void log_init(void)
  */
 int main(void)
 {
+	ret_code_t err_code;
+	
 	leds_init();
 	log_init();
 	buttons_init();
@@ -609,6 +609,7 @@ int main(void)
 	
 	for(;;)
     {
+		// REC START request
 		if(ui_rec_start_req) {
 			NRF_LOG_DEBUG("Starting REC");
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
@@ -617,35 +618,68 @@ int main(void)
 			}
 			ui_rec_start_req = false;
 		}
+		// REC STOP request
 		if(ui_rec_stop_req) {
 			NRF_LOG_DEBUG("Stopping REC");
 			sdc_close();
 			LED_OFF(LED_RECORD);
+			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 			ui_rec_stop_req = false;
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 		}
+		// MON START request
 		if(ui_mon_start_req) {
 			NRF_LOG_DEBUG("Starting MON");
 			LED_ON(LED_MONITOR);
+			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 			ui_mon_start_req = false;
 			ui_mon_running = true;
 		}
+		// MON STOP request
 		if(ui_mon_stop_req) {
 			NRF_LOG_DEBUG("Stopping MON");
 			LED_OFF(LED_MONITOR);
+			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
+			if( err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 		}
+		// SDC INIT OK
 		if(sdc_init_ok) {
-			NRF_LOG_DEBUG("Writing to SDC");
+			NRF_LOG_DEBUG("SDC init OK");
 			app_timer_stop(led_blink_timer);
+			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 			LED_ON(LED_RECORD);
 			sdc_write();
 			ui_rec_running = true;
 			sdc_init_ok = false;
 		}
+		//
 		
         __WFE();
     }
