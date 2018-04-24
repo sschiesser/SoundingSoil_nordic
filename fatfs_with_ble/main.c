@@ -67,6 +67,11 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
+static FATFS sdc_fs;
+static DIR sdc_dir;
+static FILINFO sdc_fno;
+static FIL sdc_file;
+static volatile bool sdc_init_ok = false;
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -74,7 +79,7 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 /*                                    GPS                                     */
 /* -------------------------------------------------------------------------- */
 
-/*                                LED/BUTTON                                  */
+/*                                    UI                                      */
 /* -------------------------------------------------------------------------- */
 static volatile bool ui_rec_start_req = false;
 static volatile bool ui_rec_stop_req = false;
@@ -82,6 +87,7 @@ static volatile bool ui_rec_running = false;
 static volatile bool ui_mon_start_req = false;
 static volatile bool ui_mon_stop_req = false;
 static volatile bool ui_mon_running = false;
+APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
@@ -92,15 +98,8 @@ static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        
 /* ========================================================================== */
 /*                                  UTILS                                     */
 /* ========================================================================== */
-// FATFS example
-static void fatfs_example()
+static uint32_t sdc_start()
 {
-    static FATFS fs;
-    static DIR dir;
-    static FILINFO fno;
-    static FIL file;
-
-    uint32_t bytes_written;
     FRESULT ff_result;
     DSTATUS disk_state = STA_NOINIT;
 
@@ -120,7 +119,7 @@ static void fatfs_example()
     if (disk_state)
     {
         NRF_LOG_INFO("Disk initialization failed. Disk state: %d", disk_state);
-        return;
+        return (uint32_t)disk_state;
     }
 
     uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
@@ -128,54 +127,62 @@ static void fatfs_example()
     NRF_LOG_INFO("Capacity: %d MB", capacity);
 
     NRF_LOG_INFO("Mounting volume...");
-    ff_result = f_mount(&fs, "", 1);
+    ff_result = f_mount(&sdc_fs, "", 1);
     if (ff_result)
     {
         NRF_LOG_INFO("Mount failed. Result: %d", ff_result);
-        return;
+        return (uint32_t)ff_result;
     }
 
     NRF_LOG_INFO("\r\n Listing directory: /");
-    ff_result = f_opendir(&dir, "/");
+    ff_result = f_opendir(&sdc_dir, "/");
     if (ff_result)
     {
         NRF_LOG_INFO("Directory listing failed!");
-        return;
+        return (uint32_t)ff_result;
     }
 
     do
     {
-        ff_result = f_readdir(&dir, &fno);
+        ff_result = f_readdir(&sdc_dir, &sdc_fno);
         if (ff_result != FR_OK)
         {
             NRF_LOG_INFO("Directory read failed.");
-            return;
+            return (uint32_t)ff_result;
         }
 
-        if (fno.fname[0])
+        if (sdc_fno.fname[0])
         {
-            if (fno.fattrib & AM_DIR)
+            if (sdc_fno.fattrib & AM_DIR)
             {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
+                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)sdc_fno.fname);
             }
             else
             {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
+                NRF_LOG_RAW_INFO("%9lu  %s", sdc_fno.fsize, (uint32_t)sdc_fno.fname);
             }
         }
     }
-    while (fno.fname[0]);
-    NRF_LOG_RAW_INFO("");
-
-    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-    ff_result = f_open(&file, FILE_NAME, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    while (sdc_fno.fname[0]);
+    NRF_LOG_INFO("");
+    NRF_LOG_INFO("Opening file " FILE_NAME "...");
+    ff_result = f_open(&sdc_file, FILE_NAME, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
-        return;
+        return (uint32_t)ff_result;
     }
+	
+	return (uint32_t)0;
+}
 
-    ff_result = f_write(&file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
+static FRESULT sdc_write(void)
+{
+    uint32_t bytes_written;
+    FRESULT ff_result;
+
+    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
+    ff_result = f_write(&sdc_file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Write failed\r\n.");
@@ -184,12 +191,15 @@ static void fatfs_example()
     {
         NRF_LOG_INFO("%d bytes written.", bytes_written);
     }
-
-    (void) f_close(&file);
-    return;
+	f_sync(&sdc_file);
+	return ff_result;
 }
 
-
+static void sdc_close(void)
+{
+    (void) f_close(&sdc_file);
+    return;
+}
 
 
 /* ========================================================================== */
@@ -370,7 +380,13 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 }
 
 
-//LED REC
+// LED blink
+static void led_blink_handler(void * p_context)
+{
+	LED_TOGGLE(LED_RECORD);
+}
+
+// LED REC
 static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
@@ -555,6 +571,7 @@ static void buttons_init(void)
 static void leds_init(void)
 {
 	bsp_board_leds_init();
+	ret_code_t err_code = app_timer_create(&led_blink_timer, APP_TIMER_MODE_REPEATED, led_blink_handler);
 }
 
 // LOG
@@ -570,9 +587,6 @@ static void log_init(void)
  */
 int main(void)
 {
-	DSTATUS card_status;
-	FRESULT ff_result;
-	
 	leds_init();
 	log_init();
 	buttons_init();
@@ -597,26 +611,40 @@ int main(void)
     {
 		if(ui_rec_start_req) {
 			NRF_LOG_DEBUG("Starting REC");
-			fatfs_example();
+			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
+			if(sdc_start() == 0) {
+				sdc_init_ok = true;
+			}
 			ui_rec_start_req = false;
-			ui_rec_running = true;
 		}
 		if(ui_rec_stop_req) {
 			NRF_LOG_DEBUG("Stopping REC");
+			sdc_close();
+			LED_OFF(LED_RECORD);
 			ui_rec_stop_req = false;
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 		}
 		if(ui_mon_start_req) {
 			NRF_LOG_DEBUG("Starting MON");
+			LED_ON(LED_MONITOR);
 			ui_mon_start_req = false;
 			ui_mon_running = true;
 		}
 		if(ui_mon_stop_req) {
 			NRF_LOG_DEBUG("Stopping MON");
+			LED_OFF(LED_MONITOR);
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
+		}
+		if(sdc_init_ok) {
+			NRF_LOG_DEBUG("Writing to SDC");
+			app_timer_stop(led_blink_timer);
+			LED_ON(LED_RECORD);
+			sdc_write();
+			ui_rec_running = true;
+			sdc_init_ok = false;
 		}
 		
         __WFE();
