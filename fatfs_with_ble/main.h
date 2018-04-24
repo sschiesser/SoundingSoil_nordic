@@ -38,7 +38,7 @@
 /* NRF DRV */
 //#include "nrf_drv_spi.h"
 //#include "nrf_drv_timer.h"
-//#include "nrf_drv_gpiote.h"
+#include "nrf_drv_gpiote.h"
 //#include "nrf_drv_uart.h"
 //#include "nrf_drv_clock.h"
 /* BLE */
@@ -48,7 +48,7 @@
 #include "ble_srv_common.h" /**/
 #include "ble_advdata.h" /**/
 #include "ble_conn_params.h" /**/
-//#include "ble_sss.h"
+#include "ble_sss.h"
 /* LOG */
 #include "nrf_log.h" /**/
 #include "nrf_log_ctrl.h" /**/
@@ -71,29 +71,31 @@
 
 /*                             LED/BUTTON MACROS                              */
 /* -------------------------------------------------------------------------- */
-//#define LED_RECORD						(BSP_LED_2)
-//#define LED_MONITOR						(BSP_LED_3)
-//#define LED_ADVERTISE					(BSP_LED_0)
-//#define LED_ON(led)						(nrf_drv_gpiote_out_clear(led))
-//#define LED_OFF(led)					(nrf_drv_gpiote_out_set(led))
-//#define LED_TOGGLE(led)					(nrf_drv_gpiote_out_toggle(led))
+#define LED_ADVERTISING					(BSP_LED_0)
+#define LED_CONNECTED					(BSP_LED_1)
+#define LED_RECORD						(BSP_LED_2)
+#define LED_MONITOR						(BSP_LED_3)
+#define LED_ON(led)						(nrf_drv_gpiote_out_clear(led))
+#define LED_OFF(led)					(nrf_drv_gpiote_out_set(led))
+#define LED_TOGGLE(led)					(nrf_drv_gpiote_out_toggle(led))
 
-//#define BUTTON_RECORD					(BSP_BUTTON_2)
-//#define BUTTON_MONITOR					(BSP_BUTTON_3)
+#define BUTTON_RECORD					(BSP_BUTTON_2)
+#define BUTTON_MONITOR					(BSP_BUTTON_3)
+#define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(50) // Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
-#define FIFO_DATA_SIZE					8192
+//#define FIFO_DATA_SIZE					8192
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
 #define FILE_NAME   					"NORDIC.TXT"
 #define TEST_STRING 					"SD card example."
 //#define ROOT_DIR						"0:/"
-#define SDC_SCK_PIN     				23//28  ///< SDC serial clock (SCK) pin.
-#define SDC_MOSI_PIN    				24//30  ///< SDC serial data in (DI) pin.
-#define SDC_MISO_PIN    				22//29  ///< SDC serial data out (DO) pin.
-#define SDC_CS_PIN      				25//31  ///< SDC chip select (CS) pin.
+#define SDC_SCK_PIN     				29  ///< SDC serial clock (SCK) pin.
+#define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
+#define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
+#define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
 #define SDC_BLOCK_SIZE					(SDC_SECTOR_SIZE)
 
 /*                                    ADC                                     */
@@ -165,33 +167,32 @@
 
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
-//#define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
+#define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
 
 //#define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
 //#define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
 //#define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
 //#define LEDBUTTON_BUTTON                BSP_BUTTON_0                            /**< Button that will trigger the notification event with the LED Button Service */
 
-//#define DEVICE_NAME                     "Nordic_Blinky"                         /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "Nordic_Blinky"                         /**< Name of device. Will be included in the advertising data. */
 
-//#define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
-//#define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
+#define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
+#define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
-//#define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
-//#define APP_ADV_TIMEOUT_IN_SECONDS      BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
+#define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_TIMEOUT_IN_SECONDS      BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
-//#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.5 seconds). */
-//#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1 second). */
-//#define SLAVE_LATENCY                   0                                       /**< Slave latency. */
-//#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (4 seconds). */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.5 seconds). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1 second). */
+#define SLAVE_LATENCY                   0                                       /**< Slave latency. */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (4 seconds). */
 
-//#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
-//#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
-//#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
+#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
+#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
-//#define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50)                     /**< Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks). */
+#define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-//#define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 
 

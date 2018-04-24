@@ -1,5 +1,6 @@
 --cpu=Cortex-M4.fp
 ".\_build\main.o"
+".\_build\ble_sss.o"
 ".\_build\boards.o"
 ".\_build\diskio_blkdev.o"
 ".\_build\ff.o"

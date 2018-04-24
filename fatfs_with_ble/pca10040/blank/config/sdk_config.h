@@ -54,7 +54,7 @@
  
 
 #ifndef BLE_ADVERTISING_ENABLED
-#define BLE_ADVERTISING_ENABLED 0
+#define BLE_ADVERTISING_ENABLED 1
 #endif
 
 // <q> BLE_DTM_ENABLED  - ble_dtm - Module for testing RF/PHY using DTM commands
@@ -74,7 +74,7 @@
 // <e> NRF_BLE_CONN_PARAMS_ENABLED - ble_conn_params - Initiating and executing a connection parameters negotiation procedure
 //==========================================================
 #ifndef NRF_BLE_CONN_PARAMS_ENABLED
-#define NRF_BLE_CONN_PARAMS_ENABLED 0
+#define NRF_BLE_CONN_PARAMS_ENABLED 1
 #endif
 // <o> NRF_BLE_CONN_PARAMS_MAX_SLAVE_LATENCY_DEVIATION - The largest acceptable deviation in slave latency. 
 // <i> The largest deviation (+ or -) from the requested slave latency that will not be renegotiated.
@@ -292,7 +292,7 @@
  
 
 #ifndef BLE_SSS_ENABLED
-#define BLE_SSS_ENABLED 0
+#define BLE_SSS_ENABLED 1
 #endif
 
 // <q> BLE_TPS_ENABLED  - ble_tps - TX Power Service
@@ -644,7 +644,7 @@
 // <i> will fail.
 
 #ifndef APP_TIMER_CONFIG_OP_QUEUE_SIZE
-#define APP_TIMER_CONFIG_OP_QUEUE_SIZE 12
+#define APP_TIMER_CONFIG_OP_QUEUE_SIZE 8
 #endif
 
 // <q> APP_TIMER_CONFIG_USE_SCHEDULER  - Enable scheduling app_timer events to app_scheduler
