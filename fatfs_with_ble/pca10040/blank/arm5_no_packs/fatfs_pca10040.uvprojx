@@ -390,6 +390,16 @@
               <FileType>5</FileType>
               <FilePath>..\config\sdk_config.h</FilePath>
             </File>
+            <File>
+              <FileName>wave_header.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\..\wave_header.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\..\main.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

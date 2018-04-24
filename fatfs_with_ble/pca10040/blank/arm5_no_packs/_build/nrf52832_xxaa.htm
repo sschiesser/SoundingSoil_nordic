@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 24 13:55:57 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 24 14:08:10 2018
 <BR><P>
 <H3>Maximum Stack Usage =        512 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -415,9 +415,9 @@ Global Symbols
 <P><STRONG><a name="[5a]"></a>SEGGER_RTT_WriteNoLock</STRONG> (Thumb, 126 bytes, Stack size 32 bytes, segger_rtt.o(i.SEGGER_RTT_WriteNoLock))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = SEGGER_RTT_WriteNoLock &rArr; _WriteNoCheck
 </UL>
-<BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_GetAvailWriteSpace
-<LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_WriteNoCheck
+<BR>[Calls]<UL><LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_WriteNoCheck
 <LI><a href="#[5d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_WriteBlocking
+<LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_GetAvailWriteSpace
 </UL>
 <BR>[Called By]<UL><LI><a href="#[3a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;serial_tx
 </UL>
@@ -489,10 +489,10 @@ Global Symbols
 <P><STRONG><a name="[72]"></a>app_button_init</STRONG> (Thumb, 132 bytes, Stack size 32 bytes, app_button.o(i.app_button_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 108<LI>Call Chain = app_button_init &rArr; nrf_drv_gpiote_in_init &rArr; channel_port_alloc
 </UL>
-<BR>[Calls]<UL><LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_init
-<LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_create
+<BR>[Calls]<UL><LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_create
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_is_init
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_init
+<LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buttons_init
 </UL>
@@ -749,8 +749,7 @@ Global Symbols
 <P><STRONG><a name="[d2]"></a>f_open</STRONG> (Thumb, 492 bytes, Stack size 104 bytes, ff.o(i.f_open))
 <BR><BR>[Stack]<UL><LI>Max Depth = 344<LI>Call Chain = f_open &rArr; follow_path &rArr; dir_find &rArr; dir_next &rArr; create_chain &rArr; get_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
-<LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_clust
+<BR>[Calls]<UL><LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_clust
 <LI><a href="#[b8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_fat
 <LI><a href="#[d3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;follow_path
 <LI><a href="#[d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;find_volume
@@ -762,6 +761,7 @@ Global Symbols
 <LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;remove_chain
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
 <LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_set
+<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
 </UL>
 <BR>[Called By]<UL><LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fatfs_example
 </UL>
@@ -806,12 +806,12 @@ Global Symbols
 <P><STRONG><a name="[df]"></a>f_write</STRONG> (Thumb, 478 bytes, Stack size 64 bytes, ff.o(i.f_write))
 <BR><BR>[Stack]<UL><LI>Max Depth = 216<LI>Call Chain = f_write &rArr; create_chain &rArr; get_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cpy
-<LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;create_chain
+<BR>[Calls]<UL><LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;create_chain
 <LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;clust2sect
 <LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_write
 <LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_read
 <LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;validate
+<LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fatfs_example
 </UL>
@@ -1344,7 +1344,7 @@ Local Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(sdh_ble_observers3)
 </UL>
-<P><STRONG><a name="[9d]"></a>ble_stack_init</STRONG> (Thumb, 104 bytes, Stack size 16 bytes, main.o(i.ble_stack_init))
+<P><STRONG><a name="[9d]"></a>ble_stack_init</STRONG> (Thumb, 102 bytes, Stack size 16 bytes, main.o(i.ble_stack_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 408<LI>Call Chain = ble_stack_init &rArr; nrf_sdh_enable_request &rArr; swi_interrupt_priority_workaround &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_sdh_enable_request
@@ -1444,9 +1444,9 @@ Local Symbols
 <P><STRONG><a name="[ad]"></a>check_fs</STRONG> (Thumb, 116 bytes, Stack size 16 bytes, ff.o(i.check_fs))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = check_fs &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
+<BR>[Calls]<UL><LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
+<LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
-<LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;find_volume
 </UL>
@@ -1494,10 +1494,10 @@ Local Symbols
 <P><STRONG><a name="[c2]"></a>dir_find</STRONG> (Thumb, 108 bytes, Stack size 24 bytes, ff.o(i.dir_find))
 <BR><BR>[Stack]<UL><LI>Max Depth = 208<LI>Call Chain = dir_find &rArr; dir_next &rArr; create_chain &rArr; get_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cmp
-<LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_sdi
+<BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_sdi
 <LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_next
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
+<LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cmp
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;follow_path
 </UL>
@@ -1529,10 +1529,10 @@ Local Symbols
 <P><STRONG><a name="[c7]"></a>dir_register</STRONG> (Thumb, 60 bytes, Stack size 16 bytes, ff.o(i.dir_register))
 <BR><BR>[Stack]<UL><LI>Max Depth = 224<LI>Call Chain = dir_register &rArr; dir_alloc &rArr; dir_next &rArr; create_chain &rArr; get_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cpy
-<LI><a href="#[bf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_alloc
+<BR>[Calls]<UL><LI><a href="#[bf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_alloc
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
 <LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_set
+<LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mem_cpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_open
 </UL>
@@ -1553,13 +1553,13 @@ Local Symbols
 <P><STRONG><a name="[d1]"></a>find_volume</STRONG> (Thumb, 744 bytes, Stack size 88 bytes, ff.o(i.find_volume))
 <BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = find_volume &rArr; check_fs &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
-<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
-<LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_ldnumber
+<BR>[Calls]<UL><LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_ldnumber
 <LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_fs
 <LI><a href="#[e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_status
 <LI><a href="#[e2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;disk_initialize
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
+<LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
+<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_opendir
 <LI><a href="#[d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_open
@@ -1581,9 +1581,9 @@ Local Symbols
 <P><STRONG><a name="[b8]"></a>get_fat</STRONG> (Thumb, 224 bytes, Stack size 32 bytes, ff.o(i.get_fat))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = get_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
+<BR>[Calls]<UL><LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
+<LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_word
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
-<LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
 </UL>
 <BR>[Called By]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_sdi
 <LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dir_next
@@ -1677,10 +1677,10 @@ Local Symbols
 <P><STRONG><a name="[b9]"></a>put_fat</STRONG> (Thumb, 312 bytes, Stack size 32 bytes, ff.o(i.put_fat))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
-<LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;st_word
+<BR>[Calls]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;st_word
 <LI><a href="#[d4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;st_dword
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;move_window
+<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ld_dword
 </UL>
 <BR>[Called By]<UL><LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;create_chain
 <LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;remove_chain
@@ -1951,8 +1951,8 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[53]"></a>channel_handler_get</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.channel_handler_get))
-<BR><BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
-<LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<BR><BR>[Called By]<UL><LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
 </UL>
 
 <P><STRONG><a name="[106]"></a>channel_port_alloc</STRONG> (Thumb, 122 bytes, Stack size 36 bytes, nrf_drv_gpiote.o(i.channel_port_alloc))
@@ -1962,8 +1962,8 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[55]"></a>channel_port_get</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.channel_port_get))
-<BR><BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
-<LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<BR><BR>[Called By]<UL><LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
 </UL>
 
 <P><STRONG><a name="[54]"></a>nrf_bitmask_bit_is_set</STRONG> (Thumb, 22 bytes, Stack size 12 bytes, nrf_drv_gpiote.o(i.nrf_bitmask_bit_is_set))
@@ -1981,8 +1981,8 @@ Local Symbols
 <P><STRONG><a name="[56]"></a>nrf_gpio_cfg_sense_set</STRONG> (Thumb, 50 bytes, Stack size 8 bytes, nrf_drv_gpiote.o(i.nrf_gpio_cfg_sense_set))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = nrf_gpio_cfg_sense_set
 </UL>
-<BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
-<LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<BR>[Called By]<UL><LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
 </UL>
 
 <P><STRONG><a name="[102]"></a>nrf_gpio_pin_read</STRONG> (Thumb, 24 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.nrf_gpio_pin_read))
@@ -2006,9 +2006,9 @@ Local Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_gpiote_event_addr_get
 </UL>
-<BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
-<LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
+<BR>[Called By]<UL><LI><a href="#[12]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GPIOTE_IRQHandler
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_init
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
 </UL>
 
 <P><STRONG><a name="[50]"></a>nrf_gpiote_event_is_set</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, nrf_drv_gpiote.o(i.nrf_gpiote_event_is_set))
@@ -2020,8 +2020,8 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[104]"></a>nrf_gpiote_int_enable</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.nrf_gpiote_int_enable))
-<BR><BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
-<LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_init
+<BR><BR>[Called By]<UL><LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_init
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_event_enable
 </UL>
 
 <P><STRONG><a name="[105]"></a>pin_in_use_by_gpiote</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.pin_in_use_by_gpiote))
@@ -2050,9 +2050,9 @@ Local Symbols
 <P><STRONG><a name="[34]"></a>gpiote_event_handler</STRONG> (Thumb, 110 bytes, Stack size 24 bytes, app_button.o(i.gpiote_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = gpiote_event_handler &rArr; app_timer_start &rArr; timer_start_op_schedule &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_is_set
-<LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_stop
+<BR>[Calls]<UL><LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_stop
 <LI><a href="#[91]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_start
+<LI><a href="#[be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_in_is_set
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> app_button.o(i.app_button_init)
 </UL>

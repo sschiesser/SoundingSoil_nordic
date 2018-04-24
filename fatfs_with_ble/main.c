@@ -48,29 +48,7 @@
  */
 
 
-#include "nrf.h"
-#include "bsp.h"
-#include "ff.h"
-#include "diskio_blkdev.h"
-#include "nrf_block_dev_sdc.h"
-#include <string.h>
-#include <stdio.h>
-#include "app_button.h"
-#include "app_timer.h"
-
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
-
-#include "ble.h"
-#include "ble_err.h"
-#include "ble_hci.h"
-#include "ble_srv_common.h"
-#include "ble_advdata.h"
-#include "ble_conn_params.h"
-#include "nrf_ble_gatt.h"
-#include "nrf_sdh.h"
-#include "nrf_sdh_ble.h"
+#include "main.h"
 
 #define FILE_NAME   "NORDIC.TXT"
 #define TEST_STRING "SD card example."
