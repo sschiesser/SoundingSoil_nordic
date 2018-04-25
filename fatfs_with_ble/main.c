@@ -55,6 +55,7 @@
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
+static uint8_t							audio_buffer[SDC_BLOCK_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -67,26 +68,30 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
-static FATFS sdc_fs;
-static DIR sdc_dir;
-static FILINFO sdc_fno;
-static FIL sdc_file;
-static volatile bool sdc_init_ok = false;
+static FATFS 							sdc_fs;
+static DIR 								sdc_dir;
+static FILINFO 							sdc_fno;
+static FIL 								sdc_file;
+static volatile bool 					sdc_init_ok = false;
+static volatile bool					sdc_rtw = false;
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
+const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
+static volatile uint32_t				adc_samples_counter = 0;
+static volatile uint32_t				adc_total_samples = 0;
 
 /*                                    GPS                                     */
 /* -------------------------------------------------------------------------- */
 
 /*                                    UI                                      */
 /* -------------------------------------------------------------------------- */
-static volatile bool ui_rec_start_req = false;
-static volatile bool ui_rec_stop_req = false;
-static volatile bool ui_rec_running = false;
-static volatile bool ui_mon_start_req = false;
-static volatile bool ui_mon_stop_req = false;
-static volatile bool ui_mon_running = false;
+static volatile bool 					ui_rec_start_req = false;
+static volatile bool 					ui_rec_stop_req = false;
+static volatile bool 					ui_rec_running = false;
+static volatile bool					ui_mon_start_req = false;
+static volatile bool 					ui_mon_stop_req = false;
+static volatile bool 					ui_mon_running = false;
 APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
@@ -102,6 +107,7 @@ static uint32_t sdc_start()
 {
     FRESULT ff_result;
     DSTATUS disk_state = STA_NOINIT;
+    uint32_t bytes_written;
 
     // Initialize FATFS disk I/O interface by providing the block device.
     static diskio_blkdev_t drives[] =
@@ -166,12 +172,19 @@ static uint32_t sdc_start()
     while (sdc_fno.fname[0]);
     NRF_LOG_INFO("");
     NRF_LOG_INFO("Opening file " FILE_NAME "...");
-    ff_result = f_open(&sdc_file, FILE_NAME, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    ff_result = f_open(&sdc_file, FILE_NAME, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
         return (uint32_t)ff_result;
     }
+	
+	NRF_LOG_INFO("Writing WAV header...");
+	ff_result = f_write(&sdc_file, wave_header, 44, (UINT *) &bytes_written);
+	if (ff_result != FR_OK) {
+		NRF_LOG_INFO("Unable to write WAV header");
+		return (uint32_t)ff_result;
+	}
 	
 	return (uint32_t)0;
 }
@@ -182,7 +195,8 @@ static FRESULT sdc_write(void)
     FRESULT ff_result;
 
     NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-    ff_result = f_write(&sdc_file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
+//    ff_result = f_write(&sdc_file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
+    ff_result = f_write(&sdc_file, audio_buffer, sizeof(audio_buffer), (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Write failed\r\n.");
@@ -228,6 +242,23 @@ static void advertising_start(void)
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
 /* ========================================================================== */
+// ADC timer
+void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
+{
+	DBG_TOGGLE(DBG0_PIN);
+	audio_buffer[adc_samples_counter] = 0xAA;
+	audio_buffer[adc_samples_counter+1] = 0x55;
+	adc_samples_counter += 2;
+	if(adc_samples_counter >= SDC_BLOCK_SIZE) {
+		adc_total_samples += SDC_BLOCK_SIZE;
+		adc_samples_counter = 0;
+		sdc_rtw = true;
+	}
+//	if(adc_spi_xfer_done) {
+//		adc_spi_xfer_done = false;
+//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+//	}
+}
 // BLE
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
@@ -437,6 +468,21 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
+// ADC timer
+static void adc_config_timer(void)
+{
+	uint32_t time_ticks;
+	nrf_drv_timer_config_t timer_config = NRF_DRV_TIMER_DEFAULT_CONFIG;
+	timer_config.interrupt_priority = 3;
+	ret_code_t err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
+	APP_ERROR_CHECK(err_code);
+	
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
+
+	nrf_drv_timer_extended_compare(
+		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
+}
+	
 // BLE advertisement
 static void advertising_init(void)
 {
@@ -565,6 +611,17 @@ static void buttons_init(void)
 }
 
 
+// DEBUG GPIO out
+static void gpio_dbg_init(void)
+{
+	ret_code_t err_code;
+	nrf_drv_gpiote_out_config_t out_config = GPIOTE_CONFIG_OUT_SIMPLE(true);
+	err_code = nrf_drv_gpiote_out_init(DBG0_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(DBG1_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+}
+
 // LEDS
 static void leds_init(void)
 {
@@ -590,6 +647,9 @@ int main(void)
 	leds_init();
 	log_init();
 	buttons_init();
+#ifdef DEBUG
+	gpio_dbg_init();
+#endif
 	
 	ble_stack_init();
 	gap_params_init();
@@ -597,6 +657,8 @@ int main(void)
 	services_init();
 	advertising_init();
 	conn_params_init();
+	
+	adc_config_timer();
 	
 	/* Starting application */
 	/* -------------------- */
@@ -621,6 +683,7 @@ int main(void)
 		// REC STOP request
 		if(ui_rec_stop_req) {
 			NRF_LOG_DEBUG("Stopping REC");
+			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			sdc_close();
 			LED_OFF(LED_RECORD);
 			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
@@ -675,13 +738,19 @@ int main(void)
 				APP_ERROR_CHECK(err_code);
 			}
 			LED_ON(LED_RECORD);
-			sdc_write();
+//			sdc_write();
+			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 			ui_rec_running = true;
 			sdc_init_ok = false;
 		}
-		//
 		
-        __WFE();
+        // SDC ready-to-write
+		if(sdc_rtw) {
+			sdc_write();
+			sdc_rtw = false;
+		}
+		
+		__WFE();
     }
 }
 

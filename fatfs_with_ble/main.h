@@ -37,7 +37,7 @@
 #include "app_button.h" /**/
 /* NRF DRV */
 //#include "nrf_drv_spi.h"
-//#include "nrf_drv_timer.h"
+#include "nrf_drv_timer.h"
 #include "nrf_drv_gpiote.h"
 //#include "nrf_drv_uart.h"
 //#include "nrf_drv_clock.h"
@@ -54,7 +54,7 @@
 #include "nrf_log_ctrl.h" /**/
 #include "nrf_log_default_backends.h" /**/
 /* SoundingSoil */
-//#include "wave_header.h"
+#include "wave_header.h"
 
 
 /* ========================================================================== */
@@ -63,11 +63,11 @@
 
 /*                                   DEBUG                                    */
 /* -------------------------------------------------------------------------- */
-//#define DBG0_PIN						11
-//#define DBG1_PIN						12
-//#define DBG_CURRENT_FOLDER				"180322"
-//#define DBG_CURRENT_FILE				"R123456.wav"
-//#define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
+#define DBG0_PIN						11
+#define DBG1_PIN						12
+#define DBG_CURRENT_FOLDER				"180425"
+#define DBG_CURRENT_FILE				"R123456.wav"
+#define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
 
 /*                             LED/BUTTON MACROS                              */
 /* -------------------------------------------------------------------------- */
@@ -89,14 +89,14 @@
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
-#define FILE_NAME   					"NORDIC.TXT"
+#define FILE_NAME   					"R123456.wav"
 #define TEST_STRING 					"SD card example."
 //#define ROOT_DIR						"0:/"
 #define SDC_SCK_PIN     				29  ///< SDC serial clock (SCK) pin.
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-#define SDC_BLOCK_SIZE					(SDC_SECTOR_SIZE)
+#define SDC_BLOCK_SIZE					(32*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -108,58 +108,39 @@
 //#define ADC_SPI_INSTANCE				1
 
 // SYNC TIMER
-//#define ADC_SYNC_TIMER_INSTANCE			1
-//#define ADC_SYNC_44KHZ_US				23
-//#define ADC_SYNC_48KHZ_US				20
+#define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
+#define ADC_SYNC_44KHZ_US				112//23
+#define ADC_SYNC_48KHZ_US				20
 
 
 /*                                   GPS                                      */
 /* -------------------------------------------------------------------------- */
-//#define GPS_NMEA_MAX_SIZE				100
-//#define GPS_NMEA_START_CHAR				0x24 // $
-//#define GPS_NMEA_STOP_CHAR				0x0A // LF
+#define GPS_NMEA_MAX_SIZE				100
+#define GPS_NMEA_START_CHAR				0x24 // $
+#define GPS_NMEA_STOP_CHAR				0x0A // LF
 
-//#define GPS_GGA_HEADER_STR				"$GPGGA"
-//#define GPS_GGA_HEADER_TOK				0
-//#define GPS_GGA_TIME_TOK				1
-//#define GPS_GGA_LAT_TOK					2
-//#define GPS_GGA_N_S_TOK					3
-//#define GPS_GGA_LONG_TOK				4
-//#define GPS_GGA_E_W_TOK					5
-//#define GPS_GGA_QUAL_TOK				6
-//#define GPS_GGA_SAT_TOK					7
-//#define GPS_GGA_DIL_TOK					8
-//#define GPS_GGA_ALT_TOK					9
-//#define GPS_GGA_ALT_UNIT_TOK			10
-//#define GPS_GGA_GEO_TOK					11
-//#define GPS_GGA_GEO_UNIT_TOK			12
-//#define GPS_GGA_DELTA_TOK				13
-//#define GPS_GGA_ST_ID_TOK				14
-//#define GPS_GGA_CHKS_TOK				15
-//#define GPS_GGA_TOKEN_MAX				16
+#define GPS_RMC_HEADER_STR				"$GPRMC"
+#define GPS_RMC_HEADER_TOK				0
+#define GPS_RMC_TIME_TOK				1
+#define GPS_RMC_STATUS_TOK				2
+#define GPS_RMC_LAT_TOK					3
+#define GPS_RMC_N_S_TOK					4
+#define GPS_RMC_LONG_TOK				5
+#define GPS_RMC_E_W_TOK					6
+#define GPS_RMC_SPEED_TOK				7
+#define GPS_RMC_TANGLE_TOK				8
+#define GPS_RMC_DATE_TOK				9
+#define GPS_RMC_MVAR_TOK				10
+#define GPS_RMC_MVAR_E_W_TOK			11
+#define GPS_RMC_INT_CHKS_TOK			12
+#define GPS_RMC_TOKEN_MAX				13
 
-//#define GPS_RMC_HEADER_STR				"$GPRMC"
-//#define GPS_RMC_HEADER_TOK				0
-//#define GPS_RMC_TIME_TOK				1
-//#define GPS_RMC_STATUS_TOK				2
-//#define GPS_RMC_LAT_TOK					3
-//#define GPS_RMC_N_S_TOK					4
-//#define GPS_RMC_LONG_TOK				5
-//#define GPS_RMC_E_W_TOK					6
-//#define GPS_RMC_SPEED_TOK				7
-//#define GPS_RMC_TANGLE_TOK				8
-//#define GPS_RMC_DATE_TOK				9
-//#define GPS_RMC_MVAR_TOK				10
-//#define GPS_RMC_MVAR_E_W_TOK			11
-//#define GPS_RMC_INT_CHKS_TOK			12
-//#define GPS_RMC_TOKEN_MAX				13
-
-//#define GPS_CONV_KNOT_TO_KMH			(1.852)
-//#define GPS_CONV_KNOT_TO_MPH			(1.15078)
-//#define GPS_CONV_MPH_TO_KMH				(1.60934)
-//#define GPS_CONV_KMH_TO_KNOT			(1/GPS_CONV_KNOT_TO_KMH)
-//#define GPS_CONV_MPH_TO_KNOT			(1/GPS_CONV_KNOT_TO_MPH)
-//#define GPS_CONV_KMH_TO_MPH				(1/GPS_CONV_MPH_TO_KMH)
+#define GPS_CONV_KNOT_TO_KMH			(1.852)
+#define GPS_CONV_KNOT_TO_MPH			(1.15078)
+#define GPS_CONV_MPH_TO_KMH				(1.60934)
+#define GPS_CONV_KMH_TO_KNOT			(1/GPS_CONV_KNOT_TO_KMH)
+#define GPS_CONV_MPH_TO_KNOT			(1/GPS_CONV_KNOT_TO_MPH)
+#define GPS_CONV_KMH_TO_MPH				(1/GPS_CONV_MPH_TO_KMH)
 
 //#define GPS_UART_INSTANCE				0
 //#define GPS_UART_RX_PIN					27
@@ -168,11 +149,6 @@
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
-
-//#define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
-//#define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
-//#define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
-//#define LEDBUTTON_BUTTON                BSP_BUTTON_0                            /**< Button that will trigger the notification event with the LED Button Service */
 
 #define DEVICE_NAME                     "Nordic_Blinky"                         /**< Name of device. Will be included in the advertising data. */
 
@@ -192,10 +168,5 @@
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
-
-
-
-
-//void gps_config_uart(void);
 
 #endif /* MAIN_H__ */

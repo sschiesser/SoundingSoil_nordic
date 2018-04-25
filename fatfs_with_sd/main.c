@@ -78,14 +78,14 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
- SPI
+// SPI
 static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool 					adc_spi_xfer_done = false;
 static volatile uint16_t 				adc_spi_xfer_counter = 0;
 static volatile uint32_t				adc_total_samples = 0;
- SYNC TIMER
+// SYNC TIMER
 const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
- AUDIO BUFFER
+// AUDIO BUFFER
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
@@ -938,14 +938,14 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
 // LFCLK (only debug mode without SoftDevice)
-static void lfclk_init(void)
-{
-    uint32_t err_code;
-    err_code = nrf_drv_clock_init();
-    APP_ERROR_CHECK(err_code);
+//static void lfclk_init(void)
+//{
+//    uint32_t err_code;
+//    err_code = nrf_drv_clock_init();
+//    APP_ERROR_CHECK(err_code);
 
-    nrf_drv_clock_lfclk_request(NULL);
-}
+//    nrf_drv_clock_lfclk_request(NULL);
+//}
 // TIMER
 static void timer_init(void)
 {
@@ -1073,7 +1073,7 @@ DSTATUS sdc_init(void)
     NRF_LOG_DEBUG("Capacity: %d MB", capacity);
 	return RES_OK;
 }
- Un-init SD card #0
+// Un-init SD card #0
 DSTATUS sdc_uninit(void)
 {
 	volatile DSTATUS disk_state = STA_NOINIT;
@@ -1481,7 +1481,7 @@ int main(void)
 	gps_config_uart();	// nrf_serial_init()
 	
 	// BLE
-	lfclk_init(); 		// nrf_drv_clock_init() + nrf_drv_clock_lfclk_request(NULL)... comment when ble stack active
+//	lfclk_init(); 		// nrf_drv_clock_init() + nrf_drv_clock_lfclk_request(NULL)... comment when ble stack active
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
@@ -1654,34 +1654,34 @@ int main(void)
     }
 }
 
-	}
+//	}
 
-	card_status = sd_card_test();
-	
-	if(card_status != RES_OK) {
-		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
-	}
-	else {
-		NRF_LOG_INFO("SD card check OK");
-		ff_result = sd_card_init();
-		if(ff_result != FR_OK) {
-			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
-		}
-		else {
-			NRF_LOG_INFO("\nSD card init OK");
-			sdc_init_ok = true;
-		}
-	}
+//	card_status = sd_card_test();
+//	
+//	if(card_status != RES_OK) {
+//		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
+//	}
+//	else {
+//		NRF_LOG_INFO("SD card check OK");
+//		ff_result = sd_card_init();
+//		if(ff_result != FR_OK) {
+//			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+//		}
+//		else {
+//			NRF_LOG_INFO("\nSD card init OK");
+//			sdc_init_ok = true;
+//		}
+//	}
 
-	if(sdc_init_ok) {
-		NRF_LOG_INFO("Starting SPI xfer");
-		adc_spi_xfer_done = true;
-		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
-	}
+//	if(sdc_init_ok) {
+//		NRF_LOG_INFO("Starting SPI xfer");
+//		adc_spi_xfer_done = true;
+//		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+////		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
+//	}
 
-    while (true)
+//    while (true)
 
-}
+//}
 
 /** @} */
