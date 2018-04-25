@@ -56,8 +56,7 @@
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
 app_fifo_t								audio_fifo;
-static uint8_t							audio_buffer[FIFO_DATA_SIZE];
-uint8_t									p_buf[SDC_BLOCK_SIZE];
+static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -79,6 +78,10 @@ static FILINFO 							sdc_fno;
 static FIL 								sdc_file;
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
+static volatile bool					sdc_writing = false;
+static volatile uint8_t					sdc_chunk_counter = 0;
+static uint8_t							sdc_buffer[SDC_BLOCK_SIZE];
+
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -95,7 +98,6 @@ static volatile uint32_t				adc_total_samples = 0;
 
 /*                                    GPS                                     */
 /* -------------------------------------------------------------------------- */
-//struct gps_rmc_tag						gps_cur_tag;
 static volatile bool 					gps_uart_reading = false;
 static volatile bool					gps_uart_timeout = false;
 
@@ -275,15 +277,15 @@ static FRESULT sdc_write(void)
     uint32_t bytes_written;
     FRESULT ff_result;
 	uint32_t buf_size = SDC_BLOCK_SIZE;
-//	uint8_t p_buf[SDC_BLOCK_SIZE];
-//	nrf_malloc(SDC_BLOCK_SIZE);
 	
+	sdc_writing = true;
 	NRF_LOG_DEBUG("Reading fifo...");
-	uint32_t fifo_res = app_fifo_read(&audio_fifo, p_buf, &buf_size);
+	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
-    NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
 	DBG_TOGGLE(DBG1_PIN);
-    ff_result = f_write(&sdc_file, p_buf, buf_size, (UINT *) &bytes_written);
+	
+    NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
+    ff_result = f_write(&sdc_file, sdc_buffer, buf_size, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
@@ -292,8 +294,18 @@ static FRESULT sdc_write(void)
     {
         NRF_LOG_DEBUG("%d bytes written.", bytes_written);
     }
-	f_sync(&sdc_file);
-	DBG_TOGGLE(DBG1_PIN);
+	
+//	DBG_TOGGLE(DBG1_PIN);
+
+//	f_sync(&sdc_file);
+	sdc_writing = false;
+
+//	DBG_TOGGLE(DBG1_PIN);
+
+	if(sdc_chunk_counter > 0) {
+		sdc_rtw = true;
+		sdc_chunk_counter--;
+	}
 	return ff_result;
 }
 
@@ -326,6 +338,7 @@ static FRESULT sdc_close(void)
     (void)f_close(&sdc_file);
     return ff_result;
 }
+
 
 
 // Start advertising
@@ -945,11 +958,6 @@ int main(void)
 	gpio_dbg_init();
 #endif
 	
-//	if(nrf_mem_init() != NRF_SUCCESS) {
-//		NRF_LOG_INFO("Memory manager initialization failed!");
-//		while(true);
-//	}
-	
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
@@ -959,7 +967,7 @@ int main(void)
 	
 	adc_config_spi();
 	adc_config_timer();
-	app_fifo_init(&audio_fifo, audio_buffer, FIFO_DATA_SIZE);
+	app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
 	gps_init();
 	
 	/* Starting application */
@@ -1049,9 +1057,17 @@ int main(void)
 		
         // SDC ready-to-write
 		if(sdc_rtw) {
-			NRF_LOG_INFO("Ready to write");
-			sdc_write();
+			DBG_TOGGLE(DBG1_PIN);
 			sdc_rtw = false;
+//			NRF_LOG_INFO("Ready to write");
+			if(sdc_writing) {
+				sdc_chunk_counter++;
+				NRF_LOG_DEBUG("Increased counter: %d", sdc_chunk_counter);
+			}
+			else {
+				NRF_LOG_DEBUG("Writing to SDC. Cnt: %d", sdc_chunk_counter);
+				sdc_write();
+			}
 		}
 		
 		__WFE();

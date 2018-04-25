@@ -105,7 +105,8 @@
 
 // SYNC TIMER
 #define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
-#define ADC_SYNC_44KHZ_US				60//23
+#define ADC_SYNC_16KHZ_US				60
+#define ADC_SYNC_44KHZ_US				35//23
 #define ADC_SYNC_48KHZ_US				20
 
 
