@@ -24,7 +24,7 @@
 //#include "nrf_error.h"
 //#include "nrf_queue.h"
 //#include "nrf_delay.h"
-//#include "nrf_serial.h"
+#include "nrf_serial.h"
 #include "nrf_sdh.h" /**/
 #include "nrf_sdh_ble.h" /**/
 #include "nrf_ble_gatt.h" /**/
@@ -65,8 +65,8 @@
 /* -------------------------------------------------------------------------- */
 #define DBG0_PIN						11
 #define DBG1_PIN						12
-#define DBG_CURRENT_FOLDER				"180425"
-#define DBG_CURRENT_FILE				"R123456.wav"
+//#define DBG_CURRENT_FOLDER				"180425"
+//#define DBG_CURRENT_FILE				"R123456.wav"
 #define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
 
 /*                             LED/BUTTON MACROS                              */
@@ -89,7 +89,7 @@
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
-#define FILE_NAME   					"R123456.wav"
+//#define FILE_NAME   					"R123456.wav"
 #define TEST_STRING 					"SD card example."
 //#define ROOT_DIR						"0:/"
 #define SDC_SCK_PIN     				29  ///< SDC serial clock (SCK) pin.
@@ -142,8 +142,62 @@
 #define GPS_CONV_MPH_TO_KNOT			(1/GPS_CONV_KNOT_TO_MPH)
 #define GPS_CONV_KMH_TO_MPH				(1/GPS_CONV_MPH_TO_KMH)
 
-//#define GPS_UART_INSTANCE				0
-//#define GPS_UART_RX_PIN					27
+#define GPS_UART_INSTANCE				0
+#define GPS_UART_RX_PIN					27
+
+struct gps_time {
+	uint8_t h;
+	uint8_t min;
+	uint8_t sec;
+	uint16_t msec;
+};
+struct gps_date {
+	uint8_t day;
+	uint8_t month;
+	uint8_t year;
+};
+struct gps_lat {
+	uint8_t deg;
+	uint8_t min;
+	uint16_t sec;
+	bool north;
+};
+struct gps_long {
+	uint8_t deg;
+	uint8_t min;
+	uint16_t sec;
+	bool east;
+};
+struct gps_altitude {
+	float number;
+	bool m_unit;
+};
+struct gps_geoid {
+	float number;
+	bool m_unit;
+};
+struct gps_speed {
+	float knots;
+	float mph;
+	float kmh;
+};
+struct gps_variation {
+	float angle;
+	bool east;
+};
+struct gps_rmc_tag {
+	struct gps_time time;
+	bool status_active;
+	struct gps_lat latitude;
+	struct gps_long longitude;
+	struct gps_speed speed;
+	float track_angle;
+	struct gps_date date;
+	struct gps_variation mvar;
+	char sig_int;
+	char raw_tag[GPS_NMEA_MAX_SIZE];
+	uint8_t length;
+};
 
 
 /*                                   BLE                                      */

@@ -68,6 +68,9 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
+static TCHAR							sdc_foldername[13] = "180424";
+static TCHAR							sdc_folderpath[14] = "/180424";
+static TCHAR							sdc_filename[12] = "R123456.wav";
 static FATFS 							sdc_fs;
 static DIR 								sdc_dir;
 static FILINFO 							sdc_fno;
@@ -84,6 +87,23 @@ static volatile uint32_t				adc_total_samples = 0;
 
 /*                                    GPS                                     */
 /* -------------------------------------------------------------------------- */
+//struct gps_rmc_tag						gps_cur_tag;
+static volatile bool 					gps_uart_reading = false;
+static volatile bool					gps_uart_timeout = false;
+
+NRF_SERIAL_DRV_UART_CONFIG_DEF(m_gps_uart_config,
+	GPS_UART_RX_PIN, NRF_UART_PSEL_DISCONNECTED,
+	NRF_UART_PSEL_DISCONNECTED, NRF_UART_PSEL_DISCONNECTED,
+	NRF_UART_HWFC_DISABLED, NRF_UART_PARITY_EXCLUDED,
+	NRF_UART_BAUDRATE_9600, UART_DEFAULT_CONFIG_IRQ_PRIORITY);
+	
+NRF_SERIAL_CONFIG_DEF(gps_config,
+	NRF_SERIAL_MODE_POLLING, NULL,
+	NULL, NULL, NULL);
+	
+NRF_SERIAL_UART_DEF(gps_uart, GPS_UART_INSTANCE);
+
+APP_TIMER_DEF(gps_uart_timer);
 
 /*                                    UI                                      */
 /* -------------------------------------------------------------------------- */
@@ -102,8 +122,31 @@ NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
 
 /* ========================================================================== */
-/*                                  UTILS                                     */
+/*                              APP FUNCTIONS                                 */
 /* ========================================================================== */
+// Slice string into tokens with 1-char delimiter (improvement of strtok())
+static char * strslice(char * str, char const * delim)
+{
+	static char * src = NULL;
+	char * p, * ret = 0;
+	
+	if(str != NULL) src = str;
+	
+	if (src == NULL) return NULL;
+	
+	if((p = strpbrk(src, delim)) != NULL) {
+		*p = 0;
+		ret = src;
+		src = ++p;
+	}
+	else if(*src) {
+		ret = src;
+		src = NULL;
+	}
+	
+	return ret;
+}
+// Init & mount SD card, create new recording file
 static uint32_t sdc_start()
 {
     FRESULT ff_result;
@@ -149,8 +192,8 @@ static uint32_t sdc_start()
         return (uint32_t)ff_result;
     }
 
-    do
-    {
+ 	bool dir_found = false;
+	do {
         ff_result = f_readdir(&sdc_dir, &sdc_fno);
         if (ff_result != FR_OK)
         {
@@ -163,20 +206,48 @@ static uint32_t sdc_start()
             if (sdc_fno.fattrib & AM_DIR)
             {
                 NRF_LOG_DEBUG("   <DIR>   %s",(uint32_t)sdc_fno.fname);
+				uint8_t res = strcmp(sdc_fno.fname, sdc_foldername);
+				NRF_LOG_DEBUG("Comp result: %d", res);
+				if(res == 0) {
+					dir_found = true;
+					NRF_LOG_DEBUG("DIR FOUND! Path: %s", sdc_folderpath);
+				}
             }
             else
             {
                 NRF_LOG_DEBUG("%9lu  %s", sdc_fno.fsize, (uint32_t)sdc_fno.fname);
             }
         }
-    }
-    while (sdc_fno.fname[0]);
-    NRF_LOG_DEBUG("");
-    NRF_LOG_DEBUG("Opening file " FILE_NAME "...");
-    ff_result = f_open(&sdc_file, FILE_NAME, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
+    } while (sdc_fno.fname[0]);
+	
+	
+	if(!dir_found) {
+		NRF_LOG_DEBUG("DIR not found... creating");
+		ff_result = f_mkdir(sdc_folderpath);
+		if(ff_result != FR_OK) {
+			NRF_LOG_DEBUG("Unable to create directory");
+			return (uint32_t)ff_result;
+		}
+		ff_result = f_opendir(&sdc_dir, sdc_folderpath);
+		if(ff_result != FR_OK) {
+			NRF_LOG_DEBUG("Unable to open directory");
+			return (uint32_t)ff_result;
+		}
+	}
+	else {
+		NRF_LOG_DEBUG("DIR found... opening");
+		ff_result = f_chdir(sdc_folderpath);
+		if(ff_result != FR_OK) {
+			NRF_LOG_DEBUG("Unable to change directory");
+			return (uint32_t)ff_result;
+		}
+	}
+	
+    NRF_LOG_DEBUG("Creating file %s...", sdc_filename);
+    ff_result = f_open(&sdc_file, sdc_filename, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_DEBUG("Unable to open or create file: " FILE_NAME ".");
+        NRF_LOG_DEBUG("Unable to open or create file: %s", sdc_filename);
         return (uint32_t)ff_result;
     }
 	
@@ -190,12 +261,13 @@ static uint32_t sdc_start()
 	return (uint32_t)0;
 }
 
+// Write audio chunk to opened file
 static FRESULT sdc_write(void)
 {
     uint32_t bytes_written;
     FRESULT ff_result;
 
-    NRF_LOG_DEBUG("Writing to file " FILE_NAME "...");
+    NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
     ff_result = f_write(&sdc_file, audio_buffer, sizeof(audio_buffer), (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
@@ -209,6 +281,7 @@ static FRESULT sdc_write(void)
 	return ff_result;
 }
 
+// Write values to WAV header & close recording file
 static void sdc_close(void)
 {
     (void) f_close(&sdc_file);
@@ -216,9 +289,6 @@ static void sdc_close(void)
 }
 
 
-/* ========================================================================== */
-/*                              APP FUNCTIONS                                 */
-/* ========================================================================== */
 // Start advertising
 static void advertising_start(void)
 {
@@ -239,6 +309,163 @@ static void advertising_start(void)
     LED_ON(LED_ADVERTISING);
 }
 
+static struct gps_rmc_tag gps_get_rmc_geotag(void)
+{
+	struct gps_rmc_tag tag;
+	uint8_t cnt = 0;
+	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
+/* REAL UART */
+//	char c; // Read UART character
+//	gps_uart_reading = true; // Reading flag
+//	gps_uart_timeout = false; // Timeout flag
+//	char *p_str; // Pointer on the string comparison result
+//	while(gps_uart_reading) {
+//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+//		if(ret == NRF_ERROR_TIMEOUT) {
+//			NRF_LOG_DEBUG("UART timeout!");
+//			gps_uart_reading = false;
+//			gps_uart_timeout = true;
+//			break;
+//		}
+//		uart_buf[cnt++] = c;
+//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+//				static char comp[7] = "$GPRMC";
+//				p_str = strstr(uart_buf, comp);
+//				if(p_str != NULL) {
+//					strcpy(tag.raw_tag, uart_buf);
+//					tag.length = strlen(uart_buf);
+//					app_timer_stop(gps_uart_timer);
+//					gps_uart_reading = false;
+//				}
+//			}
+//			cnt = 0;
+//		}
+//	}
+//	if(gps_uart_timeout) {
+//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+//		gps_uart_timeout = false;
+//	}
+/* FAKE UART */
+	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+/* ------------------------ */
+	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
+	char *tokens[GPS_RMC_TOKEN_MAX];
+	cnt = 0;
+	const char delim[2] = ",";
+	strcpy(uart_buf, tag.raw_tag);
+	tokens[cnt] = strslice(uart_buf, delim);
+	while(tokens[cnt] != NULL) {
+		cnt++;
+		tokens[cnt] = strslice(NULL, delim);
+	}
+	
+	char temp[12];
+	uint8_t len;
+	// Time
+	len = 2;
+	strncpy(temp, tokens[GPS_RMC_TIME_TOK], len);
+	temp[len] = '\0';
+	tag.time.h = atoi(temp);
+	strncpy(temp, tokens[GPS_RMC_TIME_TOK]+2, len);
+	temp[len] = '\0';
+	tag.time.min = atoi(temp);
+	strncpy(temp, tokens[GPS_RMC_TIME_TOK]+4, len);
+	temp[len] = '\0';
+	tag.time.sec = atoi(temp);
+	if(strchr(tokens[GPS_RMC_TIME_TOK], '.') != NULL) {
+		len = 3;
+		strncpy(temp, tokens[GPS_RMC_TIME_TOK]+7, len);
+		temp[len] = '\0';
+		tag.time.msec = atoi(temp);
+	}
+	else {
+		tag.time.msec = 0;
+	}
+	// Status
+	if(strncmp(tokens[GPS_RMC_STATUS_TOK], "A", 1) == 0) tag.status_active = true;
+	else tag.status_active = false;
+	// Latitude
+	len = 2;
+	strncpy(temp, tokens[GPS_RMC_LAT_TOK], len);
+	temp[len] = '\0';
+	tag.latitude.deg = atoi(temp);
+	strncpy(temp, tokens[GPS_RMC_LAT_TOK]+2, len);
+	temp[len] = '\0';
+	tag.latitude.min = atoi(temp);
+	len = 3;
+	strncpy(temp, tokens[GPS_RMC_LAT_TOK]+5, len);
+	temp[len] = '\0';
+	tag.latitude.sec = atoi(temp);
+	if(strncmp(tokens[GPS_RMC_N_S_TOK], "N", 1) == 0) tag.latitude.north = true;
+	else tag.latitude.north = false;
+	// Longitude
+	len = 3;
+	strncpy(temp, tokens[GPS_RMC_LONG_TOK], len);
+	temp[len] = '\0';
+	tag.longitude.deg = atoi(temp);
+	len = 2;
+	strncpy(temp, tokens[GPS_RMC_LONG_TOK]+3, len);
+	temp[len] = '\0';
+	tag.longitude.min = atoi(temp);
+	len = 3;
+	strncpy(temp, tokens[GPS_RMC_LONG_TOK]+6, len);
+	temp[len] = '\0';
+	tag.longitude.sec = atoi(temp);
+	if(strncmp(tokens[GPS_RMC_E_W_TOK], "E", 1) == 0) tag.longitude.east = true;
+	else tag.longitude.east = false;
+	// Speed
+	len = strlen(tokens[GPS_RMC_SPEED_TOK]);
+	strncpy(temp, tokens[GPS_RMC_SPEED_TOK], len);
+	temp[len] = '\0';
+	tag.speed.knots = atof(temp);
+	tag.speed.mph = tag.speed.knots * (float)GPS_CONV_KNOT_TO_MPH;
+	tag.speed.kmh = tag.speed.knots * (float)GPS_CONV_KNOT_TO_KMH;
+	// Track angle	NRF_LOG_INFO("Tangle len: %d", strlen(tokens[GPS_RMC_TANGLE_TOK]));
+	len = strlen(tokens[GPS_RMC_TANGLE_TOK]);
+	strncpy(temp, tokens[GPS_RMC_TANGLE_TOK], len);
+	temp[len] = '\0';
+	tag.track_angle = atof(temp);
+	// Date
+	len = 2;
+	strncpy(temp, tokens[GPS_RMC_DATE_TOK], len);
+	temp[len] = '\0';
+	tag.date.day = atoi(temp);
+	strncpy(temp, tokens[GPS_RMC_DATE_TOK]+2, len);
+	temp[len] = '\0';
+	tag.date.month = atoi(temp);
+	strncpy(temp, tokens[GPS_RMC_DATE_TOK]+4, len);
+	temp[len] = '\0';
+	tag.date.year = atoi(temp);
+	// Magnetic variation
+	len = strlen(tokens[GPS_RMC_MVAR_TOK]);
+	strncpy(temp, tokens[GPS_RMC_MVAR_TOK], len);
+	temp[len] = '\0';
+	tag.mvar.angle = atof(temp);
+	if(strncmp(tokens[GPS_RMC_MVAR_E_W_TOK], "E", 1) == 0) tag.mvar.east = true;
+	else tag.mvar.east = false;
+	// Signal integrity
+	len = 1;
+	strncpy(temp, tokens[GPS_RMC_INT_CHKS_TOK], len);
+	temp[len] = '\0';
+	tag.sig_int = temp[0];
+	
+	return tag;
+}
+static void gps_poll_data(void)
+{
+	struct gps_rmc_tag gps_cur_tag = gps_get_rmc_geotag();
+	char temp[6];
+	
+	sprintf(temp, "%02d%02d%02d", gps_cur_tag.date.year, gps_cur_tag.date.month, gps_cur_tag.date.day);
+	memcpy(sdc_foldername, temp, 6);
+	sprintf(sdc_folderpath, "/%s", sdc_foldername);
+	NRF_LOG_DEBUG("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
+	
+	sprintf(temp, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
+	memcpy(&sdc_filename[1], temp, 6);
+	NRF_LOG_DEBUG("sdc_filename: %s", sdc_filename);
+}
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
 /* ========================================================================== */
@@ -659,6 +886,15 @@ static void gpio_dbg_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
+// GPS UART & TIMER
+void gps_init(void)
+{
+	ret_code_t err_code = nrf_serial_init(&gps_uart, &m_gps_uart_config, &gps_config);
+	APP_ERROR_CHECK(err_code);
+	
+//	err_code = app_timer_create(&gps_uart_timer, APP_TIMER_MODE_SINGLE_SHOT, gps_timeout_handler);
+}
+
 // LEDS
 static void leds_init(void)
 {
@@ -695,7 +931,9 @@ int main(void)
 	advertising_init();
 	conn_params_init();
 	
+	adc_config_spi();
 	adc_config_timer();
+	gps_init();
 	
 	/* Starting application */
 	/* -------------------- */
@@ -712,6 +950,7 @@ int main(void)
 		if(ui_rec_start_req) {
 			NRF_LOG_INFO("Starting REC");
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
+			gps_poll_data();
 			if(sdc_start() == 0) {
 				sdc_init_ok = true;
 			}
