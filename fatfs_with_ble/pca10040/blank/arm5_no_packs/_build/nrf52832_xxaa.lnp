@@ -23,6 +23,8 @@
 ".\_build\nrf_fprintf.o"
 ".\_build\nrf_fprintf_format.o"
 ".\_build\nrf_memobj.o"
+".\_build\nrf_queue.o"
+".\_build\nrf_serial.o"
 ".\_build\nrf_strerror.o"
 ".\_build\nrf_section_iter.o"
 ".\_build\sdk_mapped_flags.o"

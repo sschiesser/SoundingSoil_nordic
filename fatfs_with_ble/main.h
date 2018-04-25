@@ -36,10 +36,10 @@
 #include "app_timer.h" /**/
 #include "app_button.h" /**/
 /* NRF DRV */
-//#include "nrf_drv_spi.h"
+#include "nrf_drv_spi.h"
 #include "nrf_drv_timer.h"
 #include "nrf_drv_gpiote.h"
-//#include "nrf_drv_uart.h"
+#include "nrf_drv_uart.h"
 //#include "nrf_drv_clock.h"
 /* BLE */
 #include "ble.h" /**/
@@ -101,15 +101,15 @@
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
 // SPI
-//#define ADC_SPI_CONV_PIN				22
-//#define ADC_SPI_MOSI_PIN				23
-//#define ADC_SPI_MISO_PIN				24
-//#define ADC_SPI_SCK_PIN					25
-//#define ADC_SPI_INSTANCE				1
+#define ADC_SPI_CONV_PIN				22
+#define ADC_SPI_MOSI_PIN				23
+#define ADC_SPI_MISO_PIN				24
+#define ADC_SPI_SCK_PIN					25
+#define ADC_SPI_INSTANCE				1
 
 // SYNC TIMER
 #define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
-#define ADC_SYNC_44KHZ_US				112//23
+#define ADC_SYNC_44KHZ_US				100
 #define ADC_SYNC_48KHZ_US				20
 
 

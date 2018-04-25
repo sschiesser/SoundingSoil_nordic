@@ -77,6 +77,7 @@ static volatile bool					sdc_rtw = false;
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
+static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
 static volatile uint32_t				adc_samples_counter = 0;
 static volatile uint32_t				adc_total_samples = 0;
@@ -117,34 +118,34 @@ static uint32_t sdc_start()
 
     diskio_blockdev_register(drives, ARRAY_SIZE(drives));
 
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
+    NRF_LOG_DEBUG("Initializing disk 0 (SDC)...");
     for (uint32_t retries = 3; retries && disk_state; --retries)
     {
         disk_state = disk_initialize(0);
     }
     if (disk_state)
     {
-        NRF_LOG_INFO("Disk initialization failed. Disk state: %d", disk_state);
+        NRF_LOG_DEBUG("Disk initialization failed. Disk state: %d", disk_state);
         return (uint32_t)disk_state;
     }
 
     uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
     uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
+    NRF_LOG_DEBUG("Capacity: %d MB", capacity);
 
-    NRF_LOG_INFO("Mounting volume...");
+    NRF_LOG_DEBUG("Mounting volume...");
     ff_result = f_mount(&sdc_fs, "", 1);
     if (ff_result)
     {
-        NRF_LOG_INFO("Mount failed. Result: %d", ff_result);
+        NRF_LOG_DEBUG("Mount failed. Result: %d", ff_result);
         return (uint32_t)ff_result;
     }
 
-    NRF_LOG_INFO("\r\n Listing directory: /");
+    NRF_LOG_DEBUG("\r\n Listing directory: /");
     ff_result = f_opendir(&sdc_dir, "/");
     if (ff_result)
     {
-        NRF_LOG_INFO("Directory listing failed!");
+        NRF_LOG_DEBUG("Directory listing failed!");
         return (uint32_t)ff_result;
     }
 
@@ -161,28 +162,28 @@ static uint32_t sdc_start()
         {
             if (sdc_fno.fattrib & AM_DIR)
             {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)sdc_fno.fname);
+                NRF_LOG_DEBUG("   <DIR>   %s",(uint32_t)sdc_fno.fname);
             }
             else
             {
-                NRF_LOG_RAW_INFO("%9lu  %s", sdc_fno.fsize, (uint32_t)sdc_fno.fname);
+                NRF_LOG_DEBUG("%9lu  %s", sdc_fno.fsize, (uint32_t)sdc_fno.fname);
             }
         }
     }
     while (sdc_fno.fname[0]);
-    NRF_LOG_INFO("");
-    NRF_LOG_INFO("Opening file " FILE_NAME "...");
+    NRF_LOG_DEBUG("");
+    NRF_LOG_DEBUG("Opening file " FILE_NAME "...");
     ff_result = f_open(&sdc_file, FILE_NAME, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
+        NRF_LOG_DEBUG("Unable to open or create file: " FILE_NAME ".");
         return (uint32_t)ff_result;
     }
 	
-	NRF_LOG_INFO("Writing WAV header...");
+	NRF_LOG_DEBUG("Writing WAV header...");
 	ff_result = f_write(&sdc_file, wave_header, 44, (UINT *) &bytes_written);
 	if (ff_result != FR_OK) {
-		NRF_LOG_INFO("Unable to write WAV header");
+		NRF_LOG_DEBUG("Unable to write WAV header");
 		return (uint32_t)ff_result;
 	}
 	
@@ -194,16 +195,15 @@ static FRESULT sdc_write(void)
     uint32_t bytes_written;
     FRESULT ff_result;
 
-    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-//    ff_result = f_write(&sdc_file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
+    NRF_LOG_DEBUG("Writing to file " FILE_NAME "...");
     ff_result = f_write(&sdc_file, audio_buffer, sizeof(audio_buffer), (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_INFO("Write failed\r\n.");
+        NRF_LOG_DEBUG("Write failed\r\n.");
     }
     else
     {
-        NRF_LOG_INFO("%d bytes written.", bytes_written);
+        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
     }
 	f_sync(&sdc_file);
 	return ff_result;
@@ -242,6 +242,30 @@ static void advertising_start(void)
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
 /* ========================================================================== */
+// ADC SPI
+void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
+{
+//	static uint32_t buf_size = 2;
+//	app_fifo_write(&m_adc2sd_fifo, m_rx_buf, &buf_size);
+//	
+//	if(adc_spi_xfer_counter < (SDC_BLOCK_SIZE-1)) {
+//		adc_spi_xfer_counter++;
+//	}
+//	else {
+//		DBG_TOGGLE(DBG0_PIN);
+//		adc_total_samples += (2*adc_spi_xfer_counter);
+//		sdc_rtw = true;
+//		if(!sdc_writing) {
+//			sdc_rtw = true;
+//		}
+//		else {
+//			sdc_block_cnt++;
+//		}
+//		adc_spi_xfer_counter = 0;
+//	}
+//	adc_spi_xfer_done = true;
+}
+
 // ADC timer
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
@@ -483,6 +507,19 @@ static void adc_config_timer(void)
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
 }
 	
+// ADC SPI
+static void adc_config_spi(void)
+{
+	nrf_drv_spi_config_t adc_spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+	adc_spi_config.ss_pin = ADC_SPI_CONV_PIN;
+	adc_spi_config.miso_pin = ADC_SPI_MISO_PIN;
+	adc_spi_config.mosi_pin = ADC_SPI_MOSI_PIN;
+	adc_spi_config.sck_pin = ADC_SPI_SCK_PIN;
+	adc_spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
+	adc_spi_config.irq_priority = 2;
+	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
+}
+
 // BLE advertisement
 static void advertising_init(void)
 {
@@ -673,7 +710,7 @@ int main(void)
     {
 		// REC START request
 		if(ui_rec_start_req) {
-			NRF_LOG_DEBUG("Starting REC");
+			NRF_LOG_INFO("Starting REC");
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
 			if(sdc_start() == 0) {
 				sdc_init_ok = true;
@@ -682,7 +719,7 @@ int main(void)
 		}
 		// REC STOP request
 		if(ui_rec_stop_req) {
-			NRF_LOG_DEBUG("Stopping REC");
+			NRF_LOG_INFO("Stopping REC");
 			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			sdc_close();
 			LED_OFF(LED_RECORD);
@@ -699,7 +736,7 @@ int main(void)
 		}
 		// MON START request
 		if(ui_mon_start_req) {
-			NRF_LOG_DEBUG("Starting MON");
+			NRF_LOG_INFO("Starting MON");
 			LED_ON(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
 			if (err_code != NRF_SUCCESS &&
@@ -713,7 +750,7 @@ int main(void)
 		}
 		// MON STOP request
 		if(ui_mon_stop_req) {
-			NRF_LOG_DEBUG("Stopping MON");
+			NRF_LOG_INFO("Stopping MON");
 			LED_OFF(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
 			if( err_code != NRF_SUCCESS &&
@@ -728,7 +765,7 @@ int main(void)
 		}
 		// SDC INIT OK
 		if(sdc_init_ok) {
-			NRF_LOG_DEBUG("SDC init OK");
+			NRF_LOG_INFO("SDC init OK");
 			app_timer_stop(led_blink_timer);
 			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
 			if (err_code != NRF_SUCCESS &&
