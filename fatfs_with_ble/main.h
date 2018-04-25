@@ -20,6 +20,7 @@
 #include "boards.h"
 #include "ff.h" /**/
 #include "diskio_blkdev.h" /**/
+#include "mem_manager.h"
 #include "nrf_block_dev_sdc.h" /**/
 //#include "nrf_error.h"
 //#include "nrf_queue.h"
@@ -31,8 +32,7 @@
 /* APP libraries */
 //#include "app_util_platform.h"
 //#include "app_error.h"
-//#include "app_fifo.h"
-//#include "app_uart.h"
+#include "app_fifo.h"
 #include "app_timer.h" /**/
 #include "app_button.h" /**/
 /* NRF DRV */
@@ -83,10 +83,6 @@
 #define BUTTON_MONITOR					(BSP_BUTTON_3)
 #define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(50) // Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
 
-/*                              ADC to SDC FIFO                               */
-/* -------------------------------------------------------------------------- */
-//#define FIFO_DATA_SIZE					8192
-
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
 //#define FILE_NAME   					"R123456.wav"
@@ -96,7 +92,7 @@
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-#define SDC_BLOCK_SIZE					(32*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
+#define SDC_BLOCK_SIZE					(16*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -109,8 +105,13 @@
 
 // SYNC TIMER
 #define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
-#define ADC_SYNC_44KHZ_US				100
+#define ADC_SYNC_44KHZ_US				60//23
 #define ADC_SYNC_48KHZ_US				20
+
+
+/*                              ADC to SDC FIFO                               */
+/* -------------------------------------------------------------------------- */
+#define FIFO_DATA_SIZE					(2*SDC_BLOCK_SIZE)
 
 
 /*                                   GPS                                      */

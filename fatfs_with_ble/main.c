@@ -55,7 +55,9 @@
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
-static uint8_t							audio_buffer[SDC_BLOCK_SIZE];
+app_fifo_t								audio_fifo;
+static uint8_t							audio_buffer[FIFO_DATA_SIZE];
+uint8_t									p_buf[SDC_BLOCK_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -81,7 +83,13 @@ static volatile bool					sdc_rtw = false;
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
 static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
+static volatile bool					adc_spi_xfer_done = false;
+static uint8_t							adc_spi_txbuf[2] = {0xFF, 0xFF};
+static uint8_t							adc_spi_rxbuf[2];
+static const uint8_t					adc_spi_len = 2;
+
 const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
+
 static volatile uint32_t				adc_samples_counter = 0;
 static volatile uint32_t				adc_total_samples = 0;
 
@@ -266,9 +274,16 @@ static FRESULT sdc_write(void)
 {
     uint32_t bytes_written;
     FRESULT ff_result;
+	uint32_t buf_size = SDC_BLOCK_SIZE;
+//	uint8_t p_buf[SDC_BLOCK_SIZE];
+//	nrf_malloc(SDC_BLOCK_SIZE);
+	
+	NRF_LOG_DEBUG("Reading fifo...");
+	uint32_t fifo_res = app_fifo_read(&audio_fifo, p_buf, &buf_size);
 
     NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
-    ff_result = f_write(&sdc_file, audio_buffer, sizeof(audio_buffer), (UINT *) &bytes_written);
+	DBG_TOGGLE(DBG1_PIN);
+    ff_result = f_write(&sdc_file, p_buf, buf_size, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
@@ -278,14 +293,38 @@ static FRESULT sdc_write(void)
         NRF_LOG_DEBUG("%d bytes written.", bytes_written);
     }
 	f_sync(&sdc_file);
+	DBG_TOGGLE(DBG1_PIN);
 	return ff_result;
 }
 
 // Write values to WAV header & close recording file
-static void sdc_close(void)
+static FRESULT sdc_close(void)
 {
-    (void) f_close(&sdc_file);
-    return;
+	FRESULT ff_result;
+	UINT bytes;
+	
+	((uint16_t *)&wave_header)[WAVE_FORMAT_NUM_CHANNEL_OFFSET/2] = AUDIO_NUM_CHANNELS;
+	((uint16_t *)&wave_header)[WAVE_FORMAT_BITS_PER_SAMPLE_OFFSET/2] = AUDIO_BITS_PER_SAMPLE;
+	((uint16_t *)&wave_header)[WAVE_FORMAT_BLOCK_ALIGN_OFFSET/2] = AUDIO_BITS_PER_SAMPLE/8 * AUDIO_NUM_CHANNELS;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_SAMPLE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_BYTE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE * AUDIO_NUM_CHANNELS * AUDIO_BITS_PER_SAMPLE/8;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = (adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
+	
+	ff_result = f_lseek(&sdc_file, 0);
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Error while seeking for beginning of file");
+		return ff_result;
+	}
+	
+	ff_result = f_write(&sdc_file, wave_header, 44, &bytes);
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Error while updating the WAV header");
+		return ff_result;
+	}
+	
+    (void)f_close(&sdc_file);
+    return ff_result;
 }
 
 
@@ -315,39 +354,39 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-//	char c; // Read UART character
-//	gps_uart_reading = true; // Reading flag
-//	gps_uart_timeout = false; // Timeout flag
-//	char *p_str; // Pointer on the string comparison result
-//	while(gps_uart_reading) {
-//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-//		if(ret == NRF_ERROR_TIMEOUT) {
-//			NRF_LOG_DEBUG("UART timeout!");
-//			gps_uart_reading = false;
-//			gps_uart_timeout = true;
-//			break;
-//		}
-//		uart_buf[cnt++] = c;
-//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-//				static char comp[7] = "$GPRMC";
-//				p_str = strstr(uart_buf, comp);
-//				if(p_str != NULL) {
-//					strcpy(tag.raw_tag, uart_buf);
-//					tag.length = strlen(uart_buf);
-//					app_timer_stop(gps_uart_timer);
-//					gps_uart_reading = false;
-//				}
-//			}
-//			cnt = 0;
-//		}
-//	}
-//	if(gps_uart_timeout) {
-//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
-//		gps_uart_timeout = false;
-//	}
+	char c; // Read UART character
+	gps_uart_reading = true; // Reading flag
+	gps_uart_timeout = false; // Timeout flag
+	char *p_str; // Pointer on the string comparison result
+	while(gps_uart_reading) {
+		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+		if(ret == NRF_ERROR_TIMEOUT) {
+			NRF_LOG_DEBUG("UART timeout!");
+			gps_uart_reading = false;
+			gps_uart_timeout = true;
+			break;
+		}
+		uart_buf[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+				static char comp[7] = "$GPRMC";
+				p_str = strstr(uart_buf, comp);
+				if(p_str != NULL) {
+					strcpy(tag.raw_tag, uart_buf);
+					tag.length = strlen(uart_buf);
+					app_timer_stop(gps_uart_timer);
+					gps_uart_reading = false;
+				}
+			}
+			cnt = 0;
+		}
+	}
+	if(gps_uart_timeout) {
+		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+		gps_uart_timeout = false;
+	}
 /* FAKE UART */
-	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
 /* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
@@ -472,43 +511,25 @@ static void gps_poll_data(void)
 // ADC SPI
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
-//	static uint32_t buf_size = 2;
-//	app_fifo_write(&m_adc2sd_fifo, m_rx_buf, &buf_size);
-//	
-//	if(adc_spi_xfer_counter < (SDC_BLOCK_SIZE-1)) {
-//		adc_spi_xfer_counter++;
-//	}
-//	else {
-//		DBG_TOGGLE(DBG0_PIN);
-//		adc_total_samples += (2*adc_spi_xfer_counter);
-//		sdc_rtw = true;
-//		if(!sdc_writing) {
-//			sdc_rtw = true;
-//		}
-//		else {
-//			sdc_block_cnt++;
-//		}
-//		adc_spi_xfer_counter = 0;
-//	}
-//	adc_spi_xfer_done = true;
+	static uint32_t size = adc_spi_len;
+	app_fifo_write(&audio_fifo, adc_spi_rxbuf, &size);
+	adc_samples_counter += 2;
+	adc_spi_xfer_done = true;
 }
 
 // ADC timer
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	DBG_TOGGLE(DBG0_PIN);
-	audio_buffer[adc_samples_counter] = 0xAA;
-	audio_buffer[adc_samples_counter+1] = 0x55;
-	adc_samples_counter += 2;
-	if(adc_samples_counter >= SDC_BLOCK_SIZE) {
-		adc_total_samples += SDC_BLOCK_SIZE;
-		adc_samples_counter = 0;
-		sdc_rtw = true;
+	if(adc_spi_xfer_done) {
+		adc_spi_xfer_done = false;
+		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
+			adc_total_samples += SDC_BLOCK_SIZE;
+			adc_samples_counter = 0;
+			sdc_rtw = true;
+		}
 	}
-//	if(adc_spi_xfer_done) {
-//		adc_spi_xfer_done = false;
-//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
-//	}
 }
 // BLE
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
@@ -924,6 +945,11 @@ int main(void)
 	gpio_dbg_init();
 #endif
 	
+//	if(nrf_mem_init() != NRF_SUCCESS) {
+//		NRF_LOG_INFO("Memory manager initialization failed!");
+//		while(true);
+//	}
+	
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
@@ -933,6 +959,7 @@ int main(void)
 	
 	adc_config_spi();
 	adc_config_timer();
+	app_fifo_init(&audio_fifo, audio_buffer, FIFO_DATA_SIZE);
 	gps_init();
 	
 	/* Starting application */
@@ -1014,7 +1041,7 @@ int main(void)
 				APP_ERROR_CHECK(err_code);
 			}
 			LED_ON(LED_RECORD);
-//			sdc_write();
+			nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 			ui_rec_running = true;
 			sdc_init_ok = false;
@@ -1022,6 +1049,7 @@ int main(void)
 		
         // SDC ready-to-write
 		if(sdc_rtw) {
+			NRF_LOG_INFO("Ready to write");
 			sdc_write();
 			sdc_rtw = false;
 		}
