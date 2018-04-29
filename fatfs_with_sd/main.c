@@ -96,7 +96,7 @@ static volatile bool					sdc_writing = false;
 static uint8_t							sdc_block_cnt = 0;
 static FIL   							recording_fil;
 
-#define ADC_SYNC_TIMER_INSTANCE			0
+#define ADC_SYNC_TIMER_INSTANCE			1
 #define ADC_SYNC_44KHZ_US				23
 #define ADC_SYNC_48KHZ_US				20
 const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
