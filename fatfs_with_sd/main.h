@@ -48,13 +48,13 @@
 #include "ble_srv_common.h" /**/
 #include "ble_advdata.h" /**/
 #include "ble_conn_params.h" /**/
-//#include "ble_sss.h"
+#include "ble_sss.h"
 /* LOG */
 #include "nrf_log.h" /**/
 #include "nrf_log_ctrl.h" /**/
 #include "nrf_log_default_backends.h" /**/
 /* SoundingSoil */
-//#include "wave_header.h"
+#include "wave_header.h"
 
 
 /* ========================================================================== */

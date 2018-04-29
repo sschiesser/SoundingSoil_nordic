@@ -137,7 +137,7 @@ APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
-//BLE_SSS_DEF(m_sss);																// LED Button Service instance.
+BLE_SSS_DEF(m_sss);																// LED Button Service instance.
 NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
 

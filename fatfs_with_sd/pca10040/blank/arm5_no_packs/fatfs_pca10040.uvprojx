@@ -395,6 +395,21 @@
               <FileType>5</FileType>
               <FilePath>..\..\..\main.h</FilePath>
             </File>
+            <File>
+              <FileName>ble_sss.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ble_sss.c</FilePath>
+            </File>
+            <File>
+              <FileName>wave_header.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\..\wave_header.h</FilePath>
+            </File>
+            <File>
+              <FileName>ble_sss.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\..\ble_sss.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
