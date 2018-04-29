@@ -154,12 +154,20 @@ static const uint8_t					m_length = 2;
 /* ========================================================================== */
 static void sdc_fill_queue(void)
 {
-	bsp_board_led_invert(2);
+	DBG_TOGGLE(DBG2_PIN);
 	static FRESULT res;
 	static UINT byte_written;
 	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
+//	uint32_t fifo_size = m_adc2sd_fifo.write_pos - m_adc2sd_fifo.read_pos;
+//	NRF_LOG_INFO("FIFO W->%d, R->%d, size: %d", m_adc2sd_fifo.write_pos, m_adc2sd_fifo.read_pos, fifo_size);
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
+		NRF_LOG_INFO("FIFO READ->%d", m_adc2sd_fifo.read_pos);
+	if((m_adc2sd_fifo.read_pos == m_adc2sd_fifo.write_pos) && (m_adc2sd_fifo.write_pos != 0)) {
+		NRF_LOG_INFO("Flushing...");
+		m_adc2sd_fifo.write_pos = 0;
+		app_fifo_flush(&m_adc2sd_fifo);
+	}
 	sdc_writing = true;
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
 	if(res == FR_OK) {
@@ -230,14 +238,14 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		adc_spi_xfer_counter++;
 	}
 	else {
-		bsp_board_led_invert(1);
+		DBG_TOGGLE(DBG1_PIN);
+		NRF_LOG_INFO("FIFO WRITE->%d", m_adc2sd_fifo.write_pos);
 		adc_spi_xfer_counter = 0;
 		if(!sdc_writing) {
 			sdc_rtw = true;
 		}
 		else {
 			sdc_block_cnt++;
-//			NRF_LOG_INFO("still writing! counter: %d", sdc_block_cnt);
 		}
 	}
 	adc_spi_xfer_done = true;
@@ -245,7 +253,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
-	bsp_board_led_invert(0);
+	DBG_TOGGLE(DBG0_PIN);
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
@@ -481,7 +489,7 @@ static void adc_config_timer(void)
 	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
 
 	nrf_drv_timer_extended_compare(
-		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, TIMER_SHORTS_COMPARE0_CLEAR_Msk, true);
+		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
 	
 //	nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 }
@@ -610,6 +618,18 @@ static void buttons_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+
+
+// DEBUG GPIO out
+static void gpio_dbg_init(void)
+{
+	ret_code_t err_code;
+	nrf_drv_gpiote_out_config_t out_config = GPIOTE_CONFIG_OUT_SIMPLE(true);
+	err_code = nrf_drv_gpiote_out_init(DBG0_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	err_code = nrf_drv_gpiote_out_init(DBG1_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+}
 
 
 DSTATUS sd_card_test(void)
@@ -852,6 +872,9 @@ int main(void)
 	
     bsp_board_leds_init();
 	buttons_init();
+#ifdef DEBUG
+	gpio_dbg_init();
+#endif
 	
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();

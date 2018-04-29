@@ -66,8 +66,6 @@
 #define DBG0_PIN						11
 #define DBG1_PIN						12
 #define DBG2_PIN						18
-//#define DBG_CURRENT_FOLDER				"180425"
-//#define DBG_CURRENT_FILE				"R123456.wav"
 #define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
 
 /*                             LED/BUTTON MACROS                              */
@@ -93,7 +91,7 @@
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-#define SDC_BLOCK_SIZE					(8*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
+#define SDC_BLOCK_SIZE					(2*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 
 #define FILE_NAME   					"NORDIC.TXT"
