@@ -14,13 +14,13 @@
 //#define NB_BUFFERS							4
 #define AUDIO_NUM_CHANNELS					1
 #define AUDIO_BITS_PER_SAMPLE				16
-#define AUDIO_SAMPLING_RATE					16000//44100
+#define AUDIO_SAMPLING_RATE					44100
 #define NUMBER_OF_CHANNELS					0x01
 /* Byte rate = SampleRate * NumChannels * BitPerChannel/8
- *    br     =   16000    *      1      *       16/8     = 32'000 (0x00007D00) */
-#define BYTE_RATE_LL						0x00
-#define BYTE_RATE_LH						0x7D
-#define BYTE_RATE_HL						0x00
+ *    br     =   44100    *      1      *       16/8     = 88'200 (0x00015888) */
+#define BYTE_RATE_LL						0x88
+#define BYTE_RATE_LH						0x58
+#define BYTE_RATE_HL						0x01
 #define BYTE_RATE_HH						0x00
 
 /*Wave header for PCM sound file */

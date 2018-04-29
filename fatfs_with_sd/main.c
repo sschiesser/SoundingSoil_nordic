@@ -160,8 +160,6 @@ static void sdc_fill_queue(void)
 	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
-//	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
-//	NRF_LOG_INFO("read: %d", p_fifo->read_pos);
 	sdc_writing = true;
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
 	if(res == FR_OK) {
@@ -188,6 +186,36 @@ static void advertising_start(void)
     err_code = sd_ble_gap_adv_start(&adv_params, APP_BLE_CONN_CFG_TAG);
     APP_ERROR_CHECK(err_code);
     LED_ON(LED_ADVERTISING);
+}
+
+// Write values to WAV header & close recording file
+static FRESULT sdc_close(void)
+{
+	FRESULT ff_result;
+	UINT bytes;
+	
+	((uint16_t *)&wave_header)[WAVE_FORMAT_NUM_CHANNEL_OFFSET/2] = AUDIO_NUM_CHANNELS;
+	((uint16_t *)&wave_header)[WAVE_FORMAT_BITS_PER_SAMPLE_OFFSET/2] = AUDIO_BITS_PER_SAMPLE;
+	((uint16_t *)&wave_header)[WAVE_FORMAT_BLOCK_ALIGN_OFFSET/2] = AUDIO_BITS_PER_SAMPLE/8 * AUDIO_NUM_CHANNELS;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_SAMPLE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_BYTE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE * AUDIO_NUM_CHANNELS * AUDIO_BITS_PER_SAMPLE/8;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = (adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
+	
+	ff_result = f_lseek(&recording_fil, 0);
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Error while seeking for beginning of file");
+		return ff_result;
+	}
+	
+	ff_result = f_write(&recording_fil, wave_header, 44, &bytes);
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Error while updating the WAV header");
+		return ff_result;
+	}
+	
+    (void)f_close(&recording_fil);
+    return ff_result;
 }
 
 /* ========================================================================== */
@@ -375,6 +403,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 }
 
 
+// LED REC
 static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
@@ -791,6 +820,15 @@ FRESULT sd_card_init(void)
 			return res;
 		}
 	}
+	
+	uint32_t bytes_written;
+	NRF_LOG_DEBUG("Writing WAV header...");
+	res = f_write(&recording_fil, wave_header, 44, (UINT *) &bytes_written);
+	if (res != FR_OK) {
+		NRF_LOG_DEBUG("Unable to write WAV header");
+		return (uint32_t)res;
+	}
+
 
 	return FR_OK;
 }
@@ -856,12 +894,36 @@ int main(void)
 				}
 			}
 		}
+		
+		if(ui_rec_stop_req) {
+			ui_rec_stop_req = false;
+			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+			sdc_close();
+			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
+			if(err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
+			ui_rec_start_req = false;
+			ui_rec_running = false;
+		}
+				
 
 		if(sdc_init_ok) {
 			sdc_init_ok = false;
 			NRF_LOG_INFO("Starting SPI xfer");
+			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
+			if (err_code != NRF_SUCCESS &&
+				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+				err_code != NRF_ERROR_INVALID_STATE &&
+				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+				APP_ERROR_CHECK(err_code);
+			}
 			adc_spi_xfer_done = true;
 			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+			ui_rec_running = true;
 		}
 
 		if(sdc_rtw) {
