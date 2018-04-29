@@ -93,7 +93,7 @@
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-#define SDC_BLOCK_SIZE					(8*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
+#define SDC_BLOCK_SIZE					(2*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -113,7 +113,7 @@
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
-#define FIFO_DATA_SIZE					(2*SDC_BLOCK_SIZE)
+#define FIFO_DATA_SIZE					(16*SDC_BLOCK_SIZE)
 
 
 /*                                   GPS                                      */

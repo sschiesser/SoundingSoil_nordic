@@ -27,7 +27,18 @@ Project File Date:  04/29/2018
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 0 Warning(s).
+compiling main.c...
+..\..\..\main.c(192): warning:  #188-D: enumerated type mixed with another type
+  		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
+IMER_SHORTS_COMPARE0_CLEAR_Msk, 
+rue);
+..\..\..\main.c(420): warning:  #177-D: variable "p_fifo"  was declared but never referenced
+  	static app_fifo_t * p_fifo = &m_adc2sd_fifo;
+..\..\..\main.c: 2 warnings, 0 errors
+linking...
+Program Size: Code=21284 RO-data=2184 RW-data=220 ZI-data=52836  
+FromELF: creating hex file...
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 2 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -51,9 +62,9 @@ Package Vendor: NordicSemiconductor
 <h2>Collection of Component Files used:</h2>
 
    * Component: NordicSemiconductor::Device:Startup:8.15.0
+      Source file:   Device\Source\system_nrf52.c
       Include file:  Device\Include\system_nrf52.h
       Source file:   Device\Source\arm\arm_startup_nrf52.s
-      Source file:   Device\Source\system_nrf52.c
 
    * Component: ARM::CMSIS:CORE:4.3.0
 Build Time Elapsed:  00:00:01

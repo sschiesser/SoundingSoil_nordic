@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 16:30:51 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 17:53:10 2018
 <BR><P>
 <H3>Maximum Stack Usage =        552 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -467,7 +467,7 @@ Global Symbols
 
 <P><STRONG><a name="[114]"></a>__scatterload_zeroinit</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_zeroinit), UNUSED)
 
-<P><STRONG><a name="[37]"></a>adc_spi_event_handler</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
+<P><STRONG><a name="[37]"></a>adc_spi_event_handler</STRONG> (Thumb, 64 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = adc_spi_event_handler &rArr; app_fifo_write
 </UL>
 <BR>[Calls]<UL><LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bsp_board_led_invert
@@ -786,7 +786,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_fill_queue
 </UL>
 
-<P><STRONG><a name="[2f]"></a>main</STRONG> (Thumb, 320 bytes, Stack size 24 bytes, main.o(i.main))
+<P><STRONG><a name="[2f]"></a>main</STRONG> (Thumb, 306 bytes, Stack size 24 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 552<LI>Call Chain = main &rArr; sd_card_init &rArr; scan_files &rArr;  scan_files (Cycle)
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_init

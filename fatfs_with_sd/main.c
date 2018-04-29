@@ -74,7 +74,7 @@
 //#define QUEUE_DATA_SIZE					4096
 //NRF_QUEUE_DEF(uint8_t, m_adc2sd_queue, QUEUE_DATA_SIZE, NRF_QUEUE_MODE_NO_OVERFLOW);
 /* ADC to SDC FIFO definition */
-#define FIFO_DATA_SIZE					4096
+#define FIFO_DATA_SIZE					16384
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
@@ -88,7 +88,7 @@ uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
 //#define SDC_CD_PIN					04  ///< SCD card detect (CD) pin.
 
-#define SDC_BLOCK_SIZE					SDC_SECTOR_SIZE
+#define SDC_BLOCK_SIZE					(8*SDC_SECTOR_SIZE)
 static uint8_t 							data_buffer[FIFO_DATA_SIZE];
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
@@ -481,7 +481,7 @@ int main(void)
 			sdc_fill_queue();
 		}
 		else if(sdc_block_cnt > 0) {
-			NRF_LOG_INFO("Decounting FIFO...");
+//			NRF_LOG_INFO("Decounting FIFO...");
 			sdc_block_cnt--;
 			sdc_fill_queue();
 		}
