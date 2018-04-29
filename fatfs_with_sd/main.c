@@ -82,8 +82,8 @@ uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 /* SD card definitions */
 #define FILE_NAME   "NORDIC.TXT"
 #define TEST_STRING "SD card example."
-#define SDC_SCK_PIN     				28  ///< SDC serial clock (SCK) pin.
-#define SDC_MISO_PIN    				29  ///< SDC serial data out (DO) pin.
+#define SDC_SCK_PIN     				29//28  ///< SDC serial clock (SCK) pin.
+#define SDC_MISO_PIN    				28//29  ///< SDC serial data out (DO) pin.
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
 //#define SDC_CD_PIN					04  ///< SCD card detect (CD) pin.
