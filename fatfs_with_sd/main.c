@@ -836,32 +836,34 @@ int main(void)
 	app_button_enable();
 	advertising_start();
 
-	card_status = sd_card_test();
-	
-	if(card_status != RES_OK) {
-		NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
-	}
-	else {
-		NRF_LOG_INFO("SD card check OK");
-		ff_result = sd_card_init();
-		if(ff_result != FR_OK) {
-			NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+	for(;;)
+	{
+		if(ui_rec_start_req) {
+			ui_rec_start_req = false;
+			card_status = sd_card_test();	
+			if(card_status != RES_OK) {
+				NRF_LOG_INFO("SD card check failed. Status: %d", card_status);
+			}
+			else {
+				NRF_LOG_INFO("SD card check OK");
+				ff_result = sd_card_init();
+				if(ff_result != FR_OK) {
+					NRF_LOG_INFO("SD card init failed. Result: %d", ff_result);
+				}
+				else {
+					NRF_LOG_INFO("\nSD card init OK");
+					sdc_init_ok = true;
+				}
+			}
 		}
-		else {
-			NRF_LOG_INFO("\nSD card init OK");
-			sdc_init_ok = true;
+
+		if(sdc_init_ok) {
+			sdc_init_ok = false;
+			NRF_LOG_INFO("Starting SPI xfer");
+			adc_spi_xfer_done = true;
+			nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 		}
-	}
 
-	if(sdc_init_ok) {
-		NRF_LOG_INFO("Starting SPI xfer");
-		adc_spi_xfer_done = true;
-		nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-//		nrf_drv_spi_transfer(&adc_spi, m_tx_buf, m_length, m_rx_buf, m_length);
-	}
-
-    while (true)
-    {
 		if(sdc_rtw) {
 			sdc_rtw = false;
 			sdc_fill_queue();
@@ -871,8 +873,10 @@ int main(void)
 			sdc_block_cnt--;
 			sdc_fill_queue();
 		}
-        __WFE();
-    }
+
+		__WFE();
+
+	}
 }
 
 /** @} */
