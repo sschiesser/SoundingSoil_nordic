@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 17:40:11 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 19:03:56 2018
 <BR><P>
 <H3>Maximum Stack Usage =        792 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -906,7 +906,7 @@ Global Symbols
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;NVIC_EnableIRQ
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;NVIC_ClearPendingIRQ
 </UL>
-<BR>[Called By]<UL><LI><a href="#[10a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buttons_init
+<BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
 <P><STRONG><a name="[cd]"></a>app_timer_start</STRONG> (Thumb, 78 bytes, Stack size 24 bytes, app_timer.o(i.app_timer_start))
@@ -1251,7 +1251,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 740 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 774 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 792<LI>Call Chain = main &rArr; gps_poll_data &rArr; gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
@@ -1264,6 +1264,7 @@ Global Symbols
 <LI><a href="#[170]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_sss_on_button1_change
 <LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_stop
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_start
+<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_init
 <LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_fifo_init
 <LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_button_enable
@@ -2053,11 +2054,10 @@ Local Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(.data)
 </UL>
-<P><STRONG><a name="[10a]"></a>buttons_init</STRONG> (Thumb, 72 bytes, Stack size 16 bytes, main.o(i.buttons_init))
+<P><STRONG><a name="[10a]"></a>buttons_init</STRONG> (Thumb, 42 bytes, Stack size 16 bytes, main.o(i.buttons_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 376<LI>Call Chain = buttons_init &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_init
-<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
+<BR>[Calls]<UL><LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 <LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_button_init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main

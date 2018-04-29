@@ -904,8 +904,6 @@ static void buttons_init(void)
 		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler}
     };
 
-	err_code = app_timer_init();
-	APP_ERROR_CHECK(err_code);
     err_code = app_button_init(buttons, sizeof(buttons) / sizeof(buttons[0]), BUTTON_DETECTION_DELAY);
     APP_ERROR_CHECK(err_code);
 }
@@ -952,6 +950,9 @@ static void log_init(void)
 int main(void)
 {
 	static ret_code_t err_code;
+
+	err_code = app_timer_init();
+	APP_ERROR_CHECK(err_code);
 	
 	leds_init();
 	log_init();

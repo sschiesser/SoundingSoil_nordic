@@ -337,6 +337,44 @@ static void conn_params_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
+// BUTTONS
+static void button_event_handler(uint8_t pin_no, uint8_t button_action)
+{
+	if(button_action) {
+		switch (pin_no)
+		{
+			case BUTTON_RECORD:
+				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+				if(ui_rec_running || ui_rec_start_req) {
+					ui_rec_stop_req = true;
+					ui_rec_start_req = false;
+					ui_rec_running = false;
+				}
+				else {
+					ui_rec_start_req = true;
+				}
+				break;
+				
+			case BUTTON_MONITOR:
+				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+				if(ui_mon_running || ui_mon_start_req) {
+					ui_mon_stop_req = true;
+					ui_mon_start_req = false;
+					ui_mon_running = false;
+				}
+				else {
+					ui_mon_start_req = true;
+				}
+				break;
+
+			default:
+				APP_ERROR_HANDLER(pin_no);
+				break;
+		}
+	}
+}
+
+
 static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
@@ -527,6 +565,22 @@ static void ble_stack_init(void)
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
+// BUTTONS
+static void buttons_init(void)
+{
+    ret_code_t err_code;
+
+    //The array must be static because a pointer to it will be saved in the button handler module.
+    static app_button_cfg_t buttons[] =
+    {
+        {BUTTON_RECORD, false, BUTTON_PULL, button_event_handler},
+		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler}
+    };
+
+    err_code = app_button_init(buttons, sizeof(buttons) / sizeof(buttons[0]), BUTTON_DETECTION_DELAY);
+    APP_ERROR_CHECK(err_code);
+}
+
 
 
 DSTATUS sd_card_test(void)
@@ -759,6 +813,7 @@ int main(void)
 	APP_ERROR_CHECK(err_code);
 	
     bsp_board_leds_init();
+	buttons_init();
 	
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();
@@ -777,6 +832,9 @@ int main(void)
 	adc_config_spi();
 	adc_config_timer();
 	app_fifo_init(&m_adc2sd_fifo, m_fifo_buffer, FIFO_DATA_SIZE);
+	
+	app_button_enable();
+	advertising_start();
 
 	card_status = sd_card_test();
 	
