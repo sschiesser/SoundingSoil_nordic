@@ -289,40 +289,42 @@ static FRESULT sdc_write(void)
 	uint32_t buf_size = SDC_BLOCK_SIZE;
 	static uint8_t sdc_buffer[SDC_BLOCK_SIZE];
 
-	DBG_TOGGLE(DBG2_PIN);
+//	DBG_TOGGLE(DBG2_PIN);
 	
 	sdc_writing = true;
-	NRF_LOG_DEBUG("Reading fifo...");
+//	NRF_LOG_DEBUG("Reading fifo...");
 	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
-    NRF_LOG_INFO("Writing %d bytes to file %s...", buf_size, sdc_filename);
-    ff_result = f_write(&sdc_file, sdc_buffer, buf_size, (UINT *) &bytes_written);
+    NRF_LOG_DEBUG("Writing %d bytes to file %s...", buf_size, sdc_filename);
+    ff_result = f_write(&sdc_file, sdc_buffer, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_INFO("Write failed\r\n.");
+        NRF_LOG_DEBUG("Write failed\r\n.");
     }
     else
     {
-        NRF_LOG_INFO("%d bytes written.", bytes_written);
+        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
+		ff_result = f_sync(&sdc_file);
+		sdc_writing = false;
     }
-	if(sdc_write_cnt < 16) {
-		sdc_write_cnt++;
-		app_fifo_flush(&audio_fifo);
-//		app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
-		ff_result = f_lseek(&sdc_file, 0);
-		NRF_LOG_INFO("Data flushed. ff_result: %d, counter: %d", ff_result, sdc_write_cnt);
-		sdc_chunk_counter = 0;
-		adc_samples_counter = 0;
-		adc_total_samples = 0;
-		//		DBG_TOGGLE(DBG0_PIN);
-	}
+//	if(sdc_write_cnt < 16) {
+//		sdc_write_cnt++;
+//		app_fifo_flush(&audio_fifo);
+////		app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
+//		ff_result = f_lseek(&sdc_file, 0);
+//		NRF_LOG_INFO("Data flushed. ff_result: %d, counter: %d", ff_result, sdc_write_cnt);
+//		sdc_chunk_counter = 0;
+//		adc_samples_counter = 0;
+//		adc_total_samples = 0;
+//		//		DBG_TOGGLE(DBG0_PIN);
+//	}
 	
 //	DBG_TOGGLE(DBG1_PIN);
 
 //	f_sync(&sdc_file);
-	sdc_writing = false;
+//	sdc_writing = false;
 
-	DBG_TOGGLE(DBG2_PIN);
+//	DBG_TOGGLE(DBG2_PIN);
 
 //	if(sdc_chunk_counter > 0) {
 //		sdc_rtw = true;
@@ -548,33 +550,50 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t size = adc_spi_len;
 	app_fifo_write(&audio_fifo, adc_spi_rxbuf, &size);
-
-	uint32_t f_length = (audio_fifo.write_pos - audio_fifo.read_pos);
-	if(f_length >= (FIFO_DATA_SIZE - 1)) {
-		NRF_LOG_INFO("FIFO overflow... flushing");
-		app_fifo_flush(&audio_fifo);
-		sdc_chunk_counter = 0;
+	if(adc_samples_counter < (SDC_BLOCK_SIZE - 1)) {
+		adc_samples_counter += 2;
 	}
-	adc_samples_counter += 2;
+	else {
+		DBG_TOGGLE(DBG0_PIN);
+		adc_samples_counter = 0;
+		if(!sdc_writing) {
+//			DBG_TOGGLE(DBG1_PIN);
+			sdc_rtw = true;
+		}
+		else {
+//			DBG_TOGGLE(DBG2_PIN);
+			sdc_chunk_counter++;
+		}
+	}
 	adc_spi_xfer_done = true;
 }
+
+//	uint32_t f_length = (audio_fifo.write_pos - audio_fifo.read_pos);
+//	if(f_length >= (FIFO_DATA_SIZE - 1)) {
+//		NRF_LOG_INFO("FIFO overflow... flushing");
+//		app_fifo_flush(&audio_fifo);
+//		sdc_chunk_counter = 0;
+//	}
+//	adc_samples_counter += 2;
+//	adc_spi_xfer_done = true;
+//}
 
 // ADC timer
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	if(adc_spi_xfer_done) {
-		adc_spi_xfer_done = false;
-		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
-			adc_total_samples += SDC_BLOCK_SIZE;
-			adc_samples_counter = 0;
-			if(!sdc_writing) {
-				DBG_TOGGLE(DBG0_PIN);
-				sdc_rtw = true;
-			}
-			else {
-				sdc_chunk_counter++;
-			}
-		}
+//		adc_spi_xfer_done = false;
+//		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
+//			adc_total_samples += SDC_BLOCK_SIZE;
+//			adc_samples_counter = 0;
+//			if(!sdc_writing) {
+//				DBG_TOGGLE(DBG0_PIN);
+//				sdc_rtw = true;
+//			}
+//			else {
+//				sdc_chunk_counter++;
+//			}
+//		}
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
@@ -1104,8 +1123,9 @@ int main(void)
 //				sdc_write();
 //			}
 		}
-		else if(sdc_chunk_counter > 0) {
-			NRF_LOG_INFO("Cnt > 0!");
+		if(sdc_chunk_counter > 0) {
+//			NRF_LOG_INFO("Cnt > 0!");
+			DBG_TOGGLE(DBG2_PIN);
 			sdc_chunk_counter--;
 			sdc_write();
 		}
