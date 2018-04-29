@@ -27,7 +27,48 @@ Project File Date:  04/29/2018
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 0 Warning(s).
+compiling main.c...
+..\..\..\main.c(417): warning:  #188-D: enumerated type mixed with another type
+  		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, 
+IMER_SHORTS_COMPARE0_CLEAR_Msk, 
+rue);
+..\..\..\main.c(61): warning:  #177-D: variable "fifo_buffer"  was declared but never referenced
+  static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
+..\..\..\main.c(76): warning:  #177-D: variable "sdc_foldername"  was declared but never referenced
+  static TCHAR							sdc_foldername[13] = "180424";
+..\..\..\main.c(77): warning:  #177-D: variable "sdc_folderpath"  was declared but never referenced
+  static TCHAR							sdc_folderpath[14] = "/180424";
+..\..\..\main.c(78): warning:  #177-D: variable "sdc_filename"  was declared but never referenced
+  static TCHAR							sdc_filename[12] = "R123456.wav";
+..\..\..\main.c(79): warning:  #177-D: variable "sdc_fs"  was declared but never referenced
+  static FATFS 							sdc_fs;
+..\..\..\main.c(80): warning:  #177-D: variable "sdc_dir"  was declared but never referenced
+  static DIR 								sdc_dir;
+..\..\..\main.c(81): warning:  #177-D: variable "sdc_fno"  was declared but never referenced
+  static FILINFO 							sdc_fno;
+..\..\..\main.c(82): warning:  #177-D: variable "sdc_file"  was declared but never referenced
+  static FIL 								sdc_file;
+..\..\..\main.c(98): warning:  #177-D: variable "adc_spi_txbuf"  was declared but never referenced
+  static uint8_t							adc_spi_txbuf[2] = {0xFF, 0xFF};
+..\..\..\main.c(99): warning:  #177-D: variable "adc_spi_rxbuf"  was declared but never referenced
+  static uint8_t							adc_spi_rxbuf[2];
+..\..\..\main.c(100): warning:  #177-D: variable "adc_spi_len"  was declared but never referenced
+  static const uint8_t					adc_spi_len = 2;
+..\..\..\main.c(114): warning:  #177-D: variable "m_gps_uart_config"  was declared but never referenced
+  NRF_SERIAL_DRV_UART_CONFIG_DEF(m_gps_uart_config,
+..\..\..\main.c(120): warning:  #177-D: variable "gps_config"  was declared but never referenced
+  NRF_SERIAL_CONFIG_DEF(gps_config,
+..\..\..\main.c(124): warning:  #177-D: variable "gps_uart"  was declared but never referenced
+  NRF_SERIAL_UART_DEF(gps_uart, GPS_UART_INSTANCE);
+..\..\..\main.c(126): warning:  #177-D: variable "gps_uart_timer"  was declared but never referenced
+  APP_TIMER_DEF(gps_uart_timer);
+..\..\..\main.c(136): warning:  #177-D: variable "led_blink_timer"  was declared but never referenced
+  APP_TIMER_DEF(led_blink_timer);
+..\..\..\main.c: 17 warnings, 0 errors
+linking...
+Program Size: Code=39480 RO-data=2976 RW-data=416 ZI-data=46480  
+FromELF: creating hex file...
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 17 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -56,7 +97,7 @@ Package Vendor: NordicSemiconductor
       Source file:   Device\Source\system_nrf52.c
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:03
 </pre>
 </body>
 </html>
