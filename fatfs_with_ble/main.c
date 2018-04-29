@@ -282,7 +282,7 @@ static FRESULT sdc_write(void)
 	NRF_LOG_DEBUG("Reading fifo...");
 	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
-	DBG_TOGGLE(DBG1_PIN);
+	DBG_TOGGLE(DBG2_PIN);
 	
     NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
     ff_result = f_write(&sdc_file, sdc_buffer, buf_size, (UINT *) &bytes_written);
@@ -300,12 +300,12 @@ static FRESULT sdc_write(void)
 //	f_sync(&sdc_file);
 	sdc_writing = false;
 
-//	DBG_TOGGLE(DBG1_PIN);
+	DBG_TOGGLE(DBG2_PIN);
 
-	if(sdc_chunk_counter > 0) {
-		sdc_rtw = true;
-		sdc_chunk_counter--;
-	}
+//	if(sdc_chunk_counter > 0) {
+//		sdc_rtw = true;
+//		sdc_chunk_counter--;
+//	}
 	return ff_result;
 }
 
@@ -533,15 +533,20 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 // ADC timer
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
-	DBG_TOGGLE(DBG0_PIN);
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
-		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
+			DBG_TOGGLE(DBG0_PIN);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
-			sdc_rtw = true;
+			if(!sdc_writing) {
+				sdc_rtw = true;
+			}
+			else {
+				sdc_chunk_counter++;
+			}
 		}
+		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
 // BLE
@@ -762,7 +767,7 @@ static void adc_config_timer(void)
 	ret_code_t err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
-	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_16KHZ_US);//ADC_SYNC_44KHZ_US);
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
 
 	nrf_drv_timer_extended_compare(
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
@@ -1059,15 +1064,21 @@ int main(void)
 		if(sdc_rtw) {
 			DBG_TOGGLE(DBG1_PIN);
 			sdc_rtw = false;
+			sdc_write();
 //			NRF_LOG_INFO("Ready to write");
-			if(sdc_writing) {
-				sdc_chunk_counter++;
-				NRF_LOG_DEBUG("Increased counter: %d", sdc_chunk_counter);
-			}
-			else {
-				NRF_LOG_DEBUG("Writing to SDC. Cnt: %d", sdc_chunk_counter);
-				sdc_write();
-			}
+//			if(sdc_writing) {
+//				sdc_chunk_counter++;
+//				NRF_LOG_DEBUG("Increased counter: %d", sdc_chunk_counter);
+//			}
+//			else {
+//				NRF_LOG_DEBUG("Writing to SDC. Cnt: %d", sdc_chunk_counter);
+//				sdc_write();
+//			}
+		}
+		else if(sdc_chunk_counter > 0) {
+//			DBG_TOGGLE(DBG0_PIN);
+			sdc_chunk_counter--;
+			sdc_write();
 		}
 		
 		__WFE();

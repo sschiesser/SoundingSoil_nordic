@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 10:01:31 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sun Apr 29 11:43:17 2018
 <BR><P>
 <H3>Maximum Stack Usage =        792 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -727,7 +727,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.adc_config_spi)
 </UL>
-<P><STRONG><a name="[39]"></a>adc_sync_timer_handler</STRONG> (Thumb, 76 bytes, Stack size 16 bytes, main.o(i.adc_sync_timer_handler))
+<P><STRONG><a name="[39]"></a>adc_sync_timer_handler</STRONG> (Thumb, 94 bytes, Stack size 16 bytes, main.o(i.adc_sync_timer_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = adc_sync_timer_handler &rArr; nrf_drv_spi_transfer &rArr; nrf_drv_spi_xfer &rArr; spim_xfer &rArr; nrf_spim_event_clear
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
@@ -1251,7 +1251,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 674 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 680 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 792<LI>Call Chain = main &rArr; gps_poll_data &rArr; gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
@@ -2206,7 +2206,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[173]"></a>sdc_write</STRONG> (Thumb, 80 bytes, Stack size 24 bytes, main.o(i.sdc_write))
+<P><STRONG><a name="[173]"></a>sdc_write</STRONG> (Thumb, 62 bytes, Stack size 24 bytes, main.o(i.sdc_write))
 <BR><BR>[Stack]<UL><LI>Max Depth = 240<LI>Call Chain = sdc_write &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_toggle
