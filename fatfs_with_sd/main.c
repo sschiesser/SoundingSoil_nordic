@@ -48,62 +48,23 @@
  */
 
 
-/* NRF libraries*/
-#include "nrf.h"
-#include "bsp.h"
-#include "ff.h"
-#include "diskio_blkdev.h"
-#include "nrf_block_dev_sdc.h"
-#include "nrf_queue.h"
-#include <string.h>
-#include <stdio.h>
-/* APP libraries */
-#include "app_util_platform.h"
-#include "app_error.h"
-#include "app_fifo.h"
+#include "main.h"
 
-#include "nrf_drv_spi.h"
-#include "nrf_drv_timer.h"
-#include "nrf_delay.h"
 
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
+/* ========================================================================== */
+/*                                 VARIABLES                                  */
+/* ========================================================================== */
 
-///* ADC to SDC queue definition */
-//#define QUEUE_DATA_SIZE					4096
-//NRF_QUEUE_DEF(uint8_t, m_adc2sd_queue, QUEUE_DATA_SIZE, NRF_QUEUE_MODE_NO_OVERFLOW);
-/* ADC to SDC FIFO definition */
-#define FIFO_DATA_SIZE					16384
+/*                              ADC to SDC FIFO                               */
+/* -------------------------------------------------------------------------- */
+app_fifo_t								audio_fifo;
+static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
-
-/* SD card definitions */
-#define FILE_NAME   "NORDIC.TXT"
-#define TEST_STRING "SD card example."
-#define SDC_SCK_PIN     				29//28  ///< SDC serial clock (SCK) pin.
-#define SDC_MISO_PIN    				28//29  ///< SDC serial data out (DO) pin.
-#define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
-#define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-//#define SDC_CD_PIN					04  ///< SCD card detect (CD) pin.
-
-#define SDC_BLOCK_SIZE					(8*SDC_SECTOR_SIZE)
-static uint8_t 							data_buffer[FIFO_DATA_SIZE];
-static volatile bool 					sdc_init_ok = false;
-static volatile bool					sdc_rtw = false;
-static volatile bool					sdc_writing = false;
-static uint8_t							sdc_block_cnt = 0;
-static FIL   							recording_fil;
-
-#define ADC_SYNC_TIMER_INSTANCE			1
-#define ADC_SYNC_44KHZ_US				23
-#define ADC_SYNC_48KHZ_US				20
-const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
-
-/**
- * @brief  SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
- * */
+/*                                  SD card                                   */
+/* -------------------------------------------------------------------------- */
+// SDC block device definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
 NRF_BLOCK_DEV_SDC_DEFINE(
         m_block_dev_sdc,
         NRF_BLOCK_DEV_SDC_CONFIG(
@@ -112,22 +73,83 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
+static TCHAR							sdc_foldername[13] = "180424";
+static TCHAR							sdc_folderpath[14] = "/180424";
+static TCHAR							sdc_filename[12] = "R123456.wav";
+static FATFS 							sdc_fs;
+static DIR 								sdc_dir;
+static FILINFO 							sdc_fno;
+static FIL 								sdc_file;
+static volatile bool 					sdc_init_ok = false;
+static volatile bool					sdc_rtw = false;
+static volatile bool					sdc_writing = false;
+static volatile uint8_t					sdc_chunk_counter = 0;
+//static uint8_t							sdc_buffer[SDC_BLOCK_SIZE];
 
-/* ADC defintions */
-#define ADC_SPI_CONV_PIN				22
-#define ADC_SPI_MOSI_PIN				23
-#define ADC_SPI_MISO_PIN				24
-#define ADC_SPI_SCK_PIN					25
+static uint8_t 							data_buffer[FIFO_DATA_SIZE];
+static uint8_t							sdc_block_cnt = 0;
+static FIL   							recording_fil;
 
-#define ADC_SPI_INSTANCE				1
-static const 							nrf_drv_spi_t adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
-static volatile bool 					adc_spi_xfer_done = false;
+
+/*                                    ADC                                     */
+/* -------------------------------------------------------------------------- */
+static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
+static volatile bool					adc_spi_xfer_done = false;
+static uint8_t							adc_spi_txbuf[2] = {0xFF, 0xFF};
+static uint8_t							adc_spi_rxbuf[2];
+static const uint8_t					adc_spi_len = 2;
+
+const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
+
+static volatile uint32_t				adc_samples_counter = 0;
+static volatile uint32_t				adc_total_samples = 0;
+
 static volatile uint16_t 				adc_spi_xfer_counter = 0;
 
-#define AUDIO_BUFFER_MAX				4
+/*                                    GPS                                     */
+/* -------------------------------------------------------------------------- */
+static volatile bool 					gps_uart_reading = false;
+static volatile bool					gps_uart_timeout = false;
+
+NRF_SERIAL_DRV_UART_CONFIG_DEF(m_gps_uart_config,
+	GPS_UART_RX_PIN, NRF_UART_PSEL_DISCONNECTED,
+	NRF_UART_PSEL_DISCONNECTED, NRF_UART_PSEL_DISCONNECTED,
+	NRF_UART_HWFC_DISABLED, NRF_UART_PARITY_EXCLUDED,
+	NRF_UART_BAUDRATE_9600, UART_DEFAULT_CONFIG_IRQ_PRIORITY);
+	
+NRF_SERIAL_CONFIG_DEF(gps_config,
+	NRF_SERIAL_MODE_POLLING, NULL,
+	NULL, NULL, NULL);
+	
+NRF_SERIAL_UART_DEF(gps_uart, GPS_UART_INSTANCE);
+
+APP_TIMER_DEF(gps_uart_timer);
+
+/*                                    UI                                      */
+/* -------------------------------------------------------------------------- */
+static volatile bool 					ui_rec_start_req = false;
+static volatile bool 					ui_rec_stop_req = false;
+static volatile bool 					ui_rec_running = false;
+static volatile bool					ui_mon_start_req = false;
+static volatile bool 					ui_mon_stop_req = false;
+static volatile bool 					ui_mon_running = false;
+APP_TIMER_DEF(led_blink_timer);
+
+/*                                    BLE                                     */
+/* -------------------------------------------------------------------------- */
+//BLE_SSS_DEF(m_sss);																// LED Button Service instance.
+NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
+
+
+
+
 static uint8_t							m_tx_buf[2] = {0xFF, 0xFF};
 static uint8_t							m_rx_buf[2];
 static const uint8_t					m_length = 2;
+
+
+
 
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
