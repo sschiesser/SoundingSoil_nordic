@@ -80,7 +80,7 @@ static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
 static volatile uint8_t					sdc_chunk_counter = 0;
-static uint8_t							sdc_buffer[SDC_BLOCK_SIZE];
+//static uint8_t							sdc_buffer[SDC_BLOCK_SIZE];
 
 
 /*                                    ADC                                     */
@@ -261,6 +261,15 @@ static uint32_t sdc_start()
         return (uint32_t)ff_result;
     }
 	
+//	NRF_LOG_INFO("Writting dummy");
+//	uint32_t ds = SDC_BLOCK_SIZE;
+//	static uint8_t db[SDC_BLOCK_SIZE] = {0};
+//	for(uint8_t i = 0; i < 255; i++) {
+//		ff_result = f_write(&sdc_file, db, ds, (UINT *)&bytes_written);
+//	}
+//	ff_result = f_lseek(&sdc_file, 0);
+//	NRF_LOG_INFO("Done!");
+
 	NRF_LOG_DEBUG("Writing WAV header...");
 	ff_result = f_write(&sdc_file, wave_header, 44, (UINT *) &bytes_written);
 	if (ff_result != FR_OK) {
@@ -274,26 +283,39 @@ static uint32_t sdc_start()
 // Write audio chunk to opened file
 static FRESULT sdc_write(void)
 {
+	static uint8_t sdc_write_cnt = 0;
     uint32_t bytes_written;
     FRESULT ff_result;
 	uint32_t buf_size = SDC_BLOCK_SIZE;
+	static uint8_t sdc_buffer[SDC_BLOCK_SIZE];
+
+	DBG_TOGGLE(DBG2_PIN);
 	
 	sdc_writing = true;
 	NRF_LOG_DEBUG("Reading fifo...");
 	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
-	DBG_TOGGLE(DBG2_PIN);
-	
-    NRF_LOG_DEBUG("Writing to file %s...", sdc_filename);
+    NRF_LOG_INFO("Writing %d bytes to file %s...", buf_size, sdc_filename);
     ff_result = f_write(&sdc_file, sdc_buffer, buf_size, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_DEBUG("Write failed\r\n.");
+        NRF_LOG_INFO("Write failed\r\n.");
     }
     else
     {
-        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
+        NRF_LOG_INFO("%d bytes written.", bytes_written);
     }
+	if(sdc_write_cnt < 16) {
+		sdc_write_cnt++;
+		app_fifo_flush(&audio_fifo);
+//		app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
+		ff_result = f_lseek(&sdc_file, 0);
+		NRF_LOG_INFO("Data flushed. ff_result: %d, counter: %d", ff_result, sdc_write_cnt);
+		sdc_chunk_counter = 0;
+		adc_samples_counter = 0;
+		adc_total_samples = 0;
+		//		DBG_TOGGLE(DBG0_PIN);
+	}
 	
 //	DBG_TOGGLE(DBG1_PIN);
 
@@ -526,6 +548,13 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t size = adc_spi_len;
 	app_fifo_write(&audio_fifo, adc_spi_rxbuf, &size);
+
+	uint32_t f_length = (audio_fifo.write_pos - audio_fifo.read_pos);
+	if(f_length >= (FIFO_DATA_SIZE - 1)) {
+		NRF_LOG_INFO("FIFO overflow... flushing");
+		app_fifo_flush(&audio_fifo);
+		sdc_chunk_counter = 0;
+	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
 }
@@ -536,10 +565,10 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
-			DBG_TOGGLE(DBG0_PIN);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			if(!sdc_writing) {
+				DBG_TOGGLE(DBG0_PIN);
 				sdc_rtw = true;
 			}
 			else {
@@ -954,7 +983,7 @@ static void log_init(void)
  */
 int main(void)
 {
-	ret_code_t err_code;
+	static ret_code_t err_code;
 	
 	leds_init();
 	log_init();
@@ -988,16 +1017,17 @@ int main(void)
     {
 		// REC START request
 		if(ui_rec_start_req) {
+			ui_rec_start_req = false;
 			NRF_LOG_INFO("Starting REC");
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
 			gps_poll_data();
 			if(sdc_start() == 0) {
 				sdc_init_ok = true;
 			}
-			ui_rec_start_req = false;
 		}
 		// REC STOP request
 		if(ui_rec_stop_req) {
+			ui_rec_stop_req = false;
 			NRF_LOG_INFO("Stopping REC");
 			nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			sdc_close();
@@ -1009,12 +1039,12 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			ui_rec_stop_req = false;
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 		}
 		// MON START request
 		if(ui_mon_start_req) {
+			ui_mon_start_req = false;
 			NRF_LOG_INFO("Starting MON");
 			LED_ON(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
@@ -1024,11 +1054,11 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			ui_mon_start_req = false;
 			ui_mon_running = true;
 		}
 		// MON STOP request
 		if(ui_mon_stop_req) {
+			ui_mon_stop_req = false;
 			NRF_LOG_INFO("Stopping MON");
 			LED_OFF(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
@@ -1038,7 +1068,6 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 		}
@@ -1076,7 +1105,7 @@ int main(void)
 //			}
 		}
 		else if(sdc_chunk_counter > 0) {
-//			DBG_TOGGLE(DBG0_PIN);
+			NRF_LOG_INFO("Cnt > 0!");
 			sdc_chunk_counter--;
 			sdc_write();
 		}
