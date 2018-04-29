@@ -367,39 +367,39 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-	char c; // Read UART character
-	gps_uart_reading = true; // Reading flag
-	gps_uart_timeout = false; // Timeout flag
-	char *p_str; // Pointer on the string comparison result
-	while(gps_uart_reading) {
-		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-		if(ret == NRF_ERROR_TIMEOUT) {
-			NRF_LOG_DEBUG("UART timeout!");
-			gps_uart_reading = false;
-			gps_uart_timeout = true;
-			break;
-		}
-		uart_buf[cnt++] = c;
-		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-				static char comp[7] = "$GPRMC";
-				p_str = strstr(uart_buf, comp);
-				if(p_str != NULL) {
-					strcpy(tag.raw_tag, uart_buf);
-					tag.length = strlen(uart_buf);
-					app_timer_stop(gps_uart_timer);
-					gps_uart_reading = false;
-				}
-			}
-			cnt = 0;
-		}
-	}
-	if(gps_uart_timeout) {
-		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
-		gps_uart_timeout = false;
-	}
+//	char c; // Read UART character
+//	gps_uart_reading = true; // Reading flag
+//	gps_uart_timeout = false; // Timeout flag
+//	char *p_str; // Pointer on the string comparison result
+//	while(gps_uart_reading) {
+//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+//		if(ret == NRF_ERROR_TIMEOUT) {
+//			NRF_LOG_DEBUG("UART timeout!");
+//			gps_uart_reading = false;
+//			gps_uart_timeout = true;
+//			break;
+//		}
+//		uart_buf[cnt++] = c;
+//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+//				static char comp[7] = "$GPRMC";
+//				p_str = strstr(uart_buf, comp);
+//				if(p_str != NULL) {
+//					strcpy(tag.raw_tag, uart_buf);
+//					tag.length = strlen(uart_buf);
+//					app_timer_stop(gps_uart_timer);
+//					gps_uart_reading = false;
+//				}
+//			}
+//			cnt = 0;
+//		}
+//	}
+//	if(gps_uart_timeout) {
+//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+//		gps_uart_timeout = false;
+//	}
 /* FAKE UART */
-//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
 /* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
@@ -762,7 +762,7 @@ static void adc_config_timer(void)
 	ret_code_t err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
-	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_44KHZ_US);
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_16KHZ_US);//ADC_SYNC_44KHZ_US);
 
 	nrf_drv_timer_extended_compare(
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
