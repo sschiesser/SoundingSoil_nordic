@@ -110,7 +110,7 @@ static uint32_t led1_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_in
     char_md.p_sccd_md        = NULL;
 
     ble_uuid.type = p_sss->uuid_type;
-    ble_uuid.uuid = SSS_UUID_LED1_CHAR;
+    ble_uuid.uuid = BLE_SSS_UUID_LED1_CHAR;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -161,7 +161,7 @@ static uint32_t led2_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_in
     char_md.p_sccd_md        = NULL;
 
     ble_uuid.type = p_sss->uuid_type;
-    ble_uuid.uuid = SSS_UUID_LED2_CHAR;
+    ble_uuid.uuid = BLE_SSS_UUID_LED2_CHAR;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -221,7 +221,7 @@ static uint32_t button1_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss
     char_md.p_sccd_md         = NULL;
 
     ble_uuid.type = p_sss->uuid_type;
-    ble_uuid.uuid = SSS_UUID_BUTTON1_CHAR;
+    ble_uuid.uuid = BLE_SSS_UUID_BUTTON1_CHAR;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -280,7 +280,7 @@ static uint32_t button2_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss
     char_md.p_sccd_md         = NULL;
 
     ble_uuid.type = p_sss->uuid_type;
-    ble_uuid.uuid = SSS_UUID_BUTTON2_CHAR;
+    ble_uuid.uuid = BLE_SSS_UUID_BUTTON2_CHAR;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -317,12 +317,12 @@ uint32_t ble_sss_init(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_init)
 	p_sss->led2_write_handler = p_sss_init->led2_write_handler;
 
     // Add service.
-    ble_uuid128_t base_uuid = {SSS_UUID_BASE};
+    ble_uuid128_t base_uuid = {BLE_SSS_UUID_BASE};
     err_code = sd_ble_uuid_vs_add(&base_uuid, &p_sss->uuid_type);
     VERIFY_SUCCESS(err_code);
 
     ble_uuid.type = p_sss->uuid_type;
-    ble_uuid.uuid = SSS_UUID_SERVICE;
+    ble_uuid.uuid = BLE_SSS_UUID_SERVICE;
 
     err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &p_sss->service_handle);
     VERIFY_SUCCESS(err_code);

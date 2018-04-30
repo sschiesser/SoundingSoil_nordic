@@ -3568,8 +3568,8 @@
 #define BLE_RSCS_C_BLE_OBSERVER_PRIO 2
 #endif
 
-// <o> BLE_RSCS_C_BLE_OBSERVER_PRIO  
-// <i> Priority with which BLE events are dispatched to the Running Speed and Cadence Client.
+// <o> BLE_SSS_BLE_OBSERVER_PRIO  
+// <i> Priority with which BLE events are dispatched to the Sounding Soil Service.
 
 #ifndef BLE_SSS_BLE_OBSERVER_PRIO
 #define BLE_SSS_BLE_OBSERVER_PRIO 2

@@ -89,13 +89,13 @@ NRF_SDH_BLE_OBSERVER(_name ## _obs,                                             
                      BLE_SSS_BLE_OBSERVER_PRIO,                                                     \
                      ble_sss_on_ble_evt, &_name)
 
-#define SSS_UUID_BASE        	{0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, \
-								0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00}
-#define SSS_UUID_SERVICE     	0x1523
-#define SSS_UUID_BUTTON1_CHAR 	0x1524
-#define SSS_UUID_LED1_CHAR    	0x1525
-#define SSS_UUID_BUTTON2_CHAR	0x1526
-#define SSS_UUID_LED2_CHAR		0x1527
+#define BLE_SSS_UUID_BASE        	{0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, \
+									0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00}
+#define BLE_SSS_UUID_SERVICE     	0x1523
+#define BLE_SSS_UUID_BUTTON1_CHAR 	0x1524
+#define BLE_SSS_UUID_LED1_CHAR    	0x1525
+#define BLE_SSS_UUID_BUTTON2_CHAR	0x1526
+#define BLE_SSS_UUID_LED2_CHAR		0x1527
 
 
 // Forward declaration of the ble_sss_t type.

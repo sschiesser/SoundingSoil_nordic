@@ -49,6 +49,7 @@
 
 
 #include "main.h"
+#include "ble_advertising.h"
 /* ========================================================================== */
 /*                                 VARIABLES                                  */
 /* ========================================================================== */
@@ -127,9 +128,15 @@ APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
+static ble_uuid_t m_adv_uuids[] =
+{
+	{BLE_SSS_UUID_SERVICE, BLE_UUID_TYPE_BLE},
+	{BLE_UUID_NUS_SERVICE, BLE_UUID_TYPE_BLE}
+};
 BLE_SSS_DEF(m_sss);																// LED Button Service instance
 BLE_NUS_DEF(m_nus);																// Nordic UART Service instance
 NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance
+BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising module instance
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 
 /* ========================================================================== */
@@ -644,6 +651,27 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
 
 
+// BLE advertising event
+static void on_adv_event(ble_adv_evt_t ble_adv_evt)
+{
+//	ret_code_t err_code;
+	
+	switch(ble_adv_evt)
+	{
+		case BLE_ADV_EVT_FAST:
+			NRF_LOG_INFO("Fast advertising");
+//			err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+//			APP_ERROR_CHECK(err_code);
+			break;
+		
+		case BLE_ADV_EVT_IDLE:
+			break;
+		
+		default:
+			break;
+	}
+}
+
 // BLE connection parameter event reception
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
@@ -833,28 +861,24 @@ static void adc_config_spi(void)
 static void advertising_init(void)
 {
     ret_code_t    err_code;
-    ble_advdata_t advdata;
-    ble_advdata_t srdata;
+	ble_advertising_init_t adv_init;
 
-    ble_uuid_t adv_uuids[] = {
-		{SSS_UUID_SERVICE, m_sss.uuid_type},
-		{BLE_UUID_NUS_SERVICE, m_nus.uuid_type}
-	};
-
-    // Build and set advertising data
-    memset(&advdata, 0, sizeof(advdata));
-
-    advdata.name_type          = BLE_ADVDATA_SHORT_NAME;
-	advdata.short_name_len	   = 8;
-    advdata.include_appearance = false;
-    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-
-    memset(&srdata, 0, sizeof(srdata));
-    srdata.uuids_complete.uuid_cnt = sizeof(adv_uuids) / sizeof(adv_uuids[0]);
-    srdata.uuids_complete.p_uuids  = adv_uuids;
-
-    err_code = ble_advdata_set(&advdata, &srdata);
-    APP_ERROR_CHECK(err_code);
+	memset(&adv_init, 0, sizeof(adv_init));
+	
+	adv_init.advdata.name_type					= BLE_ADVDATA_FULL_NAME;
+	adv_init.advdata.include_appearance			= true;
+	adv_init.advdata.flags						= BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+	adv_init.advdata.uuids_complete.uuid_cnt	= sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+	adv_init.advdata.uuids_complete.p_uuids		= m_adv_uuids;
+	
+	adv_init.config.ble_adv_fast_enabled		= true;
+	adv_init.config.ble_adv_fast_interval		= APP_ADV_INTERVAL;
+	adv_init.config.ble_adv_fast_timeout		= APP_ADV_TIMEOUT_IN_SECONDS;
+	
+	adv_init.evt_handler						= on_adv_event;
+	
+	err_code = ble_advertising_init(&m_advertising, &adv_init);
+	APP_ERROR_CHECK(err_code);
 }
 // BLE connection parameters
 static void conn_params_init(void)
@@ -913,11 +937,15 @@ static void services_init(void)
     ret_code_t     err_code;
     ble_sss_init_t sss_init;
 	ble_nus_init_t nus_init;
+	
+	memset(&sss_init, 0, sizeof(sss_init));
 
     sss_init.led1_write_handler = led_rec_handler;
 	sss_init.led2_write_handler = led_mon_handler;
     err_code = ble_sss_init(&m_sss, &sss_init);
     APP_ERROR_CHECK(err_code);
+	
+	memset(&nus_init, 0, sizeof(nus_init));
 	
 	nus_init.data_handler = nus_data_handler;
 	err_code = ble_nus_init(&m_nus, &nus_init);

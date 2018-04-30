@@ -10,51 +10,48 @@
 #define MAIN_H__
 
 /* Standard libraries */
-#include <string.h> /**/
-#include <stdio.h> /**/
-//#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
 /* NRF libraries*/
-#include "nrf.h" /**/
+#include "nrf.h"
 #include "nordic_common.h"
-#include "bsp.h" /**/
+#include "bsp.h"
 #include "boards.h"
-#include "ff.h" /**/
-#include "diskio_blkdev.h" /**/
+#include "ff.h"
+#include "diskio_blkdev.h"
 #include "mem_manager.h"
-#include "nrf_block_dev_sdc.h" /**/
-//#include "nrf_error.h"
-//#include "nrf_queue.h"
-//#include "nrf_delay.h"
+#include "nrf_block_dev_sdc.h"
 #include "nrf_serial.h"
-#include "nrf_sdh.h" /**/
-#include "nrf_sdh_ble.h" /**/
-#include "nrf_ble_gatt.h" /**/
-#include "nrf_fstorage.h"
+#include "nrf_sdh.h"
+#include "nrf_sdh_ble.h"
+#include "nrf_ble_gatt.h"
 /* APP libraries */
-//#include "app_util_platform.h"
-//#include "app_error.h"
 #include "app_fifo.h"
-#include "app_timer.h" /**/
-#include "app_button.h" /**/
+#include "app_timer.h"
+#include "app_button.h"
 /* NRF DRV */
 #include "nrf_drv_spi.h"
 #include "nrf_drv_timer.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_drv_uart.h"
-//#include "nrf_drv_clock.h"
+/* SoftDevice header (SDH) */
+#include "nrf_sdh.h"
+#include "nrf_sdh_soc.h"
+#include "nrf_sdh_ble.h"
 /* BLE */
-#include "ble.h" /**/
-#include "ble_err.h" /**/
-#include "ble_hci.h" /**/
-#include "ble_srv_common.h" /**/
-#include "ble_advdata.h" /**/
-#include "ble_conn_params.h" /**/
+#include "ble.h"
+#include "ble_err.h"
+#include "ble_hci.h"
+#include "ble_srv_common.h"
+#include "ble_advdata.h"
+#include "ble_conn_params.h"
 #include "ble_sss.h"
 #include "ble_nus.h"
+#include "ble_advertising.h"
 /* LOG */
-#include "nrf_log.h" /**/
-#include "nrf_log_ctrl.h" /**/
-#include "nrf_log_default_backends.h" /**/
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
 /* SoundingSoil */
 #include "wave_header.h"
 
