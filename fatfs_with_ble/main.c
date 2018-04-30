@@ -292,7 +292,7 @@ static FRESULT sdc_write(void)
 	sdc_writing = true;
 	NRF_LOG_DEBUG("Reading fifo...");
 	DBG_TOGGLE(DBG2_PIN);
-	NRF_LOG_INFO("FIFO READ @ %d", audio_fifo.read_pos);
+	NRF_LOG_DEBUG("FIFO READ @ %d", audio_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
 	DBG_TOGGLE(DBG0_PIN);
@@ -540,7 +540,7 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 		adc_spi_xfer_done = false;
 		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
 			DBG_TOGGLE(DBG1_PIN);
-			NRF_LOG_INFO("FIFO WROTE to %d", audio_fifo.write_pos);
+			NRF_LOG_DEBUG("FIFO WROTE to %d", audio_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
@@ -766,7 +766,7 @@ static void adc_config_timer(void)
 	ret_code_t err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
-	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_28KHZ_US);
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_US);
 
 	nrf_drv_timer_extended_compare(
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
@@ -959,9 +959,7 @@ int main(void)
 	leds_init();
 	log_init();
 	buttons_init();
-#ifdef DEBUG
 	gpio_dbg_init();
-#endif
 	
 	ble_stack_init();
 	gap_params_init();

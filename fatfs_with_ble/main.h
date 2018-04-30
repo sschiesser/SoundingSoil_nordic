@@ -49,6 +49,7 @@
 #include "ble_advdata.h" /**/
 #include "ble_conn_params.h" /**/
 #include "ble_sss.h"
+#include "ble_nus.h"
 /* LOG */
 #include "nrf_log.h" /**/
 #include "nrf_log_ctrl.h" /**/
@@ -110,6 +111,11 @@
 #define ADC_SYNC_28KHZ_US				36 // <-- currently max usable frequency
 #define ADC_SYNC_44KHZ_US				23
 #define ADC_SYNC_48KHZ_US				20
+#ifdef DEBUG
+	#define ADC_SYNC_US					ADC_SYNC_16KHZ_US
+#else
+	#define ADC_SYNC_US					ADC_SYNC_28KHZ_US
+#endif
 
 
 /*                              ADC to SDC FIFO                               */
