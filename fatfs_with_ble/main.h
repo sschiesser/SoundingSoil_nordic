@@ -29,6 +29,7 @@
 #include "nrf_sdh.h" /**/
 #include "nrf_sdh_ble.h" /**/
 #include "nrf_ble_gatt.h" /**/
+#include "nrf_fstorage.h"
 /* APP libraries */
 //#include "app_util_platform.h"
 //#include "app_error.h"

@@ -127,9 +127,10 @@ APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
-BLE_SSS_DEF(m_sss);																// LED Button Service instance.
-NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance.
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection.
+BLE_SSS_DEF(m_sss);																// LED Button Service instance
+BLE_NUS_DEF(m_nus);																// Nordic UART Service instance
+NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 
 /* ========================================================================== */
 /*                              APP FUNCTIONS                                 */
@@ -754,6 +755,49 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 	}
 }
 
+// NUS
+static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
+{
+//    uint32_t err_code;
+//    
+//    if (length != 20)
+//    {
+//        err_code = audio_manager_streaming_end(true);
+//#if USE_RECEIPT_TIMER == 1
+//        app_timer_stop(m_receipt_timer_id_t);
+//#endif
+//        NRF_LOG_PRINTF("Stop\r\n");
+//        
+//        m_receipt_counter = 0;
+//        
+//        return;
+//    }
+//    else
+//    {
+//        ++m_receipt_counter;
+//    }
+//    
+//    if (!audio_manager_is_running())
+//    {
+//        NRF_LOG_PRINTF("Start\r\n");
+//        err_code = audio_manager_streaming_begin_buffered(NUM_FRAMES_TO_BUFFER);
+//        APP_ERROR_CHECK(err_code);
+//#if USE_RECEIPT_TIMER == 1        
+//        err_code = app_timer_start(m_receipt_timer_id_t, RECEIPT_TIMER_TICKS, 0);
+//        APP_ERROR_CHECK(err_code);
+//#endif
+//    }
+
+//    err_code = audio_manager_pkt_process(p_data, length);
+//    if (err_code == NRF_ERROR_NO_MEM)
+//    {
+//        NRF_LOG_PRINTF("Out of memory\r\n");
+//    }
+//    else
+//    {
+//        APP_ERROR_CHECK(err_code);
+//    }
+}
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
@@ -792,15 +836,18 @@ static void advertising_init(void)
     ble_advdata_t advdata;
     ble_advdata_t srdata;
 
-    ble_uuid_t adv_uuids[] = {{SSS_UUID_SERVICE, m_sss.uuid_type}};
+    ble_uuid_t adv_uuids[] = {
+		{SSS_UUID_SERVICE, m_sss.uuid_type},
+		{BLE_UUID_NUS_SERVICE, m_nus.uuid_type}
+	};
 
     // Build and set advertising data
     memset(&advdata, 0, sizeof(advdata));
 
-    advdata.name_type          = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance = true;
+    advdata.name_type          = BLE_ADVDATA_SHORT_NAME;
+	advdata.short_name_len	   = 8;
+    advdata.include_appearance = false;
     advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-
 
     memset(&srdata, 0, sizeof(srdata));
     srdata.uuids_complete.uuid_cnt = sizeof(adv_uuids) / sizeof(adv_uuids[0]);
@@ -864,12 +911,17 @@ static void gatt_init(void)
 static void services_init(void)
 {
     ret_code_t     err_code;
-    ble_sss_init_t init;
+    ble_sss_init_t sss_init;
+	ble_nus_init_t nus_init;
 
-    init.led1_write_handler = led_rec_handler;
-	init.led2_write_handler = led_mon_handler;
-    err_code = ble_sss_init(&m_sss, &init);
+    sss_init.led1_write_handler = led_rec_handler;
+	sss_init.led2_write_handler = led_mon_handler;
+    err_code = ble_sss_init(&m_sss, &sss_init);
     APP_ERROR_CHECK(err_code);
+	
+	nus_init.data_handler = nus_data_handler;
+	err_code = ble_nus_init(&m_nus, &nus_init);
+	APP_ERROR_CHECK(err_code);
 }
 
 // BLE stack
@@ -964,8 +1016,8 @@ int main(void)
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
-	services_init();
 	advertising_init();
+	services_init();
 	conn_params_init();
 	
 	adc_config_spi();
