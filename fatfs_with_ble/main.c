@@ -134,10 +134,11 @@ static ble_uuid_t m_adv_uuids[] =
 	{BLE_UUID_NUS_SERVICE, BLE_UUID_TYPE_BLE}
 };
 BLE_SSS_DEF(m_sss);																// LED Button Service instance
-BLE_NUS_DEF(m_nus);																// Nordic UART Service instance
+BLE_NUS_DEF(m_nus);																// Nordic UART Service instance (for audio streaming)
 NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance
 BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising module instance
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
+APP_TIMER_DEF(astr_timer);
 
 /* ========================================================================== */
 /*                              APP FUNCTIONS                                 */
@@ -556,6 +557,12 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
+// Audio streaming timer
+void astr_timer_handler(void * p_context)
+{
+	DBG_TOGGLE(DBG0_PIN);
+//	ble_nus_string_send(&m_nus, strcasecmp, strlen((char *)strcasecmp));
+}
 // BLE
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
@@ -786,45 +793,6 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 // NUS
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
-//    uint32_t err_code;
-//    
-//    if (length != 20)
-//    {
-//        err_code = audio_manager_streaming_end(true);
-//#if USE_RECEIPT_TIMER == 1
-//        app_timer_stop(m_receipt_timer_id_t);
-//#endif
-//        NRF_LOG_PRINTF("Stop\r\n");
-//        
-//        m_receipt_counter = 0;
-//        
-//        return;
-//    }
-//    else
-//    {
-//        ++m_receipt_counter;
-//    }
-//    
-//    if (!audio_manager_is_running())
-//    {
-//        NRF_LOG_PRINTF("Start\r\n");
-//        err_code = audio_manager_streaming_begin_buffered(NUM_FRAMES_TO_BUFFER);
-//        APP_ERROR_CHECK(err_code);
-//#if USE_RECEIPT_TIMER == 1        
-//        err_code = app_timer_start(m_receipt_timer_id_t, RECEIPT_TIMER_TICKS, 0);
-//        APP_ERROR_CHECK(err_code);
-//#endif
-//    }
-
-//    err_code = audio_manager_pkt_process(p_data, length);
-//    if (err_code == NRF_ERROR_NO_MEM)
-//    {
-//        NRF_LOG_PRINTF("Out of memory\r\n");
-//    }
-//    else
-//    {
-//        APP_ERROR_CHECK(err_code);
-//    }
 }
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
@@ -857,6 +825,13 @@ static void adc_config_spi(void)
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 }
 
+// Audio streaming
+static void astr_init(void)
+{
+	ret_code_t err_code;
+	err_code = app_timer_create(&astr_timer, APP_TIMER_MODE_REPEATED, astr_timer_handler);
+	APP_ERROR_CHECK(err_code);
+}
 // BLE advertisement
 static void advertising_init(void)
 {
@@ -1051,6 +1026,7 @@ int main(void)
 	adc_config_spi();
 	adc_config_timer();
 	app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
+	astr_init();
 	gps_init();
 	
 	/* Starting application */
@@ -1096,6 +1072,7 @@ int main(void)
 			ui_mon_start_req = false;
 			NRF_LOG_INFO("Starting MON");
 			LED_ON(LED_MONITOR);
+			app_timer_start(astr_timer, APP_TIMER_TICKS(100), NULL);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
 			if (err_code != NRF_SUCCESS &&
 				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1110,6 +1087,7 @@ int main(void)
 			ui_mon_stop_req = false;
 			NRF_LOG_INFO("Stopping MON");
 			LED_OFF(LED_MONITOR);
+			app_timer_stop(astr_timer);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
 			if( err_code != NRF_SUCCESS &&
 				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
