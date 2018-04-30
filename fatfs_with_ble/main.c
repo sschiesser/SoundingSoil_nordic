@@ -56,7 +56,7 @@
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
 app_fifo_t								audio_fifo;
-static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
+uint8_t							fifo_buffer[FIFO_DATA_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -288,13 +288,14 @@ static FRESULT sdc_write(void)
 	uint32_t buf_size = SDC_BLOCK_SIZE;
 	static uint8_t sdc_buffer[SDC_BLOCK_SIZE];
 
-	DBG_TOGGLE(DBG1_PIN);
 	
 	sdc_writing = true;
 	NRF_LOG_DEBUG("Reading fifo...");
+	DBG_TOGGLE(DBG2_PIN);
+	NRF_LOG_INFO("FIFO READ @ %d", audio_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
 
-	DBG_TOGGLE(DBG2_PIN);
+	DBG_TOGGLE(DBG0_PIN);
     NRF_LOG_DEBUG("Writing %d bytes to file %s...", SDC_BLOCK_SIZE, sdc_filename);
     ff_result = f_write(&sdc_file, sdc_buffer, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
@@ -538,7 +539,8 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		if(adc_samples_counter >= SDC_BLOCK_SIZE) {
-			DBG_TOGGLE(DBG0_PIN);
+			DBG_TOGGLE(DBG1_PIN);
+			NRF_LOG_INFO("FIFO WROTE to %d", audio_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
@@ -764,7 +766,7 @@ static void adc_config_timer(void)
 	ret_code_t err_code = nrf_drv_timer_init(&ADC_SYNC_TIMER, &timer_config, adc_sync_timer_handler);
 	APP_ERROR_CHECK(err_code);
 	
-	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_16KHZ_US);
+	time_ticks = nrf_drv_timer_us_to_ticks(&ADC_SYNC_TIMER, ADC_SYNC_28KHZ_US);
 
 	nrf_drv_timer_extended_compare(
 		&ADC_SYNC_TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);

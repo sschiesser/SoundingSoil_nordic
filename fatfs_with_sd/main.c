@@ -57,8 +57,8 @@
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
-app_fifo_t								audio_fifo;
-static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
+//app_fifo_t								audio_fifo;
+//static uint8_t							fifo_buffer[FIFO_DATA_SIZE];
 app_fifo_t								m_adc2sd_fifo;
 uint8_t									m_fifo_buffer[FIFO_DATA_SIZE];
 
@@ -154,20 +154,16 @@ static const uint8_t					m_length = 2;
 /* ========================================================================== */
 static void sdc_fill_queue(void)
 {
-	DBG_TOGGLE(DBG2_PIN);
 	static FRESULT res;
 	static UINT byte_written;
 	static uint8_t p_buf[2*SDC_BLOCK_SIZE];
 //	uint32_t fifo_size = m_adc2sd_fifo.write_pos - m_adc2sd_fifo.read_pos;
 //	NRF_LOG_INFO("FIFO W->%d, R->%d, size: %d", m_adc2sd_fifo.write_pos, m_adc2sd_fifo.read_pos, fifo_size);
 	uint32_t buf_size = 2*SDC_BLOCK_SIZE;
+	DBG_TOGGLE(DBG2_PIN);
+	NRF_LOG_INFO("FIFO READ @ %d", m_adc2sd_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&m_adc2sd_fifo, p_buf, &buf_size);
-		NRF_LOG_INFO("FIFO READ->%d", m_adc2sd_fifo.read_pos);
-	if((m_adc2sd_fifo.read_pos == m_adc2sd_fifo.write_pos) && (m_adc2sd_fifo.write_pos != 0)) {
-		NRF_LOG_INFO("Flushing...");
-		m_adc2sd_fifo.write_pos = 0;
-		app_fifo_flush(&m_adc2sd_fifo);
-	}
+//
 	sdc_writing = true;
 	res = f_write(&recording_fil, p_buf, (2*SDC_BLOCK_SIZE), &byte_written);
 	if(res == FR_OK) {
@@ -239,7 +235,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 	}
 	else {
 		DBG_TOGGLE(DBG1_PIN);
-		NRF_LOG_INFO("FIFO WRITE->%d", m_adc2sd_fifo.write_pos);
+		NRF_LOG_INFO("FIFO WROTE to %d", m_adc2sd_fifo.write_pos);
 		adc_spi_xfer_counter = 0;
 		if(!sdc_writing) {
 			sdc_rtw = true;

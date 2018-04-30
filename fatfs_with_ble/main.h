@@ -93,7 +93,7 @@
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
 #define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
-#define SDC_BLOCK_SIZE					(2*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
+#define SDC_BLOCK_SIZE					(16*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
 /* -------------------------------------------------------------------------- */
@@ -107,13 +107,14 @@
 // SYNC TIMER
 #define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
 #define ADC_SYNC_16KHZ_US				60
+#define ADC_SYNC_28KHZ_US				36 // <-- currently max usable frequency
 #define ADC_SYNC_44KHZ_US				23
 #define ADC_SYNC_48KHZ_US				20
 
 
 /*                              ADC to SDC FIFO                               */
 /* -------------------------------------------------------------------------- */
-#define FIFO_DATA_SIZE					(16*SDC_BLOCK_SIZE)
+#define FIFO_DATA_SIZE					(32768)
 
 
 /*                                   GPS                                      */

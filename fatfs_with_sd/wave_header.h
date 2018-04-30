@@ -32,7 +32,7 @@ __ALIGN(4) int8_t wave_header[44]= {
 	0x10, 0x00, 0x00, 0x00,  /* Subchunk1 size - 16 for PCM */
 	0x01, 0x00,              /* Audio format - PCM */
 	NUMBER_OF_CHANNELS, 0x00,/* Number of channels - 1 for mono 2 for stereo*/
-	0x80, 0x3E, 0x00, 0x00,  /* Sampling rate -  16000 (0x3E80)*/
+	0x44, 0xAC, 0x00, 0x00,  /* Sampling rate -  44100 (0xAC44)*/
 	BYTE_RATE_LL, BYTE_RATE_LH, BYTE_RATE_HL, BYTE_RATE_HH,  /* Byte rate = SampleRate * NumChannels 
 								* BitsPerSample/8 */
 	NUMBER_OF_CHANNELS*2, 0x00, /* Block Alignment 
