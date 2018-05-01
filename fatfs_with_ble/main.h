@@ -116,9 +116,11 @@
 #endif
 
 
-/*                              ADC to SDC FIFO                               */
+/*                                    FIFO                                    */
 /* -------------------------------------------------------------------------- */
-#define FIFO_DATA_SIZE					(32768)
+#define SDC_FIFO_SIZE					(32768)
+#define BLE_MAX_MTU_SIZE				246
+#define BLE_FIFO_SIZE					(4*BLE_MAX_MTU_SIZE)
 
 
 /*                                   GPS                                      */

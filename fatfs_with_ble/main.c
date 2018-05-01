@@ -54,10 +54,12 @@
 /*                                 VARIABLES                                  */
 /* ========================================================================== */
 
-/*                              ADC to SDC FIFO                               */
+/*                                   FIFO                                     */
 /* -------------------------------------------------------------------------- */
-app_fifo_t								audio_fifo;
-uint8_t							fifo_buffer[FIFO_DATA_SIZE];
+app_fifo_t								sdc_fifo;
+uint8_t									sdc_buffer[SDC_FIFO_SIZE];
+app_fifo_t								ble_fifo;
+uint8_t									ble_buffer[BLE_FIFO_SIZE];
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -81,7 +83,6 @@ static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
 static volatile uint8_t					sdc_chunk_counter = 0;
-//static uint8_t							sdc_buffer[SDC_BLOCK_SIZE];
 
 
 /*                                    ADC                                     */
@@ -140,6 +141,8 @@ BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 APP_TIMER_DEF(astr_timer);
 static volatile uint32_t				mon_sample_cnt = 0;
+static volatile bool					ble_rts = false;
+
 
 /* ========================================================================== */
 /*                              APP FUNCTIONS                                 */
@@ -296,18 +299,18 @@ static FRESULT sdc_write(void)
     uint32_t bytes_written;
     FRESULT ff_result;
 	uint32_t buf_size = SDC_BLOCK_SIZE;
-	static uint8_t sdc_buffer[SDC_BLOCK_SIZE];
+	uint8_t temp_buf[SDC_BLOCK_SIZE];
 
 	
 	sdc_writing = true;
 	NRF_LOG_DEBUG("Reading fifo...");
 	DBG_TOGGLE(DBG2_PIN);
-	NRF_LOG_DEBUG("FIFO READ @ %d", audio_fifo.read_pos);
-	uint32_t fifo_res = app_fifo_read(&audio_fifo, sdc_buffer, &buf_size);
+	NRF_LOG_DEBUG("FIFO READ @ %d", sdc_fifo.read_pos);
+	uint32_t fifo_res = app_fifo_read(&sdc_fifo, temp_buf, &buf_size);
 
 	DBG_TOGGLE(DBG0_PIN);
     NRF_LOG_DEBUG("Writing %d bytes to file %s...", SDC_BLOCK_SIZE, sdc_filename);
-    ff_result = f_write(&sdc_file, sdc_buffer, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
+    ff_result = f_write(&sdc_file, temp_buf, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
@@ -539,12 +542,14 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	static uint32_t size = adc_spi_len;
 	if(ui_rec_running) {
-		app_fifo_write(&audio_fifo, adc_spi_rxbuf, &size);
-		adc_samples_counter += 2;
+		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
-	if((ui_mon_running) && ((mon_sample_cnt++ % 4) == 0)) {
+	if((ui_mon_running) && ((adc_samples_counter % 8) == 0)) {
 		DBG_TOGGLE(DBG0_PIN);
+		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
+		mon_sample_cnt += 2;
 	}
+	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
 }
 
@@ -555,10 +560,15 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
 			DBG_TOGGLE(DBG1_PIN);
-			NRF_LOG_DEBUG("FIFO WROTE to %d", audio_fifo.write_pos);
+			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
+		}
+		if(ui_mon_running && (mon_sample_cnt >= BLE_MAX_MTU_SIZE)) {
+			DBG_TOGGLE(DBG1_PIN);
+			mon_sample_cnt = 0;
+			ble_rts = true;
 		}
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
@@ -1030,7 +1040,7 @@ int main(void)
 	
 	adc_config_spi();
 	adc_config_timer();
-	app_fifo_init(&audio_fifo, fifo_buffer, FIFO_DATA_SIZE);
+	app_fifo_init(&sdc_fifo, sdc_buffer, SDC_FIFO_SIZE);
 	astr_init();
 	gps_init();
 	
@@ -1161,7 +1171,13 @@ int main(void)
 		if((sdc_chunk_counter > 0) && (!sdc_writing)) {
 			sdc_write();
 		}
-			
+		
+		/* BLE TO SEND
+		 * ----------- */
+		if(ble_rts) {
+			ble_rts = false;
+			DBG_TOGGLE(DBG2_PIN);
+		}
 
 		__WFE();
     }
