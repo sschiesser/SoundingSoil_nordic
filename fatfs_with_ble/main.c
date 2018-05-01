@@ -89,8 +89,8 @@ static volatile uint8_t					sdc_chunk_counter = 0;
 /* -------------------------------------------------------------------------- */
 static const nrf_drv_spi_t				adc_spi = NRF_DRV_SPI_INSTANCE(ADC_SPI_INSTANCE);
 static volatile bool					adc_spi_xfer_done = false;
-static uint8_t							adc_spi_txbuf[2] = {0xFF, 0xFF};
-static uint8_t							adc_spi_rxbuf[2];
+uint8_t									adc_spi_txbuf[2] = {0xFF, 0xFF};
+uint8_t									adc_spi_rxbuf[2];
 static const uint8_t					adc_spi_len = 2;
 
 const nrf_drv_timer_t					ADC_SYNC_TIMER = NRF_DRV_TIMER_INSTANCE(ADC_SYNC_TIMER_INSTANCE);
@@ -540,13 +540,15 @@ static void gps_poll_data(void)
 // ADC SPI
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
-	static uint32_t size = adc_spi_len;
 	if(ui_rec_running) {
+		static uint32_t size = adc_spi_len;
 		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
 	if((ui_mon_running) && ((adc_samples_counter % (2*MON_DOWNSAMPLE_FACTOR)) == 0)) {
+		static uint32_t size = adc_spi_len;
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
 		ble_samples_counter += 2;
+		DBG_TOGGLE(DBG0_PIN);
 	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
@@ -595,6 +597,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_INFO("Disconnected");
             LED_OFF(LED_CONNECTED);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
+			if(ui_mon_running) {
+				ui_mon_stop_req = true;
+			}
             advertising_start();
             break;
 
@@ -867,6 +872,8 @@ static void advertising_init(void)
 	
 	err_code = ble_advertising_init(&m_advertising, &adv_init);
 	APP_ERROR_CHECK(err_code);
+	
+	ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
 // BLE connection parameters
 static void conn_params_init(void)
@@ -902,6 +909,9 @@ static void gap_params_init(void)
                                           strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
 
+	err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_GENERIC_REMOTE_CONTROL);
+	APP_ERROR_CHECK(err_code);
+										  
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
@@ -1038,8 +1048,9 @@ int main(void)
 	
 	adc_config_spi();
 	adc_config_timer();
-	app_fifo_init(&sdc_fifo, sdc_buffer, SDC_FIFO_SIZE);
-	astr_init();
+	err_code = app_fifo_init(&sdc_fifo, sdc_buffer, SDC_FIFO_SIZE);
+	err_code = app_fifo_init(&ble_fifo, ble_buffer, BLE_FIFO_SIZE);
+//	astr_init();
 	gps_init();
 	
 	/* Starting application */
@@ -1173,10 +1184,11 @@ int main(void)
 		/* CHUNKS TO BLE
 		 * ------------- */
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
-			static uint16_t str_len = BLE_MAX_MTU_SIZE;
-			uint32_t err_code = ble_nus_string_send(&m_nus, ble_fifo.p_buf, &str_len);
-			NRF_LOG_INFO("Err: %d");
 			DBG_TOGGLE(DBG2_PIN);
+			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
+			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
+			app_fifo_read(&ble_fifo, temp_buf, &len);
+			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 			ble_chunk_counter--;
 		}
 
