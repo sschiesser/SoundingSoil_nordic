@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue May 01 14:20:55 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue May 01 14:26:42 2018
 <BR><P>
 <H3>Maximum Stack Usage =       8496 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -730,15 +730,14 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_scanf_really_real
 </UL>
 
-<P><STRONG><a name="[38]"></a>adc_spi_event_handler</STRONG> (Thumb, 82 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
+<P><STRONG><a name="[38]"></a>adc_spi_event_handler</STRONG> (Thumb, 76 bytes, Stack size 16 bytes, main.o(i.adc_spi_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 48<LI>Call Chain = adc_spi_event_handler &rArr; app_fifo_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_toggle
-<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_fifo_write
+<BR>[Calls]<UL><LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_fifo_write
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.adc_config_spi)
 </UL>
-<P><STRONG><a name="[39]"></a>adc_sync_timer_handler</STRONG> (Thumb, 118 bytes, Stack size 16 bytes, main.o(i.adc_sync_timer_handler))
+<P><STRONG><a name="[39]"></a>adc_sync_timer_handler</STRONG> (Thumb, 116 bytes, Stack size 16 bytes, main.o(i.adc_sync_timer_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = adc_sync_timer_handler &rArr; nrf_drv_spi_transfer &rArr; nrf_drv_spi_xfer &rArr; spim_xfer &rArr; nrf_spim_event_clear
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
@@ -1329,7 +1328,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 782 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 788 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8496<LI>Call Chain = main &rArr; sdc_write &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
@@ -1508,7 +1507,6 @@ Global Symbols
 <P><STRONG><a name="[aa]"></a>nrf_drv_gpiote_out_toggle</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.nrf_drv_gpiote_out_toggle))
 <BR><BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_sync_timer_handler
-<LI><a href="#[38]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;adc_spi_event_handler
 <LI><a href="#[18d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_write
 <LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_blink_handler
 </UL>

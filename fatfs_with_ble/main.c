@@ -140,8 +140,8 @@ NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance
 BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising module instance
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 APP_TIMER_DEF(astr_timer);
-static volatile uint32_t				mon_sample_cnt = 0;
-static volatile bool					ble_rts = false;
+static volatile uint32_t				ble_samples_counter = 0;
+static volatile uint8_t					ble_chunk_counter = 0;
 
 
 /* ========================================================================== */
@@ -545,9 +545,8 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
 	if((ui_mon_running) && ((adc_samples_counter % 8) == 0)) {
-		DBG_TOGGLE(DBG0_PIN);
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
-		mon_sample_cnt += 2;
+		ble_samples_counter += 2;
 	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
@@ -565,10 +564,9 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
 		}
-		if(ui_mon_running && (mon_sample_cnt >= BLE_MAX_MTU_SIZE)) {
-			DBG_TOGGLE(DBG1_PIN);
-			mon_sample_cnt = 0;
-			ble_rts = true;
+		if(ui_mon_running && (ble_samples_counter >= BLE_MAX_MTU_SIZE)) {
+			ble_samples_counter = 0;
+			ble_chunk_counter++;
 		}
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
@@ -1174,8 +1172,8 @@ int main(void)
 		
 		/* BLE TO SEND
 		 * ----------- */
-		if(ble_rts) {
-			ble_rts = false;
+		if(ble_chunk_counter > 0) {
+			ble_chunk_counter--;
 			DBG_TOGGLE(DBG2_PIN);
 		}
 

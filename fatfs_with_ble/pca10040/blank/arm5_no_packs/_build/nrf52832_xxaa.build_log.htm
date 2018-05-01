@@ -28,13 +28,13 @@ Project File Date:  04/30/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
-..\..\..\main.c(940): warning:  #513-D: a value of type "void (*)(ble_nus_t *, uint8_t *, uint16_t)" cannot be assigned to an entity of type "ble_nus_data_handler_t"
+..\..\..\main.c(938): warning:  #513-D: a value of type "void (*)(ble_nus_t *, uint8_t *, uint16_t)" cannot be assigned to an entity of type "ble_nus_data_handler_t"
   	nus_init.data_handler = nus_data_handler;
 ..\..\..\main.c(118): warning:  #177-D: variable "gps_uart_timer"  was declared but never referenced
   APP_TIMER_DEF(gps_uart_timer);
 ..\..\..\main.c: 2 warnings, 0 errors
 linking...
-Program Size: Code=50128 RO-data=3200 RW-data=460 ZI-data=46588  
+Program Size: Code=50120 RO-data=3200 RW-data=460 ZI-data=46588  
 FromELF: creating hex file...
 ".\_build\nrf52832_xxaa.axf" - 0 Error(s), 2 Warning(s).
 
@@ -61,11 +61,11 @@ Package Vendor: NordicSemiconductor
 
    * Component: NordicSemiconductor::Device:Startup:8.15.0
       Source file:   Device\Source\arm\arm_startup_nrf52.s
-      Include file:  Device\Include\system_nrf52.h
       Source file:   Device\Source\system_nrf52.c
+      Include file:  Device\Include\system_nrf52.h
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
