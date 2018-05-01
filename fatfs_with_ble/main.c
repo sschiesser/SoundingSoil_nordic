@@ -544,7 +544,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 	if(ui_rec_running) {
 		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
-	if((ui_mon_running) && ((adc_samples_counter % 8) == 0)) {
+	if((ui_mon_running) && ((adc_samples_counter % (2*MON_DOWNSAMPLE_FACTOR)) == 0)) {
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
 		ble_samples_counter += 2;
 	}
@@ -1164,17 +1164,20 @@ int main(void)
 			ui_rec_running = true;
 		}
 		
-		/* CHUNKS TO WRITE
+		/* CHUNKS TO SDC
 		 * --------------- */
 		if((sdc_chunk_counter > 0) && (!sdc_writing)) {
 			sdc_write();
 		}
 		
-		/* BLE TO SEND
-		 * ----------- */
-		if(ble_chunk_counter > 0) {
-			ble_chunk_counter--;
+		/* CHUNKS TO BLE
+		 * ------------- */
+		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
+			static uint16_t str_len = BLE_MAX_MTU_SIZE;
+			uint32_t err_code = ble_nus_string_send(&m_nus, ble_fifo.p_buf, &str_len);
+			NRF_LOG_INFO("Err: %d");
 			DBG_TOGGLE(DBG2_PIN);
+			ble_chunk_counter--;
 		}
 
 		__WFE();
