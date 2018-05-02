@@ -1188,6 +1188,7 @@ int main(void)
 			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 			app_fifo_read(&ble_fifo, temp_buf, &len);
+//			uint32_t err_code = ble_nus_string_send(&m_nus, ble_fifo.p_buf, (uint16_t*)&len);
 			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 			ble_chunk_counter--;
 		}
