@@ -724,7 +724,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
@@ -736,7 +736,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 				
 			case BUTTON_MONITOR:
-				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
@@ -811,7 +811,7 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 }
 
 // NUS
-static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
+static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
 }
 /* ========================================================================== */
@@ -1068,10 +1068,6 @@ int main(void)
 	advertising_start();
 	
 	for(;;)
-	{
-		gps_poll_data();
-	}
-	for(;;)
     {
 		/* REC START request
 		 * ----------------- */
@@ -1092,7 +1088,10 @@ int main(void)
 		/* REC STOP request
 		 * ---------------- */
 		if(ui_rec_stop_req) {
+			// Set flags
+			ui_rec_running = false;
 			ui_rec_stop_req = false;
+			ui_rec_start_req = false;
 			NRF_LOG_DEBUG("Stopping REC");
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
@@ -1109,9 +1108,6 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			// Set flags
-			ui_rec_start_req = false;
-			ui_rec_running = false;
 		}
 		
 		/* MON START request
@@ -1140,7 +1136,10 @@ int main(void)
 		/* MON STOP request
 		 * ---------------- */
 		if(ui_mon_stop_req) {
+			// Set flags
+			ui_mon_running = false;
 			ui_mon_stop_req = false;
+			ui_mon_start_req = false;
 			NRF_LOG_DEBUG("Stopping MON");
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
@@ -1155,9 +1154,6 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			// Set flags
-			ui_mon_start_req = false;
-			ui_mon_running = false;
 		}
 		
 		/* SDC INIT OK (REC READY)

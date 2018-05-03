@@ -28,17 +28,13 @@ Project File Date:  04/30/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nrf52832_xxaa'
 compiling main.c...
-..\..\..\main.c(950): warning:  #513-D: a value of type "void (*)(ble_nus_t *, uint8_t *, uint16_t)" cannot be assigned to an entity of type "ble_nus_data_handler_t"
-  	nus_init.data_handler = nus_data_handler;
-..\..\..\main.c(1074): warning:  #128-D: loop is not reachable
-  	for(;;)
 ..\..\..\main.c(849): warning:  #177-D: function "astr_init"  was declared but never referenced
   static void astr_init(void)
-..\..\..\main.c: 3 warnings, 0 errors
+..\..\..\main.c: 1 warning, 0 errors
 linking...
-Program Size: Code=43860 RO-data=3360 RW-data=456 ZI-data=45856  
+Program Size: Code=54172 RO-data=3360 RW-data=472 ZI-data=45856  
 FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 3 Warning(s).
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 1 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -62,9 +58,9 @@ Package Vendor: NordicSemiconductor
 <h2>Collection of Component Files used:</h2>
 
    * Component: NordicSemiconductor::Device:Startup:8.15.0
+      Source file:   Device\Source\arm\arm_startup_nrf52.s
       Include file:  Device\Include\system_nrf52.h
       Source file:   Device\Source\system_nrf52.c
-      Source file:   Device\Source\arm\arm_startup_nrf52.s
 
    * Component: ARM::CMSIS:CORE:4.3.0
 Build Time Elapsed:  00:00:02
