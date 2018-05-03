@@ -29,6 +29,7 @@
 #include "app_fifo.h"
 #include "app_timer.h"
 #include "app_button.h"
+#include "nrf_delay.h"
 /* NRF DRV */
 #include "nrf_drv_spi.h"
 #include "nrf_drv_timer.h"

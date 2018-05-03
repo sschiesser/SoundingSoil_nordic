@@ -383,39 +383,41 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-//	char c; // Read UART character
-//	gps_uart_reading = true; // Reading flag
-//	gps_uart_timeout = false; // Timeout flag
-//	char *p_str; // Pointer on the string comparison result
-//	while(gps_uart_reading) {
-//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-//		if(ret == NRF_ERROR_TIMEOUT) {
-//			NRF_LOG_DEBUG("UART timeout!");
-//			gps_uart_reading = false;
-//			gps_uart_timeout = true;
-//			break;
-//		}
-//		uart_buf[cnt++] = c;
-//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-//				static char comp[7] = "$GPRMC";
-//				p_str = strstr(uart_buf, comp);
-//				if(p_str != NULL) {
-//					strcpy(tag.raw_tag, uart_buf);
-//					tag.length = strlen(uart_buf);
-//					app_timer_stop(gps_uart_timer);
-//					gps_uart_reading = false;
-//				}
-//			}
-//			cnt = 0;
-//		}
-//	}
-//	if(gps_uart_timeout) {
-//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
-//		gps_uart_timeout = false;
-//	}
+	char c; // Read UART character
+	gps_uart_reading = true; // Reading flag
+	gps_uart_timeout = false; // Timeout flag
+	char *p_str; // Pointer on the string comparison result
+	while(gps_uart_reading) {
+		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+//		NRF_LOG_DEBUG("sizeof(c): %d, cnt: %d", sizeof(c), cnt);
+		if(ret == NRF_ERROR_TIMEOUT) {
+			NRF_LOG_DEBUG("UART timeout!");
+			gps_uart_reading = false;
+			gps_uart_timeout = true;
+			break;
+		}
+		uart_buf[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+				static char comp[7] = "$GPRMC";
+				p_str = strstr(uart_buf, comp);
+				if(p_str != NULL) {
+					strcpy(tag.raw_tag, uart_buf);
+					tag.length = strlen(uart_buf);
+					app_timer_stop(gps_uart_timer);
+					gps_uart_reading = false;
+				}
+			}
+			cnt = 0;
+		}
+	}
+	if(gps_uart_timeout) {
+		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+		gps_uart_timeout = false;
+	}
 /* FAKE UART */
-	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+//	nrf_delay_ms(1000);
 /* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
@@ -1006,6 +1008,8 @@ void gps_init(void)
 	ret_code_t err_code = nrf_serial_init(&gps_uart, &m_gps_uart_config, &gps_config);
 	APP_ERROR_CHECK(err_code);
 	
+	nrf_gpio_cfg_input(m_gps_uart_config.pselrxd, NRF_GPIO_PIN_PULLUP); // Force pull-up to RX pin
+	
 //	err_code = app_timer_create(&gps_uart_timer, APP_TIMER_MODE_SINGLE_SHOT, gps_timeout_handler);
 }
 
@@ -1053,6 +1057,7 @@ int main(void)
 //	astr_init();
 	gps_init();
 	
+	
 	/* Starting application */
 	/* -------------------- */
     NRF_LOG_INFO("===========")
@@ -1062,6 +1067,10 @@ int main(void)
  	app_button_enable();
 	advertising_start();
 	
+	for(;;)
+	{
+		gps_poll_data();
+	}
 	for(;;)
     {
 		/* REC START request
@@ -1188,7 +1197,6 @@ int main(void)
 			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 			app_fifo_read(&ble_fifo, temp_buf, &len);
-//			uint32_t err_code = ble_nus_string_send(&m_nus, ble_fifo.p_buf, (uint16_t*)&len);
 			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 			ble_chunk_counter--;
 		}
