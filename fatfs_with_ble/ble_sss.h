@@ -77,7 +77,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+	
 /**@brief   Macro for defining a ble_sss instance.
  *
  * @param   _name   Name of the instance.

@@ -303,22 +303,14 @@ static FRESULT sdc_write(void)
 
 	
 	sdc_writing = true;
-	NRF_LOG_DEBUG("Reading fifo...");
-	DBG_TOGGLE(DBG2_PIN);
-	NRF_LOG_DEBUG("FIFO READ @ %d", sdc_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&sdc_fifo, temp_buf, &buf_size);
 
-	DBG_TOGGLE(DBG0_PIN);
-    NRF_LOG_DEBUG("Writing %d bytes to file %s...", SDC_BLOCK_SIZE, sdc_filename);
     ff_result = f_write(&sdc_file, temp_buf, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
     }
-    else
-    {
-        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
-    }
+
 	sdc_chunk_counter--;
 	sdc_writing = false;
 
@@ -383,41 +375,41 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-	char c; // Read UART character
-	gps_uart_reading = true; // Reading flag
-	gps_uart_timeout = false; // Timeout flag
-	char *p_str; // Pointer on the string comparison result
-	while(gps_uart_reading) {
-		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-//		NRF_LOG_DEBUG("sizeof(c): %d, cnt: %d", sizeof(c), cnt);
-		if(ret == NRF_ERROR_TIMEOUT) {
-			NRF_LOG_DEBUG("UART timeout!");
-			gps_uart_reading = false;
-			gps_uart_timeout = true;
-			break;
-		}
-		uart_buf[cnt++] = c;
-		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-				static char comp[7] = "$GPRMC";
-				p_str = strstr(uart_buf, comp);
-				if(p_str != NULL) {
-					strcpy(tag.raw_tag, uart_buf);
-					tag.length = strlen(uart_buf);
-					app_timer_stop(gps_uart_timer);
-					gps_uart_reading = false;
-				}
-			}
-			cnt = 0;
-		}
-	}
-	if(gps_uart_timeout) {
-		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
-		gps_uart_timeout = false;
-	}
+//	char c; // Read UART character
+//	gps_uart_reading = true; // Reading flag
+//	gps_uart_timeout = false; // Timeout flag
+//	char *p_str; // Pointer on the string comparison result
+//	while(gps_uart_reading) {
+//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+////		NRF_LOG_DEBUG("sizeof(c): %d, cnt: %d", sizeof(c), cnt);
+//		if(ret == NRF_ERROR_TIMEOUT) {
+//			NRF_LOG_DEBUG("UART timeout!");
+//			gps_uart_reading = false;
+//			gps_uart_timeout = true;
+//			break;
+//		}
+//		uart_buf[cnt++] = c;
+//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+//				static char comp[7] = "$GPRMC";
+//				p_str = strstr(uart_buf, comp);
+//				if(p_str != NULL) {
+//					strcpy(tag.raw_tag, uart_buf);
+//					tag.length = strlen(uart_buf);
+//					app_timer_stop(gps_uart_timer);
+//					gps_uart_reading = false;
+//				}
+//			}
+//			cnt = 0;
+//		}
+//	}
+//	if(gps_uart_timeout) {
+//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+//		gps_uart_timeout = false;
+//	}
 /* FAKE UART */
-//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
-//	nrf_delay_ms(1000);
+	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+	nrf_delay_ms(1000);
 /* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
@@ -543,6 +535,7 @@ static void gps_poll_data(void)
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	if(ui_rec_running) {
+		DBG_TOGGLE(DBG0_PIN);
 		static uint32_t size = adc_spi_len;
 		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
@@ -550,7 +543,6 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		static uint32_t size = adc_spi_len;
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
 		ble_samples_counter += 2;
-		DBG_TOGGLE(DBG0_PIN);
 	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
@@ -562,8 +554,7 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
-			DBG_TOGGLE(DBG1_PIN);
-			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
+//			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
@@ -585,6 +576,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
 
+	DBG_TOGGLE(DBG2_PIN);
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
@@ -721,23 +713,29 @@ static void conn_params_error_handler(uint32_t nrf_error)
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
 	if(button_action) {
+		DBG_TOGGLE(DBG1_PIN);
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
-				if(ui_rec_running || ui_rec_start_req) {
+				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+				if(ui_rec_running) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
 					ui_rec_running = false;
 				}
 				else {
-					ui_rec_start_req = true;
+					if(ui_rec_start_req) {
+						NRF_LOG_DEBUG("REC START requested");
+					}
+					else {
+						ui_rec_start_req = true;
+					}
 				}
 				break;
 				
 			case BUTTON_MONITOR:
-//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
-				if(ui_mon_running || ui_mon_start_req) {
+				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+				if(ui_mon_running) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
 					ui_mon_running = false;
@@ -1073,7 +1071,6 @@ int main(void)
 		 * ----------------- */
 		if(ui_rec_start_req) {
 			ui_rec_start_req = false;
-			NRF_LOG_DEBUG("Starting REC");
 			/* Initialize REC state:
 			   - get GPS tag for date, time, location
 			   - test & mount SD card
@@ -1083,6 +1080,7 @@ int main(void)
 			if(sdc_start() == 0) {
 				sdc_init_ok = true;
 			}
+			NRF_LOG_DEBUG("Starting REC");
 		}
 		
 		/* REC STOP request
@@ -1092,7 +1090,6 @@ int main(void)
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
 			ui_rec_start_req = false;
-			NRF_LOG_DEBUG("Stopping REC");
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1101,20 +1098,22 @@ int main(void)
 			sdc_close();
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
-			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+					APP_ERROR_CHECK(err_code);
+				}
 			}
+			NRF_LOG_DEBUG("REC stopped");
 		}
 		
 		/* MON START request
 		 * ----------------- */
 		if(ui_mon_start_req) {
 			ui_mon_start_req = false;
-			NRF_LOG_DEBUG("Starting MON");
 			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
@@ -1122,15 +1121,18 @@ int main(void)
 			}
 			// Notify MON START
 			LED_ON(LED_MONITOR);
-			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+					APP_ERROR_CHECK(err_code);
+				}
 			}
 			// Set flags
 			ui_mon_running = true;
+			NRF_LOG_DEBUG("Starting MON");
 		}
 		
 		/* MON STOP request
@@ -1140,27 +1142,31 @@ int main(void)
 			ui_mon_running = false;
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
-			NRF_LOG_DEBUG("Stopping MON");
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			}
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
-			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
-			if( err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
+				if( err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+					APP_ERROR_CHECK(err_code);
+				}
 			}
+			NRF_LOG_DEBUG("Stopping MON");
 		}
 		
 		/* SDC INIT OK (REC READY)
 		 * ----------------------- */
 		if(sdc_init_ok) {
+			// Set flags
 			sdc_init_ok = false;
-			NRF_LOG_INFO("SDC init OK");
+			nrf_delay_ms(1000);
+			ui_rec_running = true;
 			app_timer_stop(led_blink_timer);
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
 			if(!ui_mon_running) {
@@ -1169,32 +1175,36 @@ int main(void)
 			}
 			// Notify REC START
 			LED_ON(LED_RECORD);
-			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+					APP_ERROR_CHECK(err_code);
+				}
 			}
-			// Set flags
-			ui_rec_running = true;
+			NRF_LOG_DEBUG("SDC init OK");
 		}
 		
 		/* CHUNKS TO SDC
 		 * --------------- */
-		if((sdc_chunk_counter > 0) && (!sdc_writing)) {
-			sdc_write();
+		if(ui_rec_running) {
+			if((sdc_chunk_counter > 0) && (!sdc_writing)) {
+				sdc_write();
+			}
 		}
 		
 		/* CHUNKS TO BLE
 		 * ------------- */
-		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
-			DBG_TOGGLE(DBG2_PIN);
-			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
-			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
-			app_fifo_read(&ble_fifo, temp_buf, &len);
-			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
-			ble_chunk_counter--;
+		if(ui_mon_running) {
+			if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
+				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
+				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
+				app_fifo_read(&ble_fifo, temp_buf, &len);
+				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
+				ble_chunk_counter--;
+			}
 		}
 
 		__WFE();
