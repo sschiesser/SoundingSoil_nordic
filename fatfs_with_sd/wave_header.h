@@ -11,16 +11,16 @@
 
 
 #define PCM_BUF_SIZE						16
-#define NB_BUFFERS							4
-#define AUDIO_NUM_CHANNELS					2
+//#define NB_BUFFERS							4
+#define AUDIO_NUM_CHANNELS					1
 #define AUDIO_BITS_PER_SAMPLE				16
 #define AUDIO_SAMPLING_RATE					44100
-#define NUMBER_OF_CHANNELS					0x02
+#define NUMBER_OF_CHANNELS					0x01
 /* Byte rate = SampleRate * NumChannels * BitPerChannel/8
- *    br     =   44100    *      2      *       16/8     = 176'400 (0x2B110) */
-#define BYTE_RATE_LL						0x10
-#define BYTE_RATE_LH						0xB1
-#define BYTE_RATE_HL						0x02
+ *    br     =   44100    *      1      *       16/8     = 88'200 (0x00015888) */
+#define BYTE_RATE_LL						0x88
+#define BYTE_RATE_LH						0x58
+#define BYTE_RATE_HL						0x01
 #define BYTE_RATE_HH						0x00
 
 /*Wave header for PCM sound file */
@@ -36,14 +36,14 @@ __ALIGN(4) int8_t wave_header[44]= {
 	BYTE_RATE_LL, BYTE_RATE_LH, BYTE_RATE_HL, BYTE_RATE_HH,  /* Byte rate = SampleRate * NumChannels 
 								* BitsPerSample/8 */
 	NUMBER_OF_CHANNELS*2, 0x00, /* Block Alignment 
-							  * = NumChannels * BitsPerSample/8 = 4*/
+							  * = NumChannels * BitsPerSample/8 = 2*/
 	0x10, 0x00,              /* Bits per samples = 16*/
 	0x64, 0x61, 0x74, 0x61,  /*'d', 'a', 't', 'a' */
 	0x00, 0x00, 0x00, 0x00,  /* subchunk2 size - total size of samples */
 };
 
-#define AUDIO_CHUNK_SIZE					256
-#define AUDIO_BUFFER_NUMBER					4
+//#define AUDIO_CHUNK_SIZE					256
+//#define AUDIO_BUFFER_NUMBER					4
 
 #define WAVE_FORMAT_CHUNK_SIZE_OFFSET		04
 #define WAVE_FORMAT_NUM_CHANNEL_OFFSET		22
