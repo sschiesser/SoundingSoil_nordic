@@ -588,7 +588,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
 			}
-            advertising_start();
+//            advertising_start();
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:

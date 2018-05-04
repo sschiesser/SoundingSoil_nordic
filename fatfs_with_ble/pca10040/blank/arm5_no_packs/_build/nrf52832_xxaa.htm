@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri May 04 09:07:19 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri May 04 09:44:41 2018
 <BR><P>
 <H3>Maximum Stack Usage =       8784 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -2140,18 +2140,16 @@ Local Symbols
 <LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 </UL>
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
-<P><STRONG><a name="[59]"></a>ble_evt_handler</STRONG> (Thumb, 496 bytes, Stack size 56 bytes, main.o(i.ble_evt_handler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 448<LI>Call Chain = ble_evt_handler &rArr; advertising_start &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[59]"></a>ble_evt_handler</STRONG> (Thumb, 490 bytes, Stack size 56 bytes, main.o(i.ble_evt_handler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 416<LI>Call Chain = ble_evt_handler &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_toggle
 <LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_set
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_clear
 <LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
-<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;advertising_start
 <LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(sdh_ble_observers3)
