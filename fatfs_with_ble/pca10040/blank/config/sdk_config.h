@@ -1236,7 +1236,7 @@
 // <i> Log data is buffered and can be processed in idle.
 
 #ifndef NRF_LOG_DEFERRED
-#define NRF_LOG_DEFERRED 0
+#define NRF_LOG_DEFERRED 1
 #endif
 
 // <o> NRF_LOG_BUFSIZE  - Size of the buffer for storing logs (in bytes).
@@ -3253,7 +3253,7 @@
 // <i> or this value is actually used. It depends on which one is bigger.
 
 #ifndef SEGGER_RTT_CONFIG_BUFFER_SIZE_UP
-#define SEGGER_RTT_CONFIG_BUFFER_SIZE_UP 512
+#define SEGGER_RTT_CONFIG_BUFFER_SIZE_UP 1024
 #endif
 
 // <o> SEGGER_RTT_CONFIG_MAX_NUM_UP_BUFFERS - Size of upstream buffer. 

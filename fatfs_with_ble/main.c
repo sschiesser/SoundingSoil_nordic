@@ -722,7 +722,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
@@ -734,7 +734,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 				
 			case BUTTON_MONITOR:
-				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
@@ -763,7 +763,7 @@ static void led_blink_handler(void * p_context)
 static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
-		NRF_LOG_DEBUG("REC START requested");
+//		NRF_LOG_DEBUG("REC START requested");
 		if(!ui_rec_running && !ui_rec_start_req) {
 			ui_rec_start_req = true;
 		}
@@ -772,7 +772,7 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 	}
 	else {
-		NRF_LOG_DEBUG("REC STOP requested");
+//		NRF_LOG_DEBUG("REC STOP requested");
 		if(ui_rec_running || ui_rec_start_req) {
 			ui_rec_stop_req = true;
 			ui_rec_start_req = false;
@@ -787,7 +787,7 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
 	if(led_state) {
-		NRF_LOG_DEBUG("MON START requested");
+//		NRF_LOG_DEBUG("MON START requested");
 		if(!ui_mon_running && !ui_mon_start_req) {
 			ui_mon_start_req = true;
 		}
@@ -796,7 +796,7 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 	}
 	else {
-		NRF_LOG_DEBUG("MON STOP requested");
+//		NRF_LOG_DEBUG("MON STOP requested");
 		if(ui_mon_running || ui_mon_start_req) {
 			ui_mon_stop_req = true;
 			ui_mon_start_req = false;
@@ -809,7 +809,7 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 }
 
 // NUS
-static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
+static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
 }
 /* ========================================================================== */
@@ -1067,8 +1067,8 @@ int main(void)
 		/* REC START request
 		 * ----------------- */
 		if(ui_rec_start_req) {
+			// Clear flags
 			ui_rec_start_req = false;
-			NRF_LOG_DEBUG("Starting REC");
 			/* Initialize REC state:
 			   - get GPS tag for date, time, location
 			   - test & mount SD card
@@ -1076,15 +1076,19 @@ int main(void)
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
 			gps_poll_data();
 			if(sdc_start() == 0) {
+				// Set flags
 				sdc_init_ok = true;
 			}
+			NRF_LOG_DEBUG("REC request started");
 		}
 		
 		/* REC STOP request
 		 * ---------------- */
 		if(ui_rec_stop_req) {
+			// Clear flags
+			ui_rec_start_req = false;
+			ui_rec_running = false;
 			ui_rec_stop_req = false;
-			NRF_LOG_DEBUG("Stopping REC");
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1100,16 +1104,14 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			// Set flags
-			ui_rec_start_req = false;
-			ui_rec_running = false;
+			NRF_LOG_DEBUG("REC stopped");
 		}
 		
 		/* MON START request
 		 * ----------------- */
 		if(ui_mon_start_req) {
+			// Clear flags
 			ui_mon_start_req = false;
-			NRF_LOG_DEBUG("Starting MON");
 			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
@@ -1126,13 +1128,16 @@ int main(void)
 			}
 			// Set flags
 			ui_mon_running = true;
+			NRF_LOG_DEBUG("MON started");
 		}
 		
 		/* MON STOP request
 		 * ---------------- */
 		if(ui_mon_stop_req) {
+			// Clear flags
 			ui_mon_stop_req = false;
-			NRF_LOG_DEBUG("Stopping MON");
+			ui_mon_start_req = false;
+			ui_mon_running = false;
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1146,9 +1151,7 @@ int main(void)
 				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 				APP_ERROR_CHECK(err_code);
 			}
-			// Set flags
-			ui_mon_start_req = false;
-			ui_mon_running = false;
+			NRF_LOG_DEBUG("MON stopped");
 		}
 		
 		/* SDC INIT OK (REC READY)
@@ -1193,6 +1196,10 @@ int main(void)
 			ble_chunk_counter--;
 		}
 
+#if (NRF_LOG_DEFERRED == 1)
+		NRF_LOG_PROCESS();
+#endif
+		
 		__WFE();
     }
 }

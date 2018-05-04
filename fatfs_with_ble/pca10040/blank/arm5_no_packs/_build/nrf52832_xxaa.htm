@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Wed May 02 08:25:20 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri May 04 21:38:04 2018
 <BR><P>
 <H3>Maximum Stack Usage =       8800 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -771,10 +771,10 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
 <LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[bf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_strerror_get
 <LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_panic
 <LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_4
-<LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_save_and_stop
 </UL>
 <BR>[Called By]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
@@ -1339,6 +1339,7 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 8800<LI>Call Chain = main &rArr; sdc_write &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_dequeue
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_timer_enable
 <LI><a href="#[187]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_timer_disable
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
@@ -1751,7 +1752,8 @@ Global Symbols
 <LI><a href="#[1d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_memobj_alloc
 <LI><a href="#[1d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;buffer_is_empty
 </UL>
-<BR>[Called By]<UL><LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
+<BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[1db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
 
@@ -1782,7 +1784,6 @@ Global Symbols
 <LI><a href="#[186]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_start
 <LI><a href="#[170]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_poll_data
 <LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_get_rmc_geotag
-<LI><a href="#[1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;button_event_handler
 <LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[19a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
 <LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_request_evt
@@ -1835,7 +1836,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_backend_serial_put
 </UL>
 
-<P><STRONG><a name="[180]"></a>nrf_log_init</STRONG> (Thumb, 84 bytes, Stack size 24 bytes, nrf_log_frontend.o(i.nrf_log_init))
+<P><STRONG><a name="[180]"></a>nrf_log_init</STRONG> (Thumb, 82 bytes, Stack size 24 bytes, nrf_log_frontend.o(i.nrf_log_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = nrf_log_init &rArr; nrf_memobj_pool_init &rArr; nrf_balloc_init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_memobj_pool_init
@@ -2172,11 +2173,10 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 158 bytes, Stack size 16 bytes, main.o(i.button_event_handler))
+<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 118 bytes, Stack size 16 bytes, main.o(i.button_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 376<LI>Call Chain = button_event_handler &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
+<BR>[Calls]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(.data)
 </UL>
@@ -2268,14 +2268,14 @@ Local Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.leds_init)
 </UL>
-<P><STRONG><a name="[49]"></a>led_mon_handler</STRONG> (Thumb, 128 bytes, Stack size 16 bytes, main.o(i.led_mon_handler))
+<P><STRONG><a name="[49]"></a>led_mon_handler</STRONG> (Thumb, 96 bytes, Stack size 16 bytes, main.o(i.led_mon_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 280<LI>Call Chain = led_mon_handler &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.services_init)
 </UL>
-<P><STRONG><a name="[48]"></a>led_rec_handler</STRONG> (Thumb, 128 bytes, Stack size 16 bytes, main.o(i.led_rec_handler))
+<P><STRONG><a name="[48]"></a>led_rec_handler</STRONG> (Thumb, 96 bytes, Stack size 16 bytes, main.o(i.led_rec_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 280<LI>Call Chain = led_rec_handler &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
