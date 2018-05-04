@@ -139,7 +139,6 @@ BLE_NUS_DEF(m_nus);																// Nordic UART Service instance (for audio st
 NRF_BLE_GATT_DEF(m_gatt);														// GATT module instance
 BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising module instance
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
-APP_TIMER_DEF(astr_timer);
 static volatile uint32_t				ble_samples_counter = 0;
 static volatile uint8_t					ble_chunk_counter = 0;
 
@@ -573,11 +572,6 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
-// Audio streaming timer
-void astr_timer_handler(void * p_context)
-{
-//	ble_nus_string_send(&m_nus, strcasecmp, strlen((char *)strcasecmp));
-}
 // BLE
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
@@ -843,13 +837,6 @@ static void adc_config_spi(void)
 	APP_ERROR_CHECK(nrf_drv_spi_init(&adc_spi, &adc_spi_config, adc_spi_event_handler, NULL));
 }
 
-// Audio streaming
-static void astr_init(void)
-{
-	ret_code_t err_code;
-	err_code = app_timer_create(&astr_timer, APP_TIMER_MODE_REPEATED, astr_timer_handler);
-	APP_ERROR_CHECK(err_code);
-}
 // BLE advertisement
 static void advertising_init(void)
 {
@@ -1024,6 +1011,32 @@ static void log_init(void)
 }
 
 
+
+
+
+/* ========================================================================== */
+/*                               DUMMY FUNCTIONS                              */
+/* ========================================================================== */
+#ifdef DUMMY_MODE 
+APP_TIMER_DEF(dummy_mon_timer);
+
+static void dummy_mon_handler(void * p_context)
+{
+    uint8_t b[2];
+    for(uint8_t i = 0; i < BLE_MAX_MTU_SIZE; i += 2) {
+        static uint32_t size = 2;
+        b[0] = 0x01;
+        b[1] = (rand() % 0xFF);
+//        NRF_LOG_DEBUG("b[0]: 0x%02x, b[1]: 0x%02x", b[0], b[1]);
+        app_fifo_write(&ble_fifo, b, &size);
+    }
+    ble_chunk_counter++;
+}
+#endif
+
+
+
+
 /**
  * @brief Function for main application entry.
  */
@@ -1050,7 +1063,6 @@ int main(void)
 	adc_config_timer();
 	err_code = app_fifo_init(&sdc_fifo, sdc_buffer, SDC_FIFO_SIZE);
 	err_code = app_fifo_init(&ble_fifo, ble_buffer, BLE_FIFO_SIZE);
-//	astr_init();
 	gps_init();
 	
 	/* Starting application */
@@ -1074,11 +1086,12 @@ int main(void)
 			   - test & mount SD card
 			   - open/create dir & file for audio record */
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
-			gps_poll_data();
-			if(sdc_start() == 0) {
+//			gps_poll_data();
+//			if(sdc_start() == 0) {
+				nrf_delay_ms(1000);
 				// Set flags
 				sdc_init_ok = true;
-			}
+//			}
 			NRF_LOG_DEBUG("REC request started");
 		}
 		
@@ -1090,11 +1103,11 @@ int main(void)
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
-			if(!ui_mon_running) {
-				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_mon_running) {
+//				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+//			}
 			// Write WAV header & close SD card file
-			sdc_close();
+//			sdc_close();
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
 			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
@@ -1113,10 +1126,14 @@ int main(void)
 			// Clear flags
 			ui_mon_start_req = false;
 			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
-			if(!ui_rec_running) {
-				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_rec_running) {
+//				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+//				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//			}
+#ifdef DUMMY_MODE 
+            app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
+            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(20), NULL);
+#endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
@@ -1139,9 +1156,13 @@ int main(void)
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
-			if(!ui_rec_running) {
-				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_rec_running) {
+//				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+//			}
+#ifdef DUMMY_MODE
+			app_timer_stop(dummy_mon_timer);
+			app_fifo_flush(&ble_fifo);
+#endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
 			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
@@ -1161,10 +1182,10 @@ int main(void)
 			NRF_LOG_INFO("SDC init OK");
 			app_timer_stop(led_blink_timer);
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
-			if(!ui_mon_running) {
-				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_mon_running) {
+//				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+//				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//			}
 			// Notify REC START
 			LED_ON(LED_RECORD);
 			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
@@ -1188,6 +1209,7 @@ int main(void)
 		 * ------------- */
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
 			DBG_TOGGLE(DBG2_PIN);
+//			NRF_LOG_DEBUG("Sending chunk to BLE");
 			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 			app_fifo_read(&ble_fifo, temp_buf, &len);
