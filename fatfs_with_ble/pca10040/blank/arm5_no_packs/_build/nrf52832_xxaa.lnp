@@ -17,6 +17,7 @@
 ".\_build\app_timer.o"
 ".\_build\app_uart_fifo.o"
 ".\_build\app_util_platform.o"
+".\_build\hardfault_implementation.o"
 ".\_build\mem_manager.o"
 ".\_build\nrf_assert.o"
 ".\_build\nrf_balloc.o"

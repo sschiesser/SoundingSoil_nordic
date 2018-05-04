@@ -30,11 +30,17 @@ Build target 'nrf52832_xxaa'
 compiling main.c...
 ..\..\..\main.c(118): warning:  #177-D: variable "gps_uart_timer"  was declared but never referenced
   APP_TIMER_DEF(gps_uart_timer);
-..\..\..\main.c: 1 warning, 0 errors
+..\..\..\main.c(174): warning:  #177-D: function "sdc_start"  was declared but never referenced
+  static uint32_t sdc_start()
+..\..\..\main.c(322): warning:  #177-D: function "sdc_close"  was declared but never referenced
+  static FRESULT sdc_close(void)
+..\..\..\main.c(518): warning:  #177-D: function "gps_poll_data"  was declared but never referenced
+  static void gps_poll_data(void)
+..\..\..\main.c: 4 warnings, 0 errors
 linking...
-Program Size: Code=53316 RO-data=3352 RW-data=464 ZI-data=46600  
+Program Size: Code=42804 RO-data=3372 RW-data=472 ZI-data=46632  
 FromELF: creating hex file...
-".\_build\nrf52832_xxaa.axf" - 0 Error(s), 1 Warning(s).
+".\_build\nrf52832_xxaa.axf" - 0 Error(s), 4 Warning(s).
 
 <h2>Software Packages used:</h2>
 

@@ -788,6 +788,28 @@
 #endif
 
 
+// <e> HARDFAULT_HANDLER_ENABLED - hardfault_default - HardFault default handler for debugging and release
+//==========================================================
+#ifndef HARDFAULT_HANDLER_ENABLED
+#define HARDFAULT_HANDLER_ENABLED 1
+#endif
+// <q> HARDFAULT_HANDLER_GDB_PSP_BACKTRACE  - Bypass the GDB problem with multiple stack pointers backtrace
+ 
+
+// <i> There is a known bug in GDB which causes it to incorrectly backtrace the code
+// <i> when multiple stack pointers are used (main and process stack pointers).
+// <i> This option enables the fix for that problem and allows to see the proper backtrace info.
+// <i> It makes it possible to trace the code to the exact point where a HardFault appeared.
+// <i> This option requires additional commands and may temporarily switch MSP stack to store data on PSP space.
+// <i> This is an optional parameter - enable it while debugging.
+// <i> Before a HardFault handler exits, the stack will be reverted to its previous value.
+
+#ifndef HARDFAULT_HANDLER_GDB_PSP_BACKTRACE
+#define HARDFAULT_HANDLER_GDB_PSP_BACKTRACE 1
+#endif
+
+// </e>
+
 
 // <e> MEM_MANAGER_ENABLED - mem_manager - Dynamic memory allocator
 //==========================================================
@@ -3328,7 +3350,7 @@
 
 // <o> NRF_SDH_BLE_GATT_MAX_MTU_SIZE - Static maximum MTU size. 
 #ifndef NRF_SDH_BLE_GATT_MAX_MTU_SIZE
-#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 247
+#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 23
 #endif
 
 // <o> NRF_SDH_BLE_GATTS_ATTR_TAB_SIZE - Attribute Table size in bytes. The size must be a multiple of 4. 

@@ -577,14 +577,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            NRF_LOG_INFO("Connected");
+            NRF_LOG_DEBUG("Connected");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             APP_ERROR_CHECK(err_code);
 			ui_ble_connect_not = true;
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            NRF_LOG_INFO("Disconnected");
+            NRF_LOG_DEBUG("Disconnected");
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
@@ -593,6 +593,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+			NRF_LOG_DEBUG("Params request");
             // Pairing not supported
             err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
                                                    BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
@@ -602,6 +603,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GATTS_EVT_SYS_ATTR_MISSING:
+			NRF_LOG_DEBUG("System attributes missing");
             // No system attributes have been stored.
             err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
             APP_ERROR_CHECK(err_code);
@@ -624,12 +626,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_EVT_USER_MEM_REQUEST:
-            err_code = sd_ble_user_mem_reply(p_ble_evt->evt.gattc_evt.conn_handle, NULL);
+ 			NRF_LOG_DEBUG("User memory request");
+           err_code = sd_ble_user_mem_reply(p_ble_evt->evt.gattc_evt.conn_handle, NULL);
             APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST:
         {
+			NRF_LOG_DEBUG("R/W authorize request");
             ble_gatts_evt_rw_authorize_request_t  req;
             ble_gatts_rw_authorize_reply_params_t auth_reply;
 
@@ -720,7 +724,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				}
 				else {
 					if(ui_rec_start_req) {
-						NRF_LOG_DEBUG("REC START requested");
+						NRF_LOG_DEBUG("REC START already requested");
 					}
 					else {
 						ui_rec_start_req = true;
@@ -759,22 +763,32 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("REC START requested");
-		if(!ui_rec_running && !ui_rec_start_req) {
-			ui_rec_start_req = true;
+		if(ui_rec_running) {
+			NRF_LOG_DEBUG("Already running!");
 		}
 		else {
-			NRF_LOG_DEBUG("REC already running...");
+			if(ui_rec_start_req) {
+				NRF_LOG_DEBUG("REC START already requested");
+			}
+			else {
+				ui_rec_start_req = true;
+			}
 		}
 	}
 	else {
 		NRF_LOG_DEBUG("REC STOP requested");
-		if(ui_rec_running || ui_rec_start_req) {
+		if(ui_rec_running) {
 			ui_rec_stop_req = true;
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 		}
 		else {
-			NRF_LOG_DEBUG("No REC running...");
+			if(ui_rec_start_req) {
+				NRF_LOG_DEBUG("Busy... please wait");
+			}
+			else {
+				NRF_LOG_DEBUG("No REC running...");
+			}
 		}
 	}
 }
@@ -783,22 +797,32 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 {
 	if(led_state) {
 		NRF_LOG_DEBUG("MON START requested");
-		if(!ui_mon_running && !ui_mon_start_req) {
-			ui_mon_start_req = true;
+		if(ui_mon_running) {
+			NRF_LOG_DEBUG("Already running!");
 		}
 		else {
-			NRF_LOG_DEBUG("MON already running...");
+			if(ui_mon_start_req) {
+				NRF_LOG_DEBUG("MON START already requested");
+			}
+			else {
+				ui_mon_start_req = true;
+			}
 		}
 	}
 	else {
 		NRF_LOG_DEBUG("MON STOP requested");
-		if(ui_mon_running || ui_mon_start_req) {
+		if(ui_mon_running) {
 			ui_mon_stop_req = true;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 		}
 		else {
-			NRF_LOG_DEBUG("No MON running...");
+			if(ui_mon_start_req) {
+				NRF_LOG_DEBUG("Busy... please wait");
+			}
+			else {
+				NRF_LOG_DEBUG("No MON running...");
+			}
 		}
 	}
 }
@@ -1010,6 +1034,29 @@ static void log_init(void)
 }
 
 
+
+
+/* ========================================================================== */
+/*                               DUMMY FUNCTIONS                              */
+/* ========================================================================== */
+#ifdef DUMMY_MODE
+APP_TIMER_DEF(dummy_mon_timer);
+
+static void dummy_mon_handler(void * p_context)
+{
+	uint8_t b[2];
+	for(uint8_t i = 0; i < BLE_MAX_MTU_SIZE; i += 2) {
+		static uint32_t size = 2;
+		b[0] = 0x01;
+		b[1] = (rand() % 0xFF);
+		NRF_LOG_DEBUG("b[0]: 0x%02x, b[1]: 0x%02x", b[0], b[1]);
+		app_fifo_write(&ble_fifo, b, &size);
+	}
+	ble_chunk_counter++;
+}
+#endif
+
+
 /**
  * @brief Function for main application entry.
  */
@@ -1059,10 +1106,10 @@ int main(void)
 			   - test & mount SD card
 			   - open/create dir & file for audio record */
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
-			gps_poll_data();
-			if(sdc_start() == 0) {
+//			gps_poll_data();
+//			if(sdc_start() == 0) {
 				sdc_init_ok = true;
-			}
+//			}
 			NRF_LOG_DEBUG("Starting REC");
 		}
 		
@@ -1074,11 +1121,11 @@ int main(void)
 			ui_rec_stop_req = false;
 			ui_rec_start_req = false;
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
-			if(!ui_mon_running) {
-				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_mon_running) {
+//				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+//			}
 			// Write WAV header & close SD card file
-			sdc_close();
+//			sdc_close();
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
@@ -1098,10 +1145,14 @@ int main(void)
 		if(ui_mon_start_req) {
 			ui_mon_start_req = false;
 			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
-			if(!ui_rec_running) {
-				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_rec_running) {
+//				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+//				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//			}
+#ifdef DUMMY_MODE
+			app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
+			app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(2000), NULL);
+#endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
@@ -1126,9 +1177,13 @@ int main(void)
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
-			if(!ui_rec_running) {
-				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_rec_running) {
+//				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+//			}
+#ifdef DUMMY_MODE
+			app_timer_stop(dummy_mon_timer);
+			app_fifo_flush(&ble_fifo);
+#endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
@@ -1152,10 +1207,10 @@ int main(void)
 			ui_rec_running = true;
 			app_timer_stop(led_blink_timer);
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
-			if(!ui_mon_running) {
-				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-			}
+//			if(!ui_mon_running) {
+//				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+//				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+//			}
 			// Notify REC START
 			LED_ON(LED_RECORD);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
@@ -1192,7 +1247,6 @@ int main(void)
 
 		/* BLE state UI */
 		if(ui_ble_connect_not) {
-			NRF_LOG_DEBUG("Conn state");
 			ui_ble_connect_not = false;
 			LED_ON(LED_CONNECTED);
 			LED_OFF(LED_ADVERTISING);
@@ -1206,6 +1260,16 @@ int main(void)
 #if (NRF_LOG_DEFERRED == 1)
 		NRF_LOG_PROCESS();
 #endif
+		LED_ON(LED_ADVERTISING);
+		LED_ON(LED_CONNECTED);
+		LED_OFF(LED_MONITOR);
+		LED_OFF(LED_RECORD);
+		nrf_delay_ms(300);
+		LED_OFF(LED_ADVERTISING);
+		LED_OFF(LED_CONNECTED);
+		LED_ON(LED_MONITOR);
+		LED_ON(LED_RECORD);
+		nrf_delay_ms(300);
 		
 		__WFE();
     }
