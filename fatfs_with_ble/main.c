@@ -125,7 +125,8 @@ static volatile bool 					ui_rec_running = false;
 static volatile bool					ui_mon_start_req = false;
 static volatile bool 					ui_mon_stop_req = false;
 static volatile bool 					ui_mon_running = false;
-APP_TIMER_DEF(led_blink_timer);
+static volatile bool					ui_ble_connect_not = false;
+static volatile bool					ui_ble_disconnect_not = false;
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
@@ -141,6 +142,7 @@ BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 static volatile uint32_t				ble_samples_counter = 0;
 static volatile uint8_t					ble_chunk_counter = 0;
+APP_TIMER_DEF(led_blink_timer);
 
 
 /* ========================================================================== */
@@ -571,24 +573,23 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     ret_code_t err_code;
 
 	DBG_TOGGLE(DBG2_PIN);
+	NRF_LOG_DEBUG("BLE evt: 0x%04x", p_ble_evt->header.evt_id);
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected");
-            LED_ON(LED_CONNECTED);
-            LED_OFF(LED_ADVERTISING);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             APP_ERROR_CHECK(err_code);
+			ui_ble_connect_not = true;
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected");
-            LED_OFF(LED_CONNECTED);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
 			}
-//            advertising_start();
+			ui_ble_disconnect_not = true;
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -1189,6 +1190,19 @@ int main(void)
 			}
 		}
 
+		/* BLE state UI */
+		if(ui_ble_connect_not) {
+			NRF_LOG_DEBUG("Conn state");
+			ui_ble_connect_not = false;
+			LED_ON(LED_CONNECTED);
+			LED_OFF(LED_ADVERTISING);
+		}
+		if(ui_ble_disconnect_not) {
+			ui_ble_disconnect_not = false;
+			LED_OFF(LED_CONNECTED);
+			LED_ON(LED_ADVERTISING);
+		}
+		
 #if (NRF_LOG_DEFERRED == 1)
 		NRF_LOG_PROCESS();
 #endif
