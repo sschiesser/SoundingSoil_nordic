@@ -125,8 +125,7 @@ static volatile bool 					ui_rec_running = false;
 static volatile bool					ui_mon_start_req = false;
 static volatile bool 					ui_mon_stop_req = false;
 static volatile bool 					ui_mon_running = false;
-static volatile bool					ui_ble_connect_not = false;
-static volatile bool					ui_ble_disconnect_not = false;
+APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
@@ -142,7 +141,6 @@ BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 static volatile uint32_t				ble_samples_counter = 0;
 static volatile uint8_t					ble_chunk_counter = 0;
-APP_TIMER_DEF(led_blink_timer);
 
 
 /* ========================================================================== */
@@ -382,7 +380,6 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 //	char *p_str; // Pointer on the string comparison result
 //	while(gps_uart_reading) {
 //		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-////		NRF_LOG_DEBUG("sizeof(c): %d, cnt: %d", sizeof(c), cnt);
 //		if(ret == NRF_ERROR_TIMEOUT) {
 //			NRF_LOG_DEBUG("UART timeout!");
 //			gps_uart_reading = false;
@@ -410,7 +407,6 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 //	}
 /* FAKE UART */
 	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
-	nrf_delay_ms(1000);
 /* ------------------------ */
 	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
 	char *tokens[GPS_RMC_TOKEN_MAX];
@@ -555,7 +551,8 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
-//			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
+			DBG_TOGGLE(DBG1_PIN);
+			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
@@ -572,24 +569,24 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
 
-	DBG_TOGGLE(DBG2_PIN);
-	NRF_LOG_DEBUG("BLE evt: 0x%04x", p_ble_evt->header.evt_id);
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected");
+            LED_ON(LED_CONNECTED);
+            LED_OFF(LED_ADVERTISING);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             APP_ERROR_CHECK(err_code);
-			ui_ble_connect_not = true;
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected");
+            LED_OFF(LED_CONNECTED);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
 			}
-			ui_ble_disconnect_not = true;
+			advertising_start();
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -708,7 +705,6 @@ static void conn_params_error_handler(uint32_t nrf_error)
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
 	if(button_action) {
-		DBG_TOGGLE(DBG1_PIN);
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
@@ -718,12 +714,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 					ui_rec_running = false;
 				}
 				else {
-					if(ui_rec_start_req) {
-						NRF_LOG_DEBUG("REC START requested");
-					}
-					else {
-						ui_rec_start_req = true;
-					}
+					ui_rec_start_req = true;
 				}
 				break;
 				
@@ -992,9 +983,7 @@ void gps_init(void)
 	ret_code_t err_code = nrf_serial_init(&gps_uart, &m_gps_uart_config, &gps_config);
 	APP_ERROR_CHECK(err_code);
 	
-	nrf_gpio_cfg_input(m_gps_uart_config.pselrxd, NRF_GPIO_PIN_PULLUP); // Force pull-up to RX pin
-	
-//	err_code = app_timer_create(&gps_uart_timer, APP_TIMER_MODE_SINGLE_SHOT, gps_timeout_handler);
+//	nrf_gpio_cfg_input(m_gps_uart_config.pselrxd, NRF_GPIO_PIN_PULLUP); // Force pull-up to RX pin
 }
 
 // LEDS
@@ -1066,7 +1055,6 @@ int main(void)
 	err_code = app_fifo_init(&ble_fifo, ble_buffer, BLE_FIFO_SIZE);
 	gps_init();
 	
-	
 	/* Starting application */
 	/* -------------------- */
     NRF_LOG_INFO("===========")
@@ -1123,7 +1111,7 @@ int main(void)
 #endif
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1131,7 +1119,7 @@ int main(void)
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 					APP_ERROR_CHECK(err_code);
 				}
-			}
+//			}
 			NRF_LOG_DEBUG("REC stopped");
 		}
 		
@@ -1152,7 +1140,7 @@ int main(void)
 #endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1160,7 +1148,7 @@ int main(void)
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 					APP_ERROR_CHECK(err_code);
 				}
-			}
+//			}
 			// Set flags
 			ui_mon_running = true;
 			NRF_LOG_DEBUG("MON started");
@@ -1184,7 +1172,7 @@ int main(void)
 #endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
 				if( err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1192,17 +1180,15 @@ int main(void)
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 					APP_ERROR_CHECK(err_code);
 				}
-			}
+//			}
 			NRF_LOG_DEBUG("MON stopped");
 		}
 		
 		/* SDC INIT OK (REC READY)
 		 * ----------------------- */
 		if(sdc_init_ok) {
-			// Set flags
+			// Clear flags
 			sdc_init_ok = false;
-			nrf_delay_ms(500);
-			ui_rec_running = true;
 			app_timer_stop(led_blink_timer);
 #ifndef DUMMY_MODE
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
@@ -1213,7 +1199,7 @@ int main(void)
 #endif
 			// Notify REC START
 			LED_ON(LED_RECORD);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1221,45 +1207,22 @@ int main(void)
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 					APP_ERROR_CHECK(err_code);
 				}
-			}
-			NRF_LOG_DEBUG("SDC init OK");
+//			}
+			// Set flags
+			ui_rec_running = true;
+			NRF_LOG_INFO("SDC init OK");
 		}
 		
 		/* CHUNKS TO SDC
 		 * --------------- */
-		if(ui_rec_running) {
+//		if(ui_rec_running) {
 			if((sdc_chunk_counter > 0) && (!sdc_writing)) {
 				sdc_write();
 			}
-		}
+//		}
 		
 		/* CHUNKS TO BLE
 		 * ------------- */
-//<<<<<<< HEAD
-//		if(ui_mon_running) {
-//			if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
-//				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
-//				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
-//				app_fifo_read(&ble_fifo, temp_buf, &len);
-//				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
-//				ble_chunk_counter--;
-//			}
-//		}
-
-//		/* BLE state UI */
-//		if(ui_ble_connect_not) {
-//			NRF_LOG_DEBUG("Conn state");
-//			ui_ble_connect_not = false;
-//			LED_ON(LED_CONNECTED);
-//			LED_OFF(LED_ADVERTISING);
-//		}
-//		if(ui_ble_disconnect_not) {
-//			ui_ble_disconnect_not = false;
-//			LED_OFF(LED_CONNECTED);
-//			LED_ON(LED_ADVERTISING);
-//		}
-//		
-//=======
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
 			DBG_TOGGLE(DBG2_PIN);
 //			NRF_LOG_DEBUG("Sending chunk to BLE");
