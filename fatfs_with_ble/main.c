@@ -1111,6 +1111,7 @@ int main(void)
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
+			sdc_chunk_counter = 0;
 #ifndef DUMMY_MODE
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
@@ -1121,12 +1122,14 @@ int main(void)
 #endif
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
-			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+				}
 			}
 			NRF_LOG_DEBUG("REC stopped");
 		}
@@ -1144,16 +1147,18 @@ int main(void)
 			}
 #else 
             app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
-            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(20), NULL);
+            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
 #endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
-			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+				}
 			}
 			// Set flags
 			ui_mon_running = true;
@@ -1167,6 +1172,7 @@ int main(void)
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
+			ble_chunk_counter = 0;
 #ifndef DUMMY_MODE
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
@@ -1178,12 +1184,14 @@ int main(void)
 #endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
-			err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
-			if( err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
+				if( err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+				}
 			}
 			NRF_LOG_DEBUG("MON stopped");
 		}
@@ -1203,12 +1211,14 @@ int main(void)
 #endif
 			// Notify REC START
 			LED_ON(LED_RECORD);
-			err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
-			if (err_code != NRF_SUCCESS &&
-				err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-				err_code != NRF_ERROR_INVALID_STATE &&
-				err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-				APP_ERROR_CHECK(err_code);
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
+				}
 			}
 			// Set flags
 			ui_rec_running = true;
