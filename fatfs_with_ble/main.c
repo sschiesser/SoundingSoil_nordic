@@ -594,7 +594,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
 			}
-            advertising_start();
+			// Not advertising here: function called in ble_advertising->on_disconnected(), LED notification in on_adv_event()
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -678,9 +678,8 @@ static void on_adv_event(ble_adv_evt_t ble_adv_evt)
 	switch(ble_adv_evt)
 	{
 		case BLE_ADV_EVT_FAST:
-			NRF_LOG_INFO("Fast advertising");
-//			err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-//			APP_ERROR_CHECK(err_code);
+			NRF_LOG_DEBUG("Fast advertising");
+			LED_ON(LED_ADVERTISING);
 			break;
 		
 		case BLE_ADV_EVT_IDLE:
@@ -1162,7 +1161,7 @@ int main(void)
 			}
 			// Set flags
 			ui_mon_running = true;
-			NRF_LOG_DEBUG("MON started");
+			NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
 		}
 		
 		/* MON STOP request
@@ -1193,7 +1192,7 @@ int main(void)
 						APP_ERROR_CHECK(err_code);
 				}
 			}
-			NRF_LOG_DEBUG("MON stopped");
+			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
 		}
 		
 		/* SDC INIT OK (REC READY)
