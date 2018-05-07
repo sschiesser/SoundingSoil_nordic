@@ -712,13 +712,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-<<<<<<< HEAD
-				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
-				if(ui_rec_running) {
-=======
-//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
->>>>>>> dummy2
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
 					ui_rec_running = false;
@@ -734,13 +728,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 				
 			case BUTTON_MONITOR:
-<<<<<<< HEAD
-				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
-				if(ui_mon_running) {
-=======
-//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
->>>>>>> dummy2
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
 					ui_mon_running = false;
@@ -813,13 +801,10 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 	}
 }
 
-<<<<<<< HEAD
-=======
 // NUS
 static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
 }
->>>>>>> dummy2
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
@@ -1114,32 +1099,21 @@ int main(void)
 				// Set flags
 				sdc_init_ok = true;
 			}
-<<<<<<< HEAD
-			NRF_LOG_DEBUG("Starting REC");
-=======
 #else
 			nrf_delay_ms(1000);
 			sdc_init_ok = true;
 #endif
 			NRF_LOG_DEBUG("REC request started");
->>>>>>> dummy2
 		}
 		
 		/* REC STOP request
 		 * ---------------- */
 		if(ui_rec_stop_req) {
-<<<<<<< HEAD
-			// Set flags
-			ui_rec_running = false;
-			ui_rec_stop_req = false;
-			ui_rec_start_req = false;
-=======
 			// Clear flags
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
 #ifndef DUMMY_MODE
->>>>>>> dummy2
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1195,18 +1169,11 @@ int main(void)
 		/* MON STOP request
 		 * ---------------- */
 		if(ui_mon_stop_req) {
-<<<<<<< HEAD
-			// Set flags
-			ui_mon_running = false;
-			ui_mon_stop_req = false;
-			ui_mon_start_req = false;
-=======
 			// Clear flags
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 #ifndef DUMMY_MODE
->>>>>>> dummy2
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1268,31 +1235,31 @@ int main(void)
 		
 		/* CHUNKS TO BLE
 		 * ------------- */
-<<<<<<< HEAD
-		if(ui_mon_running) {
-			if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
-				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
-				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
-				app_fifo_read(&ble_fifo, temp_buf, &len);
-				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
-				ble_chunk_counter--;
-			}
-		}
+//<<<<<<< HEAD
+//		if(ui_mon_running) {
+//			if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
+//				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
+//				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
+//				app_fifo_read(&ble_fifo, temp_buf, &len);
+//				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
+//				ble_chunk_counter--;
+//			}
+//		}
 
-		/* BLE state UI */
-		if(ui_ble_connect_not) {
-			NRF_LOG_DEBUG("Conn state");
-			ui_ble_connect_not = false;
-			LED_ON(LED_CONNECTED);
-			LED_OFF(LED_ADVERTISING);
-		}
-		if(ui_ble_disconnect_not) {
-			ui_ble_disconnect_not = false;
-			LED_OFF(LED_CONNECTED);
-			LED_ON(LED_ADVERTISING);
-		}
-		
-=======
+//		/* BLE state UI */
+//		if(ui_ble_connect_not) {
+//			NRF_LOG_DEBUG("Conn state");
+//			ui_ble_connect_not = false;
+//			LED_ON(LED_CONNECTED);
+//			LED_OFF(LED_ADVERTISING);
+//		}
+//		if(ui_ble_disconnect_not) {
+//			ui_ble_disconnect_not = false;
+//			LED_OFF(LED_CONNECTED);
+//			LED_ON(LED_ADVERTISING);
+//		}
+//		
+//=======
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
 			DBG_TOGGLE(DBG2_PIN);
 //			NRF_LOG_DEBUG("Sending chunk to BLE");
@@ -1303,7 +1270,6 @@ int main(void)
 			ble_chunk_counter--;
 		}
 
->>>>>>> dummy2
 #if (NRF_LOG_DEFERRED == 1)
 		NRF_LOG_PROCESS();
 #endif
