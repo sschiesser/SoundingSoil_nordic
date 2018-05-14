@@ -302,14 +302,22 @@ static FRESULT sdc_write(void)
 
 	
 	sdc_writing = true;
+	NRF_LOG_DEBUG("Reading fifo...");
+	DBG_TOGGLE(DBG2_PIN);
+	NRF_LOG_DEBUG("FIFO READ @ %d", sdc_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&sdc_fifo, temp_buf, &buf_size);
 
+	DBG_TOGGLE(DBG0_PIN);
+    NRF_LOG_DEBUG("Writing %d bytes to file %s...", SDC_BLOCK_SIZE, sdc_filename);
     ff_result = f_write(&sdc_file, temp_buf, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
     }
-
+    else
+    {
+        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
+    }
 	sdc_chunk_counter--;
 	sdc_writing = false;
 
@@ -532,7 +540,6 @@ static void gps_poll_data(void)
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	if(ui_rec_running) {
-		DBG_TOGGLE(DBG0_PIN);
 		static uint32_t size = adc_spi_len;
 		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
 	}
@@ -540,6 +547,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		static uint32_t size = adc_spi_len;
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
 		ble_samples_counter += 2;
+		DBG_TOGGLE(DBG0_PIN);
 	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
@@ -586,7 +594,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
 			}
-			advertising_start();
+			// Not advertising here: function called in ble_advertising->on_disconnected(), LED notification in on_adv_event()
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -670,9 +678,8 @@ static void on_adv_event(ble_adv_evt_t ble_adv_evt)
 	switch(ble_adv_evt)
 	{
 		case BLE_ADV_EVT_FAST:
-			NRF_LOG_INFO("Fast advertising");
-//			err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-//			APP_ERROR_CHECK(err_code);
+			NRF_LOG_DEBUG("Fast advertising");
+			LED_ON(LED_ADVERTISING);
 			break;
 		
 		case BLE_ADV_EVT_IDLE:
@@ -708,6 +715,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
+//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
@@ -719,6 +727,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 				
 			case BUTTON_MONITOR:
+//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
@@ -922,7 +931,7 @@ static void services_init(void)
 	
 	memset(&nus_init, 0, sizeof(nus_init));
 	
-	nus_init.data_handler = NULL;
+	nus_init.data_handler = nus_data_handler;
 	err_code = ble_nus_init(&m_nus, &nus_init);
 	APP_ERROR_CHECK(err_code);
 }
@@ -983,7 +992,7 @@ void gps_init(void)
 	ret_code_t err_code = nrf_serial_init(&gps_uart, &m_gps_uart_config, &gps_config);
 	APP_ERROR_CHECK(err_code);
 	
-//	nrf_gpio_cfg_input(m_gps_uart_config.pselrxd, NRF_GPIO_PIN_PULLUP); // Force pull-up to RX pin
+//	err_code = app_timer_create(&gps_uart_timer, APP_TIMER_MODE_SINGLE_SHOT, gps_timeout_handler);
 }
 
 // LEDS
@@ -1101,6 +1110,7 @@ int main(void)
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
+			sdc_chunk_counter = 0;
 #ifndef DUMMY_MODE
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
@@ -1111,15 +1121,15 @@ int main(void)
 #endif
 			// Notify REC STOP
 			LED_OFF(LED_RECORD);
-//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 0);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 					err_code != NRF_ERROR_INVALID_STATE &&
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-					APP_ERROR_CHECK(err_code);
+						APP_ERROR_CHECK(err_code);
 				}
-//			}
+			}
 			NRF_LOG_DEBUG("REC stopped");
 		}
 		
@@ -1136,22 +1146,22 @@ int main(void)
 			}
 #else 
             app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
-            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(20), NULL);
+            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
 #endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
-//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 					err_code != NRF_ERROR_INVALID_STATE &&
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-					APP_ERROR_CHECK(err_code);
+						APP_ERROR_CHECK(err_code);
 				}
-//			}
+			}
 			// Set flags
 			ui_mon_running = true;
-			NRF_LOG_DEBUG("MON started");
+			NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
 		}
 		
 		/* MON STOP request
@@ -1161,6 +1171,7 @@ int main(void)
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
+			ble_chunk_counter = 0;
 #ifndef DUMMY_MODE
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
@@ -1172,23 +1183,23 @@ int main(void)
 #endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
-//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 0);
 				if( err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 					err_code != NRF_ERROR_INVALID_STATE &&
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-					APP_ERROR_CHECK(err_code);
+						APP_ERROR_CHECK(err_code);
 				}
-//			}
-			NRF_LOG_DEBUG("MON stopped");
+			}
+			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
 		}
 		
 		/* SDC INIT OK (REC READY)
 		 * ----------------------- */
 		if(sdc_init_ok) {
-			// Clear flags
 			sdc_init_ok = false;
+			NRF_LOG_INFO("SDC init OK");
 			app_timer_stop(led_blink_timer);
 #ifndef DUMMY_MODE
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
@@ -1199,27 +1210,24 @@ int main(void)
 #endif
 			// Notify REC START
 			LED_ON(LED_RECORD);
-//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 					err_code != NRF_ERROR_INVALID_STATE &&
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-					APP_ERROR_CHECK(err_code);
+						APP_ERROR_CHECK(err_code);
 				}
-//			}
+			}
 			// Set flags
 			ui_rec_running = true;
-			NRF_LOG_INFO("SDC init OK");
 		}
 		
 		/* CHUNKS TO SDC
 		 * --------------- */
-//		if(ui_rec_running) {
-			if((sdc_chunk_counter > 0) && (!sdc_writing)) {
-				sdc_write();
-			}
-//		}
+		if((sdc_chunk_counter > 0) && (!sdc_writing)) {
+			sdc_write();
+		}
 		
 		/* CHUNKS TO BLE
 		 * ------------- */
