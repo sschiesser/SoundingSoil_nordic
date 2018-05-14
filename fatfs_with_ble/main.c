@@ -302,21 +302,12 @@ static FRESULT sdc_write(void)
 
 	
 	sdc_writing = true;
-	NRF_LOG_DEBUG("Reading fifo...");
-	DBG_TOGGLE(DBG2_PIN);
-	NRF_LOG_DEBUG("FIFO READ @ %d", sdc_fifo.read_pos);
 	uint32_t fifo_res = app_fifo_read(&sdc_fifo, temp_buf, &buf_size);
 
-	DBG_TOGGLE(DBG0_PIN);
-    NRF_LOG_DEBUG("Writing %d bytes to file %s...", SDC_BLOCK_SIZE, sdc_filename);
     ff_result = f_write(&sdc_file, temp_buf, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
         NRF_LOG_DEBUG("Write failed\r\n.");
-    }
-    else
-    {
-        NRF_LOG_DEBUG("%d bytes written.", bytes_written);
     }
 	sdc_chunk_counter--;
 	sdc_writing = false;
@@ -547,7 +538,6 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 		static uint32_t size = adc_spi_len;
 		app_fifo_write(&ble_fifo, adc_spi_rxbuf, &size);
 		ble_samples_counter += 2;
-		DBG_TOGGLE(DBG0_PIN);
 	}
 	adc_samples_counter += 2;
 	adc_spi_xfer_done = true;
@@ -559,8 +549,6 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
-			DBG_TOGGLE(DBG1_PIN);
-			NRF_LOG_DEBUG("FIFO WROTE to %d", sdc_fifo.write_pos);
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
@@ -1089,16 +1077,16 @@ int main(void)
 			   - test & mount SD card
 			   - open/create dir & file for audio record */
 			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
-#ifndef DUMMY_MODE
+#ifdef DUMMY_MODE
+			nrf_delay_ms(1000);
+			sdc_init_ok = true;
+#else
 			gps_poll_data();
 			if(sdc_start() == 0) {
 				nrf_delay_ms(500);
 				// Set flags
 				sdc_init_ok = true;
 			}
-#else
-			nrf_delay_ms(1000);
-			sdc_init_ok = true;
 #endif
 			NRF_LOG_DEBUG("REC request started");
 		}
@@ -1111,7 +1099,9 @@ int main(void)
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
 			sdc_chunk_counter = 0;
-#ifndef DUMMY_MODE
+#ifdef DUMMY_MODE
+			//
+#else
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1139,14 +1129,14 @@ int main(void)
 			// Clear flags
 			ui_mon_start_req = false;
 			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
-#ifndef DUMMY_MODE
+#ifdef DUMMY_MODE
+            app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
+            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
+#else 
 			if(!ui_rec_running) {
 				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 			}
-#else 
-            app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
-            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
 #endif
 			// Notify MON START
 			LED_ON(LED_MONITOR);
@@ -1172,14 +1162,14 @@ int main(void)
 			ui_mon_start_req = false;
 			ui_mon_running = false;
 			ble_chunk_counter = 0;
-#ifndef DUMMY_MODE
+#ifdef DUMMY_MODE
+			app_timer_stop(dummy_mon_timer);
+			app_fifo_flush(&ble_fifo);
+#else
 			// Disable audio synchronization IF NO REC STILL RUNNING!!
 			if(!ui_rec_running) {
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			}
-#else
-			app_timer_stop(dummy_mon_timer);
-			app_fifo_flush(&ble_fifo);
 #endif
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
@@ -1188,11 +1178,13 @@ int main(void)
 				if( err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
 					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != NRF_ERROR_RESOURCES &&
 					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
 						APP_ERROR_CHECK(err_code);
 				}
 			}
 			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+			app_fifo_flush(&ble_fifo);
 		}
 		
 		/* SDC INIT OK (REC READY)
@@ -1201,7 +1193,9 @@ int main(void)
 			sdc_init_ok = false;
 			NRF_LOG_INFO("SDC init OK");
 			app_timer_stop(led_blink_timer);
-#ifndef DUMMY_MODE
+#ifdef DUMMY_MODE
+			//
+#else
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
@@ -1232,11 +1226,10 @@ int main(void)
 		/* CHUNKS TO BLE
 		 * ------------- */
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
-			DBG_TOGGLE(DBG2_PIN);
-//			NRF_LOG_DEBUG("Sending chunk to BLE");
 			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 			app_fifo_read(&ble_fifo, temp_buf, &len);
+			DBG_TOGGLE(DBG1_PIN);
 			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 			ble_chunk_counter--;
 		}
