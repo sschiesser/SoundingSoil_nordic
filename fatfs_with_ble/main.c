@@ -666,7 +666,7 @@ static void on_adv_event(ble_adv_evt_t ble_adv_evt)
 	switch(ble_adv_evt)
 	{
 		case BLE_ADV_EVT_FAST:
-			NRF_LOG_DEBUG("Fast advertising");
+//			NRF_LOG_DEBUG("Fast advertising");
 			LED_ON(LED_ADVERTISING);
 			break;
 		
@@ -1083,7 +1083,7 @@ int main(void)
 #else
 			gps_poll_data();
 			if(sdc_start() == 0) {
-				nrf_delay_ms(500);
+				nrf_delay_ms(1000);
 				// Set flags
 				sdc_init_ok = true;
 			}
