@@ -89,10 +89,10 @@
 //#define FILE_NAME   					"R123456.wav"
 #define TEST_STRING 					"SD card example."
 //#define ROOT_DIR						"0:/"
-#define SDC_SCK_PIN     				29  ///< SDC serial clock (SCK) pin.
-#define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
-#define SDC_MISO_PIN    				28  ///< SDC serial data out (DO) pin.
-#define SDC_CS_PIN      				31  ///< SDC chip select (CS) pin.
+#define SDC_CS_PIN      				28  ///< SDC chip select (CS) pin.
+#define SDC_MOSI_PIN    				29  ///< SDC serial data in (DI) pin.
+#define SDC_MISO_PIN    				30  ///< SDC serial data out (DO) pin.
+#define SDC_SCK_PIN     				31  ///< SDC serial clock (SCK) pin.
 #define SDC_BLOCK_SIZE					(16*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
@@ -223,16 +223,16 @@ struct gps_rmc_tag {
 #define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS      BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.5 seconds). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1 second). */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (7.5 ms). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (20 ms). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (4 seconds). */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(2000, UNIT_10_MS)         /**< Connection supervisory time-out (2 seconds). */
 
-#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(15000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define MON_DOWNSAMPLE_FACTOR			4
+#define MON_DOWNSAMPLE_FACTOR			8
 #endif /* MAIN_H__ */
