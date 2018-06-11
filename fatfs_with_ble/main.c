@@ -125,6 +125,8 @@ static volatile bool 					ui_rec_running = false;
 static volatile bool					ui_mon_start_req = false;
 static volatile bool 					ui_mon_stop_req = false;
 static volatile bool 					ui_mon_running = false;
+static volatile bool					ui_ble_advertising = false;
+static volatile bool					ui_ble_connected = false;
 APP_TIMER_DEF(led_blink_timer);
 
 /*                                    BLE                                     */
@@ -141,6 +143,7 @@ BLE_ADVERTISING_DEF(m_advertising);                         					// Advertising 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        // Handle of the current connection
 static volatile uint32_t				ble_samples_counter = 0;
 static volatile uint8_t					ble_chunk_counter = 0;
+APP_TIMER_DEF(led_advertising_timer);
 
 
 /* ========================================================================== */
@@ -363,8 +366,12 @@ static void advertising_start(void)
     adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
 
     err_code = sd_ble_gap_adv_start(&adv_params, APP_BLE_CONN_CFG_TAG);
-    APP_ERROR_CHECK(err_code);
-    LED_ON(LED_ADVERTISING);
+	if(err_code != NRF_ERROR_INVALID_STATE) {
+		APP_ERROR_CHECK(err_code);
+	}
+	app_timer_start(led_advertising_timer, APP_TIMER_TICKS(500), NULL);
+	ui_ble_advertising = true;
+//    LED_ON(LED_BLE);
 }
 
 static struct gps_rmc_tag gps_get_rmc_geotag(void)
@@ -569,15 +576,19 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected");
-            LED_ON(LED_CONNECTED);
-            LED_OFF(LED_ADVERTISING);
+			app_timer_stop(led_advertising_timer);
+            LED_ON(LED_BLE);
+			ui_ble_advertising = false;
+			ui_ble_connected = true;
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected");
-            LED_OFF(LED_CONNECTED);
+			ui_ble_connected = false;
+			ui_ble_advertising = false;
+			LED_OFF(LED_BLE);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			if(ui_mon_running) {
 				ui_mon_stop_req = true;
@@ -585,6 +596,16 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			// Not advertising here: function called in ble_advertising->on_disconnected(), LED notification in on_adv_event()
             break;
 
+		case BLE_GAP_EVT_TIMEOUT:
+			app_timer_stop(led_advertising_timer);
+			LED_OFF(LED_BLE);
+			err_code = sd_ble_gap_adv_stop();
+			if(err_code != NRF_ERROR_INVALID_STATE) {
+				APP_ERROR_CHECK(err_code);
+			}
+			ui_ble_advertising = false;
+			break;
+		
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
             // Pairing not supported
             err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
@@ -666,8 +687,9 @@ static void on_adv_event(ble_adv_evt_t ble_adv_evt)
 	switch(ble_adv_evt)
 	{
 		case BLE_ADV_EVT_FAST:
+			ui_ble_advertising = true;
 //			NRF_LOG_DEBUG("Fast advertising");
-			LED_ON(LED_ADVERTISING);
+//			LED_ON(LED_BLE);
 			break;
 		
 		case BLE_ADV_EVT_IDLE:
@@ -699,11 +721,13 @@ static void conn_params_error_handler(uint32_t nrf_error)
 // BUTTONS
 static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
+	ret_code_t err_code;
+	
 	if(button_action) {
 		switch (pin_no)
 		{
 			case BUTTON_RECORD:
-//				NRF_LOG_DEBUG("REC! state: %d", ui_rec_running);
+//				NRF_LOG_INFO("REC! state: %d", ui_rec_running);
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
@@ -715,7 +739,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 				
 			case BUTTON_MONITOR:
-//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+//				NRF_LOG_INFO("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
@@ -726,6 +750,27 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				}
 				break;
 
+			case BUTTON_BLE:
+				NRF_LOG_INFO("BLE button pressed. adv = %d, oon = %d", ui_ble_advertising, ui_ble_connected);
+				if(!ui_ble_advertising && !ui_ble_connected) {
+					advertising_start();
+				}
+				else if(ui_ble_advertising) {
+					err_code = sd_ble_gap_adv_stop();
+					if(err_code != NRF_ERROR_INVALID_STATE) {
+						APP_ERROR_CHECK(err_code);
+					}
+					LED_OFF(LED_BLE);
+					ui_ble_advertising = false;
+				}
+				else if(ui_ble_connected) {
+					err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+					APP_ERROR_CHECK(err_code);
+					LED_OFF(LED_BLE);
+					ui_ble_connected = false;
+				}
+				break;
+			
 			default:
 				APP_ERROR_HANDLER(pin_no);
 				break;
@@ -738,6 +783,12 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 static void led_blink_handler(void * p_context)
 {
 	LED_TOGGLE(LED_RECORD);
+}
+
+// LED ADVERTISING
+static void led_advertising_handler(void * p_context)
+{
+	LED_TOGGLE(LED_BLE);
 }
 
 // LED REC
@@ -955,7 +1006,8 @@ static void buttons_init(void)
     static app_button_cfg_t buttons[] =
     {
         {BUTTON_RECORD, false, BUTTON_PULL, button_event_handler},
-		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler}
+		{BUTTON_MONITOR, false, BUTTON_PULL, button_event_handler},
+		{BUTTON_BLE, false, BUTTON_PULL, button_event_handler}
     };
 
     err_code = app_button_init(buttons, sizeof(buttons) / sizeof(buttons[0]), BUTTON_DETECTION_DELAY);
@@ -986,8 +1038,12 @@ void gps_init(void)
 // LEDS
 static void leds_init(void)
 {
+	ret_code_t err_code;
 	bsp_board_leds_init();
-	ret_code_t err_code = app_timer_create(&led_blink_timer, APP_TIMER_MODE_REPEATED, led_blink_handler);
+	err_code = app_timer_create(&led_blink_timer, APP_TIMER_MODE_REPEATED, led_blink_handler);
+	APP_ERROR_CHECK(err_code);
+	err_code = app_timer_create(&led_advertising_timer, APP_TIMER_MODE_REPEATED, led_advertising_handler);
+	APP_ERROR_CHECK(err_code);
 }
 
 // LOG
