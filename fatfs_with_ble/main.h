@@ -12,6 +12,7 @@
 /* Standard libraries */
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 /* NRF libraries*/
 #include "nrf.h"
 #include "nordic_common.h"

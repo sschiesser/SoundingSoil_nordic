@@ -846,7 +846,35 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
 static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t timestamp)
 {
+	static time_t cur_time;
+	char* c_time_string;
+	struct tm p_readable_time;
+	static uint8_t byte_cnt = 0;
 	NRF_LOG_INFO("TS value received: 0x%02x", timestamp);
+	switch(byte_cnt) {
+		case 0:
+			cur_time = (time_t)timestamp << 24;
+			byte_cnt = 1;
+			break;
+		case 1:
+			cur_time |= (time_t)timestamp << 16;
+			byte_cnt = 2;
+			break;
+		case 2:
+			cur_time |= (time_t)timestamp << 8;
+			byte_cnt = 3;
+			break;
+		case 3:
+			cur_time |= (time_t)timestamp;
+			byte_cnt = 0;
+			NRF_LOG_DEBUG("UNIX time: 0x%08x",cur_time);
+			p_readable_time = *localtime(&cur_time);
+			c_time_string = asctime(&p_readable_time);
+			NRF_LOG_INFO("Current time: %s", c_time_string);
+			break;
+		default:
+			break;
+	}
 }
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */

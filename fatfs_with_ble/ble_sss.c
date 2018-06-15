@@ -69,7 +69,6 @@ static void on_write(ble_sss_t * p_sss, ble_evt_t const * p_ble_evt)
 	if(		(p_evt_write->handle == p_sss->ts_char_handles.value_handle)
 		&&	(p_sss->ts_write_handler != NULL))
 	{
-		uint32_t data = 0;
 		for(uint8_t i = 0; i < 4; i++) {
 			p_sss->ts_write_handler(p_ble_evt->evt.gap_evt.conn_handle, p_sss, p_evt_write->data[i]);
 		}
