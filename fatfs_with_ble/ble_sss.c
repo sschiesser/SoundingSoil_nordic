@@ -65,6 +65,15 @@ static void on_write(ble_sss_t * p_sss, ble_evt_t const * p_ble_evt)
 	{
 		p_sss->led2_write_handler(p_ble_evt->evt.gap_evt.conn_handle, p_sss, p_evt_write->data[0]);
 	}
+	
+	if(		(p_evt_write->handle == p_sss->ts_char_handles.value_handle)
+		&&	(p_sss->ts_write_handler != NULL))
+	{
+		uint32_t data = 0;
+		for(uint8_t i = 0; i < 4; i++) {
+			p_sss->ts_write_handler(p_ble_evt->evt.gap_evt.conn_handle, p_sss, p_evt_write->data[i]);
+		}
+	}
 }
 
 
@@ -307,6 +316,58 @@ static uint32_t button2_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss
 }
 
 
+/**@brief Function for adding the Timestamp Characteristic.
+ *
+ * @param[in] p_sss      LED Button Service structure.
+ * @param[in] p_sss_init LED Button Service initialization structure.
+ *
+ * @retval NRF_SUCCESS on success, else an error value from the SoftDevice
+ */
+static uint32_t ts_char_add(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_init)
+{
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read  = 1;
+    char_md.char_props.write = 1;
+    char_md.p_char_user_desc = NULL;
+    char_md.p_char_pf        = NULL;
+    char_md.p_user_desc_md   = NULL;
+    char_md.p_cccd_md        = NULL;
+    char_md.p_sccd_md        = NULL;
+
+    ble_uuid.type = p_sss->uuid_type;
+    ble_uuid.uuid = BLE_SSS_UUID_TS_CHAR;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
+    attr_md.vloc    = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth = 0;
+    attr_md.wr_auth = 0;
+    attr_md.vlen    = 0;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = sizeof(uint32_t);
+    attr_char_value.init_offs = 0;
+    attr_char_value.max_len   = sizeof(uint32_t);
+    attr_char_value.p_value   = NULL;
+
+    return sd_ble_gatts_characteristic_add(p_sss->service_handle,
+                                           &char_md,
+                                           &attr_char_value,
+                                           &p_sss->ts_char_handles);
+}
+
+
 uint32_t ble_sss_init(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_init)
 {
     uint32_t   err_code;
@@ -315,6 +376,7 @@ uint32_t ble_sss_init(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_init)
     // Initialize service structure.
     p_sss->led1_write_handler = p_sss_init->led1_write_handler;
 	p_sss->led2_write_handler = p_sss_init->led2_write_handler;
+	p_sss->ts_write_handler = p_sss_init->ts_write_handler;
 
     // Add service.
     ble_uuid128_t base_uuid = {BLE_SSS_UUID_BASE};
@@ -337,6 +399,9 @@ uint32_t ble_sss_init(ble_sss_t * p_sss, const ble_sss_init_t * p_sss_init)
     VERIFY_SUCCESS(err_code);
     err_code = led2_char_add(p_sss, p_sss_init);
     VERIFY_SUCCESS(err_code);
+	
+	err_code = ts_char_add(p_sss, p_sss_init);
+	VERIFY_SUCCESS(err_code);
 
     return NRF_SUCCESS;
 }

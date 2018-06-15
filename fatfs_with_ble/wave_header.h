@@ -10,7 +10,7 @@
 #define WAVE_HEADER_H__
 
 
-#define PCM_BUF_SIZE						16
+//#define PCM_BUF_SIZE						16
 //#define NB_BUFFERS							4
 #define AUDIO_NUM_CHANNELS					1
 #define AUDIO_BITS_PER_SAMPLE				16

@@ -96,12 +96,15 @@ NRF_SDH_BLE_OBSERVER(_name ## _obs,                                             
 #define BLE_SSS_UUID_LED1_CHAR    	0x1525
 #define BLE_SSS_UUID_BUTTON2_CHAR	0x1526
 #define BLE_SSS_UUID_LED2_CHAR		0x1527
+#define BLE_SSS_UUID_TS_CHAR		0x1528									
 
 
 // Forward declaration of the ble_sss_t type.
 typedef struct ble_sss_s ble_sss_t;
 
 typedef void (*ble_sss_led_write_handler_t) (uint16_t conn_handle, ble_sss_t * p_sss, uint8_t new_state);
+									
+typedef void (*ble_sss_ts_write_handler_t) (uint16_t conn_handle, ble_sss_t * p_sss, uint8_t timestamp);
 
 /** @brief LED Button Service init structure. This structure contains all options and data needed for
  *        initialization of the service.*/
@@ -109,6 +112,7 @@ typedef struct
 {
     ble_sss_led_write_handler_t led1_write_handler; /**< Event handler to be called when the LED Characteristic is written. */
 	ble_sss_led_write_handler_t led2_write_handler;
+	ble_sss_ts_write_handler_t	ts_write_handler;
 } ble_sss_init_t;
 
 /**@brief LED Button Service structure. This structure contains various status information for the service. */
@@ -119,9 +123,11 @@ struct ble_sss_s
 	ble_gatts_char_handles_t	led2_char_handles;
     ble_gatts_char_handles_t    button1_char_handles; /**< Handles related to the Button Characteristic. */
 	ble_gatts_char_handles_t	button2_char_handles;
+	ble_gatts_char_handles_t	ts_char_handles;
     uint8_t                     uuid_type;           /**< UUID type for the LED Button Service. */
     ble_sss_led_write_handler_t led1_write_handler;   /**< Event handler to be called when the LED Characteristic is written. */
     ble_sss_led_write_handler_t led2_write_handler;   /**< Event handler to be called when the LED Characteristic is written. */
+	ble_sss_ts_write_handler_t	ts_write_handler;
 };
 
 

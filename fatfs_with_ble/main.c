@@ -329,8 +329,8 @@ static FRESULT sdc_close(void)
 	((uint16_t *)&wave_header)[WAVE_FORMAT_BLOCK_ALIGN_OFFSET/2] = AUDIO_BITS_PER_SAMPLE/8 * AUDIO_NUM_CHANNELS;
 	((uint32_t *)&wave_header)[WAVE_FORMAT_SAMPLE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE;
 	((uint32_t *)&wave_header)[WAVE_FORMAT_BYTE_RATE_OFFSET/4] = AUDIO_SAMPLING_RATE * AUDIO_NUM_CHANNELS * AUDIO_BITS_PER_SAMPLE/8;
-	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
-	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = (adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = (adc_total_samples/2) * (AUDIO_BITS_PER_SAMPLE/8);//adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
+	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = ((adc_total_samples/2) * AUDIO_BITS_PER_SAMPLE/8) + 36;//(adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
 	
 	ff_result = f_lseek(&sdc_file, 0);
 	if(ff_result != FR_OK) {
@@ -371,7 +371,6 @@ static void advertising_start(void)
 	}
 	app_timer_start(led_advertising_timer, APP_TIMER_TICKS(500), NULL);
 	ui_ble_advertising = true;
-//    LED_ON(LED_BLE);
 }
 
 static struct gps_rmc_tag gps_get_rmc_geotag(void)
@@ -844,6 +843,11 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
 }
+
+static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t timestamp)
+{
+	NRF_LOG_INFO("TS value received: 0x%02x", timestamp);
+}
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
@@ -965,6 +969,7 @@ static void services_init(void)
 
     sss_init.led1_write_handler = led_rec_handler;
 	sss_init.led2_write_handler = led_mon_handler;
+	sss_init.ts_write_handler = ts_write_handler;
     err_code = ble_sss_init(&m_sss, &sss_init);
     APP_ERROR_CHECK(err_code);
 	
@@ -1046,6 +1051,17 @@ static void leds_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
+
+//MON
+static void mon_init(void)
+{
+	ret_code_t err_code;
+	nrf_drv_gpiote_out_config_t out_config = GPIOTE_CONFIG_OUT_SIMPLE(true);
+	err_code = nrf_drv_gpiote_out_init(MON_EN_PIN, &out_config);
+	APP_ERROR_CHECK(err_code);
+	MON_DISABLE();
+}
+
 // LOG
 static void log_init(void)
 {
@@ -1094,6 +1110,7 @@ int main(void)
 	log_init();
 	buttons_init();
 	gpio_dbg_init();
+	mon_init();
 	
 	ble_stack_init();
 	gap_params_init();
@@ -1194,6 +1211,9 @@ int main(void)
 				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 			}
 #endif
+			// Enable MON outupt
+			MON_ENABLE();
+			
 			// Notify MON START
 			LED_ON(LED_MONITOR);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
@@ -1227,6 +1247,9 @@ int main(void)
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
 			}
 #endif
+			// Disable MON output
+			MON_DISABLE();
+			
 			// Notify MON STOP
 			LED_OFF(LED_MONITOR);
 			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {

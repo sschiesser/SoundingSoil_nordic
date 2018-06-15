@@ -70,7 +70,13 @@
 //#define DBG_CURRENT_FILE				"R123456.wav"
 #define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
 
-/*                             LED/BUTTON MACROS                              */
+/*                                  MONITOR                                   */
+/* -------------------------------------------------------------------------- */
+#define MON_EN_PIN						3
+#define MON_ENABLE()					(nrf_drv_gpiote_out_set(MON_EN_PIN))
+#define MON_DISABLE()					(nrf_drv_gpiote_out_clear(MON_EN_PIN))
+
+/*                                 LED/BUTTON                                 */
 /* -------------------------------------------------------------------------- */
 #define LED_BLE							(BSP_LED_3)
 #define LED_RECORD						(BSP_LED_2)
