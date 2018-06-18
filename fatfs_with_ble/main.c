@@ -129,6 +129,11 @@ static volatile bool					ui_ble_advertising = false;
 static volatile bool					ui_ble_connected = false;
 APP_TIMER_DEF(led_blink_timer);
 
+
+/*                                 TIMESTAMP                                  */
+/* -------------------------------------------------------------------------- */
+struct timestamp_tag					current_ts;
+
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
 static ble_uuid_t m_adv_uuids[] =
@@ -376,143 +381,159 @@ static void advertising_start(void)
 static struct gps_rmc_tag gps_get_rmc_geotag(void)
 {
 	struct gps_rmc_tag tag;
+	bool do_slicing = true;
 	uint8_t cnt = 0;
 	char uart_buf[GPS_NMEA_MAX_SIZE]; // Read UART buffer
 /* REAL UART */
-//	char c; // Read UART character
-//	gps_uart_reading = true; // Reading flag
-//	gps_uart_timeout = false; // Timeout flag
-//	char *p_str; // Pointer on the string comparison result
-//	while(gps_uart_reading) {
-//		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
-//		if(ret == NRF_ERROR_TIMEOUT) {
-//			NRF_LOG_DEBUG("UART timeout!");
-//			gps_uart_reading = false;
-//			gps_uart_timeout = true;
-//			break;
-//		}
-//		uart_buf[cnt++] = c;
-//		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
-//			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
-//				static char comp[7] = "$GPRMC";
-//				p_str = strstr(uart_buf, comp);
-//				if(p_str != NULL) {
-//					strcpy(tag.raw_tag, uart_buf);
-//					tag.length = strlen(uart_buf);
-//					app_timer_stop(gps_uart_timer);
-//					gps_uart_reading = false;
-//				}
-//			}
-//			cnt = 0;
-//		}
-//	}
-//	if(gps_uart_timeout) {
+	char c; // Read UART character
+	gps_uart_reading = true; // Reading flag
+	gps_uart_timeout = false; // Timeout flag
+	char *p_str; // Pointer on the string comparison result
+	while(gps_uart_reading) {
+		ret_code_t ret = nrf_serial_read(&gps_uart, &c, sizeof(c), NULL, 2000);
+		if(ret == NRF_ERROR_TIMEOUT) {
+			NRF_LOG_DEBUG("UART timeout!");
+			gps_uart_reading = false;
+			gps_uart_timeout = true;
+			break;
+		}
+		uart_buf[cnt++] = c;
+		if(c == GPS_NMEA_STOP_CHAR) { // found STOP char
+			if(uart_buf[0] == GPS_NMEA_START_CHAR) { // START char already stored
+				static char comp[7] = "$GPRMC";
+				p_str = strstr(uart_buf, comp);
+				if(p_str != NULL) {
+					strcpy(tag.raw_tag, uart_buf);
+					tag.length = strlen(uart_buf);
+					app_timer_stop(gps_uart_timer);
+					gps_uart_reading = false;
+				}
+			}
+			cnt = 0;
+		}
+	}
+	if(gps_uart_timeout) {
+		tag.date.day = current_ts.date.day;
+		tag.date.month = current_ts.date.month;
+		tag.date.year = current_ts.date.year;
+		tag.time.h = current_ts.time.h;
+		tag.time.min = current_ts.time.min;
+		tag.time.sec = current_ts.time.sec;
+		tag.latitude.deg = 0;
+		tag.latitude.min = 0;
+		tag.latitude.sec = 0;
+		tag.longitude.deg = 0;
+		tag.longitude.min = 0;
+		tag.longitude.sec = 0;
 //		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
-//		gps_uart_timeout = false;
-//	}
+		do_slicing = false;
+		gps_uart_timeout = false;
+	}
 /* FAKE UART */
-	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
+//	strcpy(tag.raw_tag, "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,03.1,W,S*6A");
 /* ------------------------ */
-	NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
-	char *tokens[GPS_RMC_TOKEN_MAX];
-	cnt = 0;
-	const char delim[2] = ",";
-	strcpy(uart_buf, tag.raw_tag);
-	tokens[cnt] = strslice(uart_buf, delim);
-	while(tokens[cnt] != NULL) {
-		cnt++;
-		tokens[cnt] = strslice(NULL, delim);
-	}
-	
-	char temp[12];
-	uint8_t len;
-	// Time
-	len = 2;
-	strncpy(temp, tokens[GPS_RMC_TIME_TOK], len);
-	temp[len] = '\0';
-	tag.time.h = atoi(temp);
-	strncpy(temp, tokens[GPS_RMC_TIME_TOK]+2, len);
-	temp[len] = '\0';
-	tag.time.min = atoi(temp);
-	strncpy(temp, tokens[GPS_RMC_TIME_TOK]+4, len);
-	temp[len] = '\0';
-	tag.time.sec = atoi(temp);
-	if(strchr(tokens[GPS_RMC_TIME_TOK], '.') != NULL) {
-		len = 3;
-		strncpy(temp, tokens[GPS_RMC_TIME_TOK]+7, len);
+	if(do_slicing) {
+		NRF_LOG_INFO("Raw tag: %s", tag.raw_tag);
+		char *tokens[GPS_RMC_TOKEN_MAX];
+		cnt = 0;
+		const char delim[2] = ",";
+		strcpy(uart_buf, tag.raw_tag);
+		tokens[cnt] = strslice(uart_buf, delim);
+		while(tokens[cnt] != NULL) {
+			cnt++;
+			tokens[cnt] = strslice(NULL, delim);
+		}
+		
+		char temp[12];
+		uint8_t len;
+		// Time
+		len = 2;
+		strncpy(temp, tokens[GPS_RMC_TIME_TOK], len);
 		temp[len] = '\0';
-		tag.time.msec = atoi(temp);
+		tag.time.h = atoi(temp);
+		strncpy(temp, tokens[GPS_RMC_TIME_TOK]+2, len);
+		temp[len] = '\0';
+		tag.time.min = atoi(temp);
+		strncpy(temp, tokens[GPS_RMC_TIME_TOK]+4, len);
+		temp[len] = '\0';
+		tag.time.sec = atoi(temp);
+		if(strchr(tokens[GPS_RMC_TIME_TOK], '.') != NULL) {
+			len = 3;
+			strncpy(temp, tokens[GPS_RMC_TIME_TOK]+7, len);
+			temp[len] = '\0';
+			tag.time.msec = atoi(temp);
+		}
+		else {
+			tag.time.msec = 0;
+		}
+		// Status
+		if(strncmp(tokens[GPS_RMC_STATUS_TOK], "A", 1) == 0) tag.status_active = true;
+		else tag.status_active = false;
+		// Latitude
+		len = 2;
+		strncpy(temp, tokens[GPS_RMC_LAT_TOK], len);
+		temp[len] = '\0';
+		tag.latitude.deg = atoi(temp);
+		strncpy(temp, tokens[GPS_RMC_LAT_TOK]+2, len);
+		temp[len] = '\0';
+		tag.latitude.min = atoi(temp);
+		len = 3;
+		strncpy(temp, tokens[GPS_RMC_LAT_TOK]+5, len);
+		temp[len] = '\0';
+		tag.latitude.sec = atoi(temp);
+		if(strncmp(tokens[GPS_RMC_N_S_TOK], "N", 1) == 0) tag.latitude.north = true;
+		else tag.latitude.north = false;
+		// Longitude
+		len = 3;
+		strncpy(temp, tokens[GPS_RMC_LONG_TOK], len);
+		temp[len] = '\0';
+		tag.longitude.deg = atoi(temp);
+		len = 2;
+		strncpy(temp, tokens[GPS_RMC_LONG_TOK]+3, len);
+		temp[len] = '\0';
+		tag.longitude.min = atoi(temp);
+		len = 3;
+		strncpy(temp, tokens[GPS_RMC_LONG_TOK]+6, len);
+		temp[len] = '\0';
+		tag.longitude.sec = atoi(temp);
+		if(strncmp(tokens[GPS_RMC_E_W_TOK], "E", 1) == 0) tag.longitude.east = true;
+		else tag.longitude.east = false;
+		// Speed
+		len = strlen(tokens[GPS_RMC_SPEED_TOK]);
+		strncpy(temp, tokens[GPS_RMC_SPEED_TOK], len);
+		temp[len] = '\0';
+		tag.speed.knots = atof(temp);
+		tag.speed.mph = tag.speed.knots * (float)GPS_CONV_KNOT_TO_MPH;
+		tag.speed.kmh = tag.speed.knots * (float)GPS_CONV_KNOT_TO_KMH;
+		// Track angle	NRF_LOG_INFO("Tangle len: %d", strlen(tokens[GPS_RMC_TANGLE_TOK]));
+		len = strlen(tokens[GPS_RMC_TANGLE_TOK]);
+		strncpy(temp, tokens[GPS_RMC_TANGLE_TOK], len);
+		temp[len] = '\0';
+		tag.track_angle = atof(temp);
+		// Date
+		len = 2;
+		strncpy(temp, tokens[GPS_RMC_DATE_TOK], len);
+		temp[len] = '\0';
+		tag.date.day = atoi(temp);
+		strncpy(temp, tokens[GPS_RMC_DATE_TOK]+2, len);
+		temp[len] = '\0';
+		tag.date.month = atoi(temp);
+		strncpy(temp, tokens[GPS_RMC_DATE_TOK]+4, len);
+		temp[len] = '\0';
+		tag.date.year = atoi(temp);
+		// Magnetic variation
+		len = strlen(tokens[GPS_RMC_MVAR_TOK]);
+		strncpy(temp, tokens[GPS_RMC_MVAR_TOK], len);
+		temp[len] = '\0';
+		tag.mvar.angle = atof(temp);
+		if(strncmp(tokens[GPS_RMC_MVAR_E_W_TOK], "E", 1) == 0) tag.mvar.east = true;
+		else tag.mvar.east = false;
+		// Signal integrity
+		len = 1;
+		strncpy(temp, tokens[GPS_RMC_INT_CHKS_TOK], len);
+		temp[len] = '\0';
+		tag.sig_int = temp[0];
 	}
-	else {
-		tag.time.msec = 0;
-	}
-	// Status
-	if(strncmp(tokens[GPS_RMC_STATUS_TOK], "A", 1) == 0) tag.status_active = true;
-	else tag.status_active = false;
-	// Latitude
-	len = 2;
-	strncpy(temp, tokens[GPS_RMC_LAT_TOK], len);
-	temp[len] = '\0';
-	tag.latitude.deg = atoi(temp);
-	strncpy(temp, tokens[GPS_RMC_LAT_TOK]+2, len);
-	temp[len] = '\0';
-	tag.latitude.min = atoi(temp);
-	len = 3;
-	strncpy(temp, tokens[GPS_RMC_LAT_TOK]+5, len);
-	temp[len] = '\0';
-	tag.latitude.sec = atoi(temp);
-	if(strncmp(tokens[GPS_RMC_N_S_TOK], "N", 1) == 0) tag.latitude.north = true;
-	else tag.latitude.north = false;
-	// Longitude
-	len = 3;
-	strncpy(temp, tokens[GPS_RMC_LONG_TOK], len);
-	temp[len] = '\0';
-	tag.longitude.deg = atoi(temp);
-	len = 2;
-	strncpy(temp, tokens[GPS_RMC_LONG_TOK]+3, len);
-	temp[len] = '\0';
-	tag.longitude.min = atoi(temp);
-	len = 3;
-	strncpy(temp, tokens[GPS_RMC_LONG_TOK]+6, len);
-	temp[len] = '\0';
-	tag.longitude.sec = atoi(temp);
-	if(strncmp(tokens[GPS_RMC_E_W_TOK], "E", 1) == 0) tag.longitude.east = true;
-	else tag.longitude.east = false;
-	// Speed
-	len = strlen(tokens[GPS_RMC_SPEED_TOK]);
-	strncpy(temp, tokens[GPS_RMC_SPEED_TOK], len);
-	temp[len] = '\0';
-	tag.speed.knots = atof(temp);
-	tag.speed.mph = tag.speed.knots * (float)GPS_CONV_KNOT_TO_MPH;
-	tag.speed.kmh = tag.speed.knots * (float)GPS_CONV_KNOT_TO_KMH;
-	// Track angle	NRF_LOG_INFO("Tangle len: %d", strlen(tokens[GPS_RMC_TANGLE_TOK]));
-	len = strlen(tokens[GPS_RMC_TANGLE_TOK]);
-	strncpy(temp, tokens[GPS_RMC_TANGLE_TOK], len);
-	temp[len] = '\0';
-	tag.track_angle = atof(temp);
-	// Date
-	len = 2;
-	strncpy(temp, tokens[GPS_RMC_DATE_TOK], len);
-	temp[len] = '\0';
-	tag.date.day = atoi(temp);
-	strncpy(temp, tokens[GPS_RMC_DATE_TOK]+2, len);
-	temp[len] = '\0';
-	tag.date.month = atoi(temp);
-	strncpy(temp, tokens[GPS_RMC_DATE_TOK]+4, len);
-	temp[len] = '\0';
-	tag.date.year = atoi(temp);
-	// Magnetic variation
-	len = strlen(tokens[GPS_RMC_MVAR_TOK]);
-	strncpy(temp, tokens[GPS_RMC_MVAR_TOK], len);
-	temp[len] = '\0';
-	tag.mvar.angle = atof(temp);
-	if(strncmp(tokens[GPS_RMC_MVAR_E_W_TOK], "E", 1) == 0) tag.mvar.east = true;
-	else tag.mvar.east = false;
-	// Signal integrity
-	len = 1;
-	strncpy(temp, tokens[GPS_RMC_INT_CHKS_TOK], len);
-	temp[len] = '\0';
-	tag.sig_int = temp[0];
 	
 	return tag;
 }
@@ -524,11 +545,11 @@ static void gps_poll_data(void)
 	sprintf(temp, "%02d%02d%02d", gps_cur_tag.date.year, gps_cur_tag.date.month, gps_cur_tag.date.day);
 	memcpy(sdc_foldername, temp, 6);
 	sprintf(sdc_folderpath, "/%s", sdc_foldername);
-	NRF_LOG_DEBUG("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
+	NRF_LOG_INFO("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
 	
 	sprintf(temp, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
 	memcpy(&sdc_filename[1], temp, 6);
-	NRF_LOG_DEBUG("sdc_filename: %s", sdc_filename);
+	NRF_LOG_INFO("sdc_filename: %s", sdc_filename);
 }
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
@@ -848,9 +869,8 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 {
 	static time_t cur_time;
 	char* c_time_string;
-	struct tm p_readable_time;
+	struct tm p_read_time;
 	static uint8_t byte_cnt = 0;
-	NRF_LOG_INFO("TS value received: 0x%02x", timestamp);
 	switch(byte_cnt) {
 		case 0:
 			cur_time = (time_t)timestamp << 24;
@@ -868,9 +888,17 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 			cur_time |= (time_t)timestamp;
 			byte_cnt = 0;
 			NRF_LOG_DEBUG("UNIX time: 0x%08x",cur_time);
-			p_readable_time = *localtime(&cur_time);
-			c_time_string = asctime(&p_readable_time);
-			NRF_LOG_INFO("Current time: %s", c_time_string);
+			p_read_time = *localtime(&cur_time);
+//			c_time_string = asctime(&p_read_time);
+//			NRF_LOG_DEBUG("Current time: %s", c_time_string);
+			current_ts.date.year = p_read_time.tm_year + 1900;
+			current_ts.date.month = p_read_time.tm_mon + 1;
+			current_ts.date.day = p_read_time.tm_mday;
+			current_ts.time.h = p_read_time.tm_hour;
+			current_ts.time.min = p_read_time.tm_min;
+			current_ts.time.sec = p_read_time.tm_sec;
+			NRF_LOG_INFO("Received TS: %02d.%02d.%d, %02dh%02dm%02ds", current_ts.date.day, current_ts.date.month,
+							current_ts.date.year, current_ts.time.h, current_ts.time.min, current_ts.time.sec);
 			break;
 		default:
 			break;

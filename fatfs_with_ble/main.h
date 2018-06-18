@@ -67,8 +67,6 @@
 #define DBG0_PIN						11
 #define DBG1_PIN						12
 #define DBG2_PIN						18
-//#define DBG_CURRENT_FOLDER				"180425"
-//#define DBG_CURRENT_FILE				"R123456.wav"
 #define DBG_TOGGLE(dbg)					(nrf_drv_gpiote_out_toggle(dbg))
 
 /*                                  MONITOR                                   */
@@ -172,7 +170,7 @@ struct gps_time {
 struct gps_date {
 	uint8_t day;
 	uint8_t month;
-	uint8_t year;
+	uint16_t year;
 };
 struct gps_lat {
 	uint8_t deg;
@@ -218,6 +216,13 @@ struct gps_rmc_tag {
 };
 
 
+/*                                TIMESTAMP                                   */
+/* -------------------------------------------------------------------------- */
+struct timestamp_tag {
+	struct gps_time time;
+	struct gps_date date;
+};
+
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
@@ -242,4 +247,7 @@ struct gps_rmc_tag {
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 #define MON_DOWNSAMPLE_FACTOR			8
+
+
+
 #endif /* MAIN_H__ */
