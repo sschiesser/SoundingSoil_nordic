@@ -72,9 +72,9 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
-static TCHAR							sdc_foldername[13] = "180424";
-static TCHAR							sdc_folderpath[14] = "/180424";
-static TCHAR							sdc_filename[12] = "R123456.wav";
+static TCHAR							sdc_foldername[13] = "000000";
+static TCHAR							sdc_folderpath[14] = "/000000";
+static TCHAR							sdc_filename[12] = "R000000.WAV";
 static FATFS 							sdc_fs;
 static DIR 								sdc_dir;
 static FILINFO 							sdc_fno;
@@ -83,6 +83,7 @@ static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
 static volatile uint8_t					sdc_chunk_counter = 0;
+APP_TIMER_DEF(sdc_init_timer);
 
 
 /*                                    ADC                                     */
@@ -214,7 +215,7 @@ static uint32_t sdc_start()
         return (uint32_t)ff_result;
     }
 
-    NRF_LOG_DEBUG("\r\n Listing directory: /");
+    NRF_LOG_DEBUG("Listing directory: /");
     ff_result = f_opendir(&sdc_dir, "/");
     if (ff_result)
     {
@@ -235,27 +236,31 @@ static uint32_t sdc_start()
         {
             if (sdc_fno.fattrib & AM_DIR)
             {
-                NRF_LOG_DEBUG("   <DIR>   %s",(uint32_t)sdc_fno.fname);
+                NRF_LOG_DEBUG("<DIR>   %s",(uint32_t)sdc_fno.fname);
 				uint8_t res = strcmp(sdc_fno.fname, sdc_foldername);
-				NRF_LOG_DEBUG("Comp result: %d", res);
 				if(res == 0) {
 					dir_found = true;
-					NRF_LOG_DEBUG("DIR FOUND! Path: %s", sdc_folderpath);
+					NRF_LOG_DEBUG("        DIR FOUND! Path: %s", sdc_folderpath);
 				}
             }
             else
             {
-                NRF_LOG_DEBUG("%9lu  %s", sdc_fno.fsize, (uint32_t)sdc_fno.fname);
+                NRF_LOG_DEBUG("        %s (%lu)", (uint32_t)sdc_fno.fname, sdc_fno.fsize);
             }
         }
     } while (sdc_fno.fname[0]);
 	
 	
 	if(!dir_found) {
-		NRF_LOG_DEBUG("DIR not found... creating");
+		NRF_LOG_DEBUG("DIR not found... creating & opening");
 		ff_result = f_mkdir(sdc_folderpath);
 		if(ff_result != FR_OK) {
 			NRF_LOG_DEBUG("Unable to create directory");
+			return (uint32_t)ff_result;
+		}
+		ff_result = f_chdir(sdc_folderpath);
+		if(ff_result != FR_OK) {
+			NRF_LOG_DEBUG("Unable to change directory");
 			return (uint32_t)ff_result;
 		}
 		ff_result = f_opendir(&sdc_dir, sdc_folderpath);
@@ -265,12 +270,48 @@ static uint32_t sdc_start()
 		}
 	}
 	else {
-		NRF_LOG_DEBUG("DIR found... opening");
+		NRF_LOG_DEBUG("Dir found... opening & searching");
 		ff_result = f_chdir(sdc_folderpath);
 		if(ff_result != FR_OK) {
 			NRF_LOG_DEBUG("Unable to change directory");
 			return (uint32_t)ff_result;
 		}
+		ff_result = f_opendir(&sdc_dir, sdc_folderpath);
+		if(ff_result != FR_OK) {
+			NRF_LOG_DEBUG("Unable to open directory");
+			return (uint32_t)ff_result;
+		}
+		
+		uint16_t file_cnt = 0;
+		do {
+			ff_result = f_readdir(&sdc_dir, &sdc_fno);
+			NRF_LOG_DEBUG("Reading... ");
+			if (ff_result != FR_OK)
+			{
+				NRF_LOG_INFO("Directory read failed.");
+				return (uint32_t)ff_result;
+			}
+
+			if (sdc_fno.fname[0])
+			{
+				if (sdc_fno.fattrib & AM_DIR)
+				{
+					NRF_LOG_DEBUG("<DIR>   %s",(uint32_t)sdc_fno.fname);
+				}
+				else
+				{
+					NRF_LOG_DEBUG("        %s (%lu)", (uint32_t)sdc_fno.fname, sdc_fno.fsize);
+					uint8_t res = strcmp(sdc_fno.fname, sdc_filename);
+					NRF_LOG_DEBUG("Comparing %s to %s... res %d", sdc_fno.fname, sdc_filename, res);
+					if(res == 0) {
+						file_cnt++;
+						sprintf(sdc_filename, "R%06d.WAV", file_cnt);
+						NRF_LOG_DEBUG("        FILE FOUND! Increasing filename to %s", sdc_filename);
+					}
+				}
+			}
+		} while (sdc_fno.fname[0]);
+
 	}
 	
     NRF_LOG_DEBUG("Creating file %s...", sdc_filename);
@@ -524,18 +565,25 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	}
 	
 	if(!tag.status_active) {
-		tag.date.day = current_ts.date.day;
-		tag.date.month = current_ts.date.month;
-		tag.date.year = current_ts.date.year;
-		tag.time.h = current_ts.time.h;
-		tag.time.min = current_ts.time.min;
-		tag.time.sec = current_ts.time.sec;
-		tag.latitude.deg = 0;
-		tag.latitude.min = 0;
-		tag.latitude.sec = 0;
-		tag.longitude.deg = 0;
-		tag.longitude.min = 0;
-		tag.longitude.sec = 0;
+		NRF_LOG_DEBUG("No valid GPS tag... trying with timestamp");
+		if(current_ts.ts_valid) {
+			NRF_LOG_DEBUG("TS valid... filling date/time");
+			tag.date.day = current_ts.date.day;
+			tag.date.month = current_ts.date.month;
+			tag.date.year = current_ts.date.year;
+			tag.time.h = current_ts.time.h;
+			tag.time.min = current_ts.time.min;
+			tag.time.sec = current_ts.time.sec;
+		}
+		else{
+			NRF_LOG_DEBUG("No valid TS!");
+		}
+//		tag.latitude.deg = 0;
+//		tag.latitude.min = 0;
+//		tag.latitude.sec = 0;
+//		tag.longitude.deg = 0;
+//		tag.longitude.min = 0;
+//		tag.longitude.sec = 0;
 	}
 	
 	return tag;
@@ -543,17 +591,21 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 static void gps_poll_data(void)
 {
 	struct gps_rmc_tag gps_cur_tag = gps_get_rmc_geotag();
-	char temp[6];
+	char temp_fold[6] = "000000";
+	char temp_file[6] = "000000";
 	
-	// The modulo-100 trick is used to get only the last 2 digits of the year value
-	sprintf(temp, "%02d%02d%02d", (gps_cur_tag.date.year%100), gps_cur_tag.date.month, gps_cur_tag.date.day);
-	memcpy(sdc_foldername, temp, 6);
+	if(current_ts.ts_valid || gps_cur_tag.status_active) {
+		// The modulo-100 trick is used to get only the last 2 digits of the year value
+		sprintf(temp_fold, "%02d%02d%02d", (gps_cur_tag.date.year%100), gps_cur_tag.date.month, gps_cur_tag.date.day);
+		sprintf(temp_file, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
+	}
+		
+	memcpy(sdc_foldername, temp_fold, 6);
 	sprintf(sdc_folderpath, "/%s", sdc_foldername);
 	NRF_LOG_INFO("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
-	
-	sprintf(temp, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
-	memcpy(&sdc_filename[1], temp, 6);
-	NRF_LOG_INFO("sdc_filename: %s", sdc_filename);
+
+	memcpy(&sdc_filename[1], temp_file, 6);
+	NRF_LOG_INFO("File name: %s", sdc_filename);
 }
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
@@ -869,23 +921,26 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
 }
 
+// TS WRITE
 static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t timestamp)
 {
 	static time_t cur_time;
-	char* c_time_string;
 	struct tm p_read_time;
 	static uint8_t byte_cnt = 0;
 	switch(byte_cnt) {
 		case 0:
 			cur_time = (time_t)timestamp << 24;
+			current_ts.ts_valid = false;
 			byte_cnt = 1;
 			break;
 		case 1:
 			cur_time |= (time_t)timestamp << 16;
+			current_ts.ts_valid = false;
 			byte_cnt = 2;
 			break;
 		case 2:
 			cur_time |= (time_t)timestamp << 8;
+			current_ts.ts_valid = false;
 			byte_cnt = 3;
 			break;
 		case 3:
@@ -901,13 +956,20 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 			current_ts.time.h = p_read_time.tm_hour;
 			current_ts.time.min = p_read_time.tm_min;
 			current_ts.time.sec = p_read_time.tm_sec;
-			NRF_LOG_INFO("Received TS: %02d.%02d.%d, %02dh%02dm%02ds", current_ts.date.day, current_ts.date.month,
+			current_ts.ts_valid = true;
+			NRF_LOG_DEBUG("Received TS: %02d.%02d.%d, %02dh%02dm%02ds", current_ts.date.day, current_ts.date.month,
 							current_ts.date.year, current_ts.time.h, current_ts.time.min, current_ts.time.sec);
 			break;
 		default:
 			break;
 	}
 }
+// SDC INIT TIMEOUT
+static void sdc_init_handler(void * p_context)
+{
+	
+}
+
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
 /* ========================================================================== */
@@ -1112,7 +1174,7 @@ static void leds_init(void)
 }
 
 
-//MON
+// MON
 static void mon_init(void)
 {
 	ret_code_t err_code;
@@ -1120,6 +1182,20 @@ static void mon_init(void)
 	err_code = nrf_drv_gpiote_out_init(MON_EN_PIN, &out_config);
 	APP_ERROR_CHECK(err_code);
 	MON_DISABLE();
+}
+
+
+// SD card
+static void sdc_init(void)
+{
+	ret_code_t err_code;
+	err_code = app_timer_create(&sdc_init_timer, APP_TIMER_MODE_SINGLE_SHOT, sdc_init_handler);
+	APP_ERROR_CHECK(err_code);
+	
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
+	in_config.pull = NRF_GPIO_PIN_PULLUP;
+	err_code = nrf_drv_gpiote_in_init(SDC_CD_PIN, &in_config, NULL);
+	APP_ERROR_CHECK(err_code);
 }
 
 // LOG
@@ -1162,6 +1238,7 @@ static void dummy_mon_handler(void * p_context)
 int main(void)
 {
 	static ret_code_t err_code;
+	current_ts.ts_valid = false;
 
 	err_code = app_timer_init();
 	APP_ERROR_CHECK(err_code);
@@ -1205,6 +1282,8 @@ int main(void)
 		if(ui_rec_start_req) {
 			// Clear flags
 			ui_rec_start_req = false;
+			// Comment (deferred)
+			NRF_LOG_DEBUG("REC request started");
 			/* Initialize REC state:
 			   - get GPS tag for date, time, location
 			   - test & mount SD card
@@ -1215,13 +1294,20 @@ int main(void)
 			sdc_init_ok = true;
 #else
 			gps_poll_data();
+			// start timer after GPS poll to avoid 2 concurrenting timers
+//			app_timer_start(sdc_init_timer, APP_TIMER_TICKS(10000), NULL);
 			if(sdc_start() == 0) {
+//				app_timer_stop(sdc_init_timer);
 				nrf_delay_ms(1000);
 				// Set flags
 				sdc_init_ok = true;
 			}
+			else {
+				app_timer_stop(led_blink_timer);
+				sdc_init_ok = false;
+				NRF_LOG_DEBUG("SDC init failed, stopping");
+			}
 #endif
-			NRF_LOG_DEBUG("REC request started");
 		}
 		
 		/* REC STOP request
@@ -1231,6 +1317,8 @@ int main(void)
 			ui_rec_start_req = false;
 			ui_rec_running = false;
 			ui_rec_stop_req = false;
+			// Clear TS flag
+			current_ts.ts_valid = false;
 			sdc_chunk_counter = 0;
 #ifdef DUMMY_MODE
 			//

@@ -98,6 +98,7 @@
 #define SDC_MOSI_PIN    				30  ///< SDC serial data in (DI) pin.
 #define SDC_MISO_PIN    				29  ///< SDC serial data out (DO) pin.
 #define SDC_SCK_PIN     				28  ///< SDC serial clock (SCK) pin.
+#define SDC_CD_PIN						4	///< SDC card detect (CD) pin.
 #define SDC_BLOCK_SIZE					(16*SDC_SECTOR_SIZE) // 2x -> 19-39ms, 4x -> 24-44ms, 8x ->38-55ms, 16x -> 74ms, 32x -> 110ms
 
 /*                                    ADC                                     */
@@ -219,6 +220,7 @@ struct gps_rmc_tag {
 /*                                TIMESTAMP                                   */
 /* -------------------------------------------------------------------------- */
 struct timestamp_tag {
+	bool ts_valid;
 	struct gps_time time;
 	struct gps_date date;
 };
