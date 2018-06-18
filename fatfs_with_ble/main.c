@@ -412,20 +412,8 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 			cnt = 0;
 		}
 	}
-	if(gps_uart_timeout) {
-		tag.date.day = current_ts.date.day;
-		tag.date.month = current_ts.date.month;
-		tag.date.year = current_ts.date.year;
-		tag.time.h = current_ts.time.h;
-		tag.time.min = current_ts.time.min;
-		tag.time.sec = current_ts.time.sec;
-		tag.latitude.deg = 0;
-		tag.latitude.min = 0;
-		tag.latitude.sec = 0;
-		tag.longitude.deg = 0;
-		tag.longitude.min = 0;
-		tag.longitude.sec = 0;
-//		strcpy(tag.raw_tag, "$GPRMC, 000000,V,0000.000,N,00000.000,E,000.0,000.0,000000,00.0,W,N*00");
+	if(gps_uart_timeout) { // GPS timeout! Couldn't read any raw tag
+		tag.status_active = false;
 		do_slicing = false;
 		gps_uart_timeout = false;
 	}
@@ -535,6 +523,21 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 		tag.sig_int = temp[0];
 	}
 	
+	if(!tag.status_active) {
+		tag.date.day = current_ts.date.day;
+		tag.date.month = current_ts.date.month;
+		tag.date.year = current_ts.date.year;
+		tag.time.h = current_ts.time.h;
+		tag.time.min = current_ts.time.min;
+		tag.time.sec = current_ts.time.sec;
+		tag.latitude.deg = 0;
+		tag.latitude.min = 0;
+		tag.latitude.sec = 0;
+		tag.longitude.deg = 0;
+		tag.longitude.min = 0;
+		tag.longitude.sec = 0;
+	}
+	
 	return tag;
 }
 static void gps_poll_data(void)
@@ -542,7 +545,8 @@ static void gps_poll_data(void)
 	struct gps_rmc_tag gps_cur_tag = gps_get_rmc_geotag();
 	char temp[6];
 	
-	sprintf(temp, "%02d%02d%02d", gps_cur_tag.date.year, gps_cur_tag.date.month, gps_cur_tag.date.day);
+	// The modulo-100 trick is used to get only the last 2 digits of the year value
+	sprintf(temp, "%02d%02d%02d", (gps_cur_tag.date.year%100), gps_cur_tag.date.month, gps_cur_tag.date.day);
 	memcpy(sdc_foldername, temp, 6);
 	sprintf(sdc_folderpath, "/%s", sdc_foldername);
 	NRF_LOG_INFO("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);

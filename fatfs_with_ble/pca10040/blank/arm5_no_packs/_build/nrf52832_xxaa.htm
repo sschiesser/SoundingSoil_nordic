@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Mon Jun 18 09:49:20 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Mon Jun 18 10:24:50 2018
 <BR><P>
 <H3>Maximum Stack Usage =       8736 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -2304,7 +2304,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[16c]"></a>gps_get_rmc_geotag</STRONG> (Thumb, 1146 bytes, Stack size 360 bytes, main.o(i.gps_get_rmc_geotag))
+<P><STRONG><a name="[16c]"></a>gps_get_rmc_geotag</STRONG> (Thumb, 1160 bytes, Stack size 360 bytes, main.o(i.gps_get_rmc_geotag))
 <BR><BR>[Stack]<UL><LI>Max Depth = 632<LI>Call Chain = gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_serial_read
@@ -2325,8 +2325,8 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[176]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_poll_data
 </UL>
 
-<P><STRONG><a name="[176]"></a>gps_poll_data</STRONG> (Thumb, 132 bytes, Stack size 168 bytes, main.o(i.gps_poll_data))
-<BR><BR>[Stack]<UL><LI>Max Depth = 800<LI>Call Chain = gps_poll_data &rArr; gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[176]"></a>gps_poll_data</STRONG> (Thumb, 144 bytes, Stack size 176 bytes, main.o(i.gps_poll_data))
+<BR><BR>[Stack]<UL><LI>Max Depth = 808<LI>Call Chain = gps_poll_data &rArr; gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
 <LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
