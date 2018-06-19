@@ -836,6 +836,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 					if(err_code != NRF_ERROR_INVALID_STATE) {
 						APP_ERROR_CHECK(err_code);
 					}
+					app_timer_stop(led_advertising_timer);
 					LED_OFF(LED_BLE);
 					ui_ble_advertising = false;
 				}

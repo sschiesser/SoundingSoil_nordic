@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Mon Jun 18 17:06:20 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Jun 19 08:20:24 2018
 <BR><P>
 <H3>Maximum Stack Usage =       8784 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -988,6 +988,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_serial_read
 <LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_get_rmc_geotag
+<LI><a href="#[1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;button_event_handler
 <LI><a href="#[5d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpiote_event_handler
 <LI><a href="#[102]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_write
@@ -2270,11 +2271,12 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 278 bytes, Stack size 24 bytes, main.o(i.button_event_handler))
+<P><STRONG><a name="[1]"></a>button_event_handler</STRONG> (Thumb, 286 bytes, Stack size 24 bytes, main.o(i.button_event_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 416<LI>Call Chain = button_event_handler &rArr; advertising_start &rArr; app_error_handler &rArr; app_error_fault_handler &rArr; nrf_log_frontend_std_4 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
 <LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_set
+<LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_stop
 <LI><a href="#[a8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_handler
 <LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;advertising_start
 </UL>
