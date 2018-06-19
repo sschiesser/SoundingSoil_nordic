@@ -103,7 +103,7 @@ static volatile uint32_t				adc_total_samples = 0;
 /* -------------------------------------------------------------------------- */
 static volatile bool 					gps_uart_reading = false;
 static volatile bool					gps_uart_timeout = false;
-static struct gps_rmc_tag				gps_backup_tag = {0};
+static struct gps_rmc_tag				gps_backup_tag;
 
 NRF_SERIAL_DRV_UART_CONFIG_DEF(m_gps_uart_config,
 	GPS_UART_RX_PIN, NRF_UART_PSEL_DISCONNECTED,
@@ -405,7 +405,61 @@ static FRESULT sdc_close(void)
 	}
 	
     (void)f_close(&sdc_file);
-    return ff_result;
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Error while closing file");
+		return ff_result;
+	}
+	
+	// Writing metadata
+	TCHAR meta_filename[12];
+	TCHAR temp[6];
+	strncat(temp, &sdc_filename[1], 6);
+	sprintf(meta_filename, "T%06s.TXT", temp);
+	
+	ff_result = f_opendir(&sdc_dir, sdc_folderpath);
+	if(ff_result != FR_OK) {
+		NRF_LOG_DEBUG("Unable to open directory");
+		return ff_result;
+	}
+
+    NRF_LOG_DEBUG("Creating meta-file %s...", meta_filename);
+    ff_result = f_open(&sdc_file, meta_filename, FA_READ | FA_WRITE | FA_CREATE_NEW);
+    if (ff_result != FR_OK) {
+        NRF_LOG_DEBUG("Unable to open or create file: %s", meta_filename);
+        return ff_result;
+    }
+//	ff_result = f_lseek(&sdc_file, sizeof(sdc_file));
+//	if(ff_result != FR_OK) {
+//		NRF_LOG_DEBUG("Unable to find the end of the file");
+//	}
+	
+	NRF_LOG_DEBUG("Writing GPS header...");
+	int res = f_printf(&sdc_file, "GPS information:\n\r----------------\n\r" \
+									"Folder name: %s\n\r" \
+									"Recording\n\r" \
+									"   name: %s\n\r" \
+									"   sampling rate: %ld\n\r" \
+									"   bit depth: %ld\n\r" \
+									"GPS\n\r" \
+									"   date: %02d.%02d.%04d\n\r" \
+									"   time: %02dh%02dm%02ds\n\r" \
+									"   longitude: %d°%d'%d'' %c\n\r" \
+									"   latitude: %d°%d'%d'' %c\n\r",
+									sdc_foldername, sdc_filename, AUDIO_SAMPLING_RATE, AUDIO_BITS_PER_SAMPLE,
+									gps_backup_tag.date.day, gps_backup_tag.date.month, gps_backup_tag.date.year,
+									gps_backup_tag.time.h, gps_backup_tag.time.min, gps_backup_tag.time.sec,
+									gps_backup_tag.longitude.deg, gps_backup_tag.longitude.min,
+									gps_backup_tag.longitude.sec, (gps_backup_tag.longitude.east ? 'E' : 'W'),
+									gps_backup_tag.latitude.deg, gps_backup_tag.latitude.min,
+									gps_backup_tag.latitude.sec, (gps_backup_tag.latitude.north ? 'N' : 'S'));
+	NRF_LOG_DEBUG("File written. res = %d", res);
+//	if (ff_result != FR_OK) {
+//		NRF_LOG_DEBUG("Unable to write GPS infos");
+//		return ff_result;
+//	}
+
+	ff_result = f_close(&sdc_file);
+	return ff_result;
 }
 
 
@@ -582,7 +636,7 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	
 	if(tag.status_active) {
 		NRF_LOG_DEBUG("Valid GPS tag");
-		memcpy(&gps_backup_tag, &tag, sizeof(struct gps_rmc_tag));
+//		memcpy(&gps_backup_tag, &tag, sizeof(struct gps_rmc_tag));
 		ts_source = TS_SOURCE_GPS;
 	}
 	else {
@@ -591,8 +645,10 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 			NRF_LOG_DEBUG("TS valid... filling date/time");
 			memcpy(&tag.date, &current_ts.date, sizeof(struct gps_date));
 			memcpy(&tag.time, &current_ts.time, sizeof(struct gps_time));
-			memcpy(&gps_backup_tag.date, &current_ts.date, sizeof(struct gps_date));
-			memcpy(&gps_backup_tag.time, &current_ts.time, sizeof(struct gps_time));
+			memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
+			memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
+//			memcpy(&gps_backup_tag.date, &current_ts.date, sizeof(struct gps_date));
+//			memcpy(&gps_backup_tag.time, &current_ts.time, sizeof(struct gps_time));
 			ts_source = TS_SOURCE_PHONE;
 		}
 		else{
@@ -600,6 +656,8 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 			if(gps_backup_tag.date.month != 0) {
 				memcpy(&tag.date, &gps_backup_tag.date, sizeof(struct gps_date));
 				memcpy(&tag.time, &gps_backup_tag.time, sizeof(struct gps_time));
+				memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
+				memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
 				ts_source = TS_SOURCE_BACKUP;
 			}
 			else {
@@ -618,7 +676,9 @@ static void gps_poll_data(void)
 	char temp_dir[6];
 	char temp_file[6];
 
-	struct gps_rmc_tag gps_cur_tag = gps_get_rmc_geotag();
+	struct gps_rmc_tag gps_cur_tag;
+	memset(&gps_cur_tag, 0, sizeof(struct gps_rmc_tag));
+	gps_cur_tag = gps_get_rmc_geotag();
 	
 	switch(ts_source) {
 		case TS_SOURCE_BACKUP:
@@ -652,14 +712,16 @@ static void gps_poll_data(void)
 			sprintf(sdc_folderpath, "/%s", sdc_foldername);
 			// Copy generated string to 'sdc_filename'
 			memcpy(&sdc_filename[1], temp_file, 6);
-			// Backup the current GPS tag
-			memcpy(&gps_backup_tag, &gps_cur_tag, sizeof(struct gps_rmc_tag));
 			break;
 		
 		case TS_SOURCE_NONE:
 		default:
 			break;
 	}
+
+	// Backup the current GPS tag
+	memcpy(&gps_backup_tag, &gps_cur_tag, sizeof(struct gps_rmc_tag));
+
 	NRF_LOG_DEBUG("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
 	NRF_LOG_DEBUG("File name: %s", sdc_filename);
 }
@@ -1296,6 +1358,7 @@ int main(void)
 {
 	static ret_code_t err_code;
 	current_ts.ts_valid = false;
+	memset(&gps_backup_tag, 0, sizeof(struct gps_rmc_tag));
 
 	err_code = app_timer_init();
 	APP_ERROR_CHECK(err_code);
