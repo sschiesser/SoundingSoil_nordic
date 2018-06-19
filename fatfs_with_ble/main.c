@@ -123,6 +123,7 @@ APP_TIMER_DEF(gps_uart_timer);
 /* -------------------------------------------------------------------------- */
 static volatile bool 					ui_rec_start_req = false;
 static volatile bool 					ui_rec_stop_req = false;
+static volatile bool					ui_rec_stop_restart = false;
 static volatile bool 					ui_rec_running = false;
 static volatile bool					ui_mon_start_req = false;
 static volatile bool 					ui_mon_stop_req = false;
@@ -137,6 +138,8 @@ APP_TIMER_DEF(led_blink_timer);
 struct timestamp_tag					current_ts = {0};
 static bool 							first_rec = true;
 enum timestamp_source					ts_source = TS_SOURCE_NONE;
+APP_TIMER_DEF(rec_window_timer);
+static volatile uint8_t					rec_run_cnt = 0;
 
 /*                                    BLE                                     */
 /* -------------------------------------------------------------------------- */
@@ -1083,11 +1086,21 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 			break;
 	}
 }
-// SDC INIT TIMEOUT
-//static void sdc_init_handler(void * p_context)
-//{
-//	
-//}
+
+// REC WINDOW
+static void rec_window_handler(void * p_context)
+{
+	if(ui_rec_running) {
+		rec_run_cnt++;
+		ui_rec_stop_req = true;
+		if(rec_run_cnt < 6) {
+			ui_rec_stop_restart = true;
+		}
+	}
+	else {
+		ui_rec_start_req = true;
+	}
+}
 
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
@@ -1304,18 +1317,13 @@ static void mon_init(void)
 }
 
 
-// SD card
-//static void sdc_init(void)
-//{
-//	ret_code_t err_code;
-//	err_code = app_timer_create(&sdc_init_timer, APP_TIMER_MODE_SINGLE_SHOT, sdc_init_handler);
-//	APP_ERROR_CHECK(err_code);
-//	
-//	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
-//	in_config.pull = NRF_GPIO_PIN_PULLUP;
-//	err_code = nrf_drv_gpiote_in_init(SDC_CD_PIN, &in_config, NULL);
-//	APP_ERROR_CHECK(err_code);
-//}
+// REC configuration
+static void rec_window_init(void)
+{
+	ret_code_t err_code;
+	err_code = app_timer_create(&rec_window_timer, APP_TIMER_MODE_SINGLE_SHOT, rec_window_handler);
+	APP_ERROR_CHECK(err_code);
+}
 
 // LOG
 static void log_init(void)
@@ -1381,6 +1389,8 @@ int main(void)
 	err_code = app_fifo_init(&sdc_fifo, sdc_buffer, SDC_FIFO_SIZE);
 	err_code = app_fifo_init(&ble_fifo, ble_buffer, BLE_FIFO_SIZE);
 	gps_init();
+	
+	rec_window_init();
 	
 	/* Starting application */
 	/* -------------------- */
@@ -1467,6 +1477,10 @@ int main(void)
 				}
 			}
 			NRF_LOG_DEBUG("REC stopped");
+			if(ui_rec_stop_restart) {
+				ui_rec_stop_restart = false;
+				app_timer_start(rec_window_timer, APP_TIMER_TICKS(5000), NULL);
+			}
 		}
 		
 		/* MON START request
@@ -1571,6 +1585,8 @@ int main(void)
 						APP_ERROR_CHECK(err_code);
 				}
 			}
+			// Start window timer
+			app_timer_start(rec_window_timer, APP_TIMER_TICKS(2000), NULL);
 			// Set flags
 			ui_rec_running = true;
 		}
