@@ -224,6 +224,15 @@ struct timestamp_tag {
 	struct gps_time time;
 	struct gps_date date;
 };
+enum timestamp_source {
+	TS_SOURCE_GPS = 0x0,
+	TS_SOURCE_PHONE,
+	TS_SOURCE_BACKUP,
+	TS_SOURCE_NONE
+};
+
+#define SS_RECORDING_DURATION_IN_S		300
+#define SS_RECORDING_OCCURENCE_IN_S		3600
 
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
