@@ -83,7 +83,7 @@ static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
 static volatile uint8_t					sdc_chunk_counter = 0;
-APP_TIMER_DEF(sdc_init_timer);
+//APP_TIMER_DEF(sdc_init_timer);
 
 
 /*                                    ADC                                     */
@@ -966,10 +966,10 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 	}
 }
 // SDC INIT TIMEOUT
-static void sdc_init_handler(void * p_context)
-{
-	
-}
+//static void sdc_init_handler(void * p_context)
+//{
+//	
+//}
 
 /* ========================================================================== */
 /*                                INIT/CONFIG                                 */
@@ -1187,17 +1187,17 @@ static void mon_init(void)
 
 
 // SD card
-static void sdc_init(void)
-{
-	ret_code_t err_code;
-	err_code = app_timer_create(&sdc_init_timer, APP_TIMER_MODE_SINGLE_SHOT, sdc_init_handler);
-	APP_ERROR_CHECK(err_code);
-	
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
-	in_config.pull = NRF_GPIO_PIN_PULLUP;
-	err_code = nrf_drv_gpiote_in_init(SDC_CD_PIN, &in_config, NULL);
-	APP_ERROR_CHECK(err_code);
-}
+//static void sdc_init(void)
+//{
+//	ret_code_t err_code;
+//	err_code = app_timer_create(&sdc_init_timer, APP_TIMER_MODE_SINGLE_SHOT, sdc_init_handler);
+//	APP_ERROR_CHECK(err_code);
+//	
+//	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
+//	in_config.pull = NRF_GPIO_PIN_PULLUP;
+//	err_code = nrf_drv_gpiote_in_init(SDC_CD_PIN, &in_config, NULL);
+//	APP_ERROR_CHECK(err_code);
+//}
 
 // LOG
 static void log_init(void)
@@ -1285,30 +1285,35 @@ int main(void)
 			ui_rec_start_req = false;
 			// Comment (deferred)
 			NRF_LOG_DEBUG("REC request started");
-			/* Initialize REC state:
-			   - get GPS tag for date, time, location
-			   - test & mount SD card
-			   - open/create dir & file for audio record */
-			app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
+			if(!ui_mon_running) {
+				/* Initialize REC state:
+				   - get GPS tag for date, time, location
+				   - test & mount SD card
+				   - open/create dir & file for audio record */
+				app_timer_start(led_blink_timer, APP_TIMER_TICKS(200), NULL);
 #ifdef DUMMY_MODE
-			nrf_delay_ms(1000);
-			sdc_init_ok = true;
-#else
-			gps_poll_data();
-			// start timer after GPS poll to avoid 2 concurrenting timers
-//			app_timer_start(sdc_init_timer, APP_TIMER_TICKS(10000), NULL);
-			if(sdc_start() == 0) {
-//				app_timer_stop(sdc_init_timer);
 				nrf_delay_ms(1000);
-				// Set flags
 				sdc_init_ok = true;
+#else
+				gps_poll_data();
+				// start timer after GPS poll to avoid 2 concurrenting timers
+//				app_timer_start(sdc_init_timer, APP_TIMER_TICKS(10000), NULL);
+				if(sdc_start() == 0) {
+//					app_timer_stop(sdc_init_timer);
+					nrf_delay_ms(1000);
+					// Set flags
+					sdc_init_ok = true;
+				}
+				else {
+					app_timer_stop(led_blink_timer);
+					sdc_init_ok = false;
+					NRF_LOG_DEBUG("SDC init failed, stopping");
+				}
+#endif
 			}
 			else {
-				app_timer_stop(led_blink_timer);
-				sdc_init_ok = false;
-				NRF_LOG_DEBUG("SDC init failed, stopping");
+				NRF_LOG_DEBUG("Can't run REC when MON active!");
 			}
-#endif
 		}
 		
 		/* REC STOP request
@@ -1350,33 +1355,39 @@ int main(void)
 		if(ui_mon_start_req) {
 			// Clear flags
 			ui_mon_start_req = false;
-			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
+//			if(ui_ble_connected)
+//			if(!ui_rec_running && !ui_rec_start_req) {
 #ifdef DUMMY_MODE
-            app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
-            app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
+				app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
+				app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
 #else 
-			if(!ui_rec_running) {
-				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-			}
-#endif
-			// Enable MON outupt
-			MON_ENABLE();
-			
-			// Notify MON START
-			LED_ON(LED_MONITOR);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
-				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
-				if (err_code != NRF_SUCCESS &&
-					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-					err_code != NRF_ERROR_INVALID_STATE &&
-					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-						APP_ERROR_CHECK(err_code);
+				// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
+				if(!ui_rec_running) {
+					nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+					nrf_drv_timer_enable(&ADC_SYNC_TIMER);
 				}
-			}
-			// Set flags
-			ui_mon_running = true;
-			NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+#endif
+				// Enable MON outupt
+				MON_ENABLE();
+				
+				// Notify MON START
+				LED_ON(LED_MONITOR);
+				if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+					err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+					if (err_code != NRF_SUCCESS &&
+						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+						err_code != NRF_ERROR_INVALID_STATE &&
+						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+							APP_ERROR_CHECK(err_code);
+					}
+				}
+				// Set flags
+				ui_mon_running = true;
+				NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+//			}
+//			else {
+//				NRF_LOG_INFO("Can't run MON if REC active!");
+//			}
 		}
 		
 		/* MON STOP request
@@ -1454,12 +1465,17 @@ int main(void)
 		/* CHUNKS TO BLE
 		 * ------------- */
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
+			if(!ui_rec_running) {
 			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 			app_fifo_read(&ble_fifo, temp_buf, &len);
 			DBG_TOGGLE(DBG1_PIN);
 			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 			ble_chunk_counter--;
+			}
+			else {
+				NRF_LOG_DEBUG("REC");
+			}
 		}
 
 #if (NRF_LOG_DEFERRED == 1)
