@@ -414,9 +414,10 @@ static FRESULT sdc_close(void)
 	}
 	
 	// Writing metadata
-	TCHAR meta_filename[12];
-	TCHAR temp[6];
-	strncat(temp, &sdc_filename[1], 6);
+	char meta_filename[13];
+	char temp[6];
+	memset(&temp, '\0', sizeof(temp));
+	strncpy(temp, (const char *)&sdc_filename[1], 6);
 	sprintf(meta_filename, "T%06s.TXT", temp);
 	
 	ff_result = f_opendir(&sdc_dir, sdc_folderpath);
@@ -456,10 +457,6 @@ static FRESULT sdc_close(void)
 									gps_backup_tag.latitude.deg, gps_backup_tag.latitude.min,
 									gps_backup_tag.latitude.sec, (gps_backup_tag.latitude.north ? 'N' : 'S'));
 	NRF_LOG_DEBUG("File written. res = %d", res);
-//	if (ff_result != FR_OK) {
-//		NRF_LOG_DEBUG("Unable to write GPS infos");
-//		return ff_result;
-//	}
 
 	ff_result = f_close(&sdc_file);
 	return ff_result;
@@ -694,7 +691,7 @@ static void gps_poll_data(void)
 			temp_tm.tm_sec = gps_cur_tag.time.sec;
 			temp_time = mktime(&temp_tm);
 			// Add seconds to the time_t
-			temp_time += SS_RECORDING_OCCURENCE_IN_S;
+			temp_time += REC_PERIODE_IN_S;
 			// Convert the time_t to tm
 			temp_tm = *localtime(&temp_time);
 			// Write the tm to the current GPS tag
@@ -923,20 +920,30 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 	if(button_action) {
 		switch (pin_no)
 		{
+			// REC button pressed
 			case BUTTON_RECORD:
-//				NRF_LOG_INFO("REC! state: %d", ui_rec_running);
+				// REC running or starting -> stop REC and disable restart
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
 					ui_rec_running = false;
+					ui_rec_stop_restart = false;
 				}
+				// REC stopped and restarting -> stop REC and disable restart
+				else if(ui_rec_stop_restart) {
+					ui_rec_stop_req = true;
+					ui_rec_stop_restart = false;
+				}
+				// REC stopped -> start REC
 				else {
 					ui_rec_start_req = true;
 				}
+				// In any case of pressing REC button, run counter is reset
+				rec_run_cnt = 0;
 				break;
 				
 			case BUTTON_MONITOR:
-//				NRF_LOG_INFO("MON: state = %d", ui_mon_running);
+//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
@@ -948,7 +955,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				break;
 
 			case BUTTON_BLE:
-				NRF_LOG_INFO("BLE button pressed. adv = %d, oon = %d", ui_ble_advertising, ui_ble_connected);
+//				NRF_LOG_DEBUG("BLE button pressed. adv = %d, oon = %d", ui_ble_advertising, ui_ble_connected);
 				if(!ui_ble_advertising && !ui_ble_connected) {
 					advertising_start();
 				}
@@ -1093,8 +1100,11 @@ static void rec_window_handler(void * p_context)
 	if(ui_rec_running) {
 		rec_run_cnt++;
 		ui_rec_stop_req = true;
-		if(rec_run_cnt < 6) {
+		if(rec_run_cnt < REC_OCCURENCE_MAX) {
 			ui_rec_stop_restart = true;
+		}
+		else {
+			ui_rec_stop_restart = false;
 		}
 	}
 	else {
@@ -1413,7 +1423,7 @@ int main(void)
 			// Clear flags
 			ui_rec_start_req = false;
 			// Comment (deferred)
-			NRF_LOG_DEBUG("REC request started");
+			NRF_LOG_INFO("REC request started");
 			if(!ui_mon_running) {
 				/* Initialize REC state:
 				   - get GPS tag for date, time, location
@@ -1425,8 +1435,6 @@ int main(void)
 				sdc_init_ok = true;
 #else
 				gps_poll_data();
-				// start timer after GPS poll to avoid 2 concurrenting timers
-//				app_timer_start(sdc_init_timer, APP_TIMER_TICKS(10000), NULL);
 				if(sdc_start() == 0) {
 //					app_timer_stop(sdc_init_timer);
 					nrf_delay_ms(1000);
@@ -1441,7 +1449,7 @@ int main(void)
 #endif
 			}
 			else {
-				NRF_LOG_DEBUG("Can't run REC when MON active!");
+				NRF_LOG_INFO("Can't run REC when MON active!");
 			}
 		}
 		
@@ -1476,10 +1484,14 @@ int main(void)
 						APP_ERROR_CHECK(err_code);
 				}
 			}
-			NRF_LOG_DEBUG("REC stopped");
 			if(ui_rec_stop_restart) {
-				ui_rec_stop_restart = false;
-				app_timer_start(rec_window_timer, APP_TIMER_TICKS(5000), NULL);
+//				ui_rec_stop_restart = false;
+				app_timer_start(rec_window_timer, APP_TIMER_TICKS((REC_PERIODE_IN_S - REC_DURATION_IN_S) * 1000), NULL);
+				NRF_LOG_INFO("REC stopped and restarting in %d seconds", (REC_PERIODE_IN_S - REC_DURATION_IN_S));
+			}
+			else {
+				app_timer_stop(rec_window_timer);
+				NRF_LOG_INFO("REC stopped definetly");
 			}
 		}
 		
@@ -1517,6 +1529,7 @@ int main(void)
 				// Set flags
 				ui_mon_running = true;
 				NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+				NRF_LOG_INFO("MON started");
 //			}
 //			else {
 //				NRF_LOG_INFO("Can't run MON if REC active!");
@@ -1556,6 +1569,7 @@ int main(void)
 				}
 			}
 			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+			NRF_LOG_INFO("MON stopped");
 			app_fifo_flush(&ble_fifo);
 		}
 		
@@ -1563,7 +1577,7 @@ int main(void)
 		 * ----------------------- */
 		if(sdc_init_ok) {
 			sdc_init_ok = false;
-			NRF_LOG_INFO("SDC init OK");
+			NRF_LOG_DEBUG("SDC init OK");
 			app_timer_stop(led_blink_timer);
 #ifdef DUMMY_MODE
 			//
@@ -1586,9 +1600,10 @@ int main(void)
 				}
 			}
 			// Start window timer
-			app_timer_start(rec_window_timer, APP_TIMER_TICKS(2000), NULL);
+			app_timer_start(rec_window_timer, APP_TIMER_TICKS(REC_DURATION_IN_S * 1000), NULL);
 			// Set flags
 			ui_rec_running = true;
+			NRF_LOG_INFO("REC #%d started for %d seconds", rec_run_cnt, REC_DURATION_IN_S);
 		}
 		
 		/* CHUNKS TO SDC

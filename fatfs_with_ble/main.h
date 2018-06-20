@@ -62,6 +62,15 @@
 /*                                   MACROS                                   */
 /* ========================================================================== */
 
+/*                                REC PRESET                                  */
+/* -------------------------------------------------------------------------- */
+#define REC_DURATION_IN_S				10//300
+#define REC_PERIODE_IN_S				12//3600
+#if (REC_PERIODE_IN_S <= REC_DURATION_IN_S)
+#error "Cannot use this recording preset!"
+#endif
+#define REC_OCCURENCE_MAX				2//24
+
 /*                                   DEBUG                                    */
 /* -------------------------------------------------------------------------- */
 #define DBG0_PIN						11
@@ -231,9 +240,6 @@ enum timestamp_source {
 	TS_SOURCE_NONE
 };
 
-#define SS_RECORDING_DURATION_IN_S		300
-#define SS_RECORDING_OCCURENCE_IN_S		3600
-
 /*                                   BLE                                      */
 /* -------------------------------------------------------------------------- */
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
@@ -247,7 +253,7 @@ enum timestamp_source {
 #define APP_ADV_TIMEOUT_IN_SECONDS      5//BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (7.5 ms). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (20 ms). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(30, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (30 ms). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(2000, UNIT_10_MS)         /**< Connection supervisory time-out (2 seconds). */
 
