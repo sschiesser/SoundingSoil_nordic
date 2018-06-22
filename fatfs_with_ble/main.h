@@ -125,11 +125,11 @@
 #define ADC_SYNC_28KHZ_US				36 // <-- currently max usable frequency
 #define ADC_SYNC_44KHZ_US				23
 #define ADC_SYNC_48KHZ_US				20
-#ifdef DEBUG
+//#ifdef DEBUG
 	#define ADC_SYNC_US					ADC_SYNC_16KHZ_US
-#else
-	#define ADC_SYNC_US					ADC_SYNC_28KHZ_US
-#endif
+//#else
+//	#define ADC_SYNC_US					ADC_SYNC_16KHZ_US
+//#endif
 
 
 /*                                    FIFO                                    */
@@ -250,7 +250,7 @@ enum timestamp_source {
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
 #define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS      5//BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
+#define APP_ADV_TIMEOUT_IN_SECONDS      30//BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (7.5 ms). */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(30, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (30 ms). */

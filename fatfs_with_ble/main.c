@@ -373,7 +373,7 @@ static FRESULT sdc_write(void)
     ff_result = f_write(&sdc_file, temp_buf, SDC_BLOCK_SIZE, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_DEBUG("Write failed\r\n.");
+        NRF_LOG_DEBUG("Write failed.");
     }
 	sdc_chunk_counter--;
 	sdc_writing = false;
@@ -395,6 +395,10 @@ static FRESULT sdc_close(void)
 	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = (adc_total_samples/2) * (AUDIO_BITS_PER_SAMPLE/8);//adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
 	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = ((adc_total_samples/2) * AUDIO_BITS_PER_SAMPLE/8) + 36;//(adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
 	
+//	NRF_LOG_INFO("adc_total_sambles/2: %ld", adc_total_samples/2);
+//	NRF_LOG_INFO("Wave header:");
+//	NRF_LOG_HEXDUMP_INFO(wave_header, sizeof(wave_header));
+	
 	ff_result = f_lseek(&sdc_file, 0);
 	if(ff_result != FR_OK) {
 		NRF_LOG_DEBUG("Error while seeking for beginning of file");
@@ -407,11 +411,18 @@ static FRESULT sdc_close(void)
 		return ff_result;
 	}
 	
+//	char line[256];
+//	f_lseek(&sdc_file, 0);
+//	while(f_gets(line, sizeof(line), &sdc_file)) {
+//		NRF_LOG_HEXDUMP_INFO(line, sizeof(line));
+//	}
+	
     (void)f_close(&sdc_file);
 	if(ff_result != FR_OK) {
 		NRF_LOG_DEBUG("Error while closing file");
 		return ff_result;
 	}
+	
 	
 	// Writing metadata
 	char meta_filename[13];
@@ -732,8 +743,10 @@ static void gps_poll_data(void)
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
 	if(ui_rec_running) {
-		static uint32_t size = adc_spi_len;
-		app_fifo_write(&sdc_fifo, adc_spi_rxbuf, &size);
+		static uint32_t size = 1;
+		app_fifo_write(&sdc_fifo, &adc_spi_rxbuf[1], &size);
+		size = 1;
+		app_fifo_write(&sdc_fifo, &adc_spi_rxbuf[0], &size);
 	}
 	if((ui_mon_running) && ((adc_samples_counter % (2*MON_DOWNSAMPLE_FACTOR)) == 0)) {
 		static uint32_t size = adc_spi_len;
@@ -753,12 +766,16 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
+			if(ui_rec_stop_req) {
+				ui_rec_stop_req = false;
+			}
 		}
 		if(ui_mon_running && (ble_samples_counter >= BLE_MAX_MTU_SIZE)) {
 			ble_samples_counter = 0;
 			ble_chunk_counter++;
 		}
-		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, 2, adc_spi_rxbuf, 2);
+//		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
 // BLE
@@ -769,17 +786,17 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            NRF_LOG_INFO("Connected");
+            NRF_LOG_DEBUG("Connected");
 			app_timer_stop(led_advertising_timer);
             LED_ON(LED_BLE);
 			ui_ble_advertising = false;
 			ui_ble_connected = true;
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            APP_ERROR_CHECK(err_code);
+//            APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            NRF_LOG_INFO("Disconnected");
+            NRF_LOG_DEBUG("Disconnected");
 			ui_ble_connected = false;
 			ui_ble_advertising = false;
 			LED_OFF(LED_BLE);
@@ -1458,8 +1475,8 @@ int main(void)
 		if(ui_rec_stop_req) {
 			// Clear flags
 			ui_rec_start_req = false;
-			ui_rec_running = false;
-			ui_rec_stop_req = false;
+//			ui_rec_running = false;
+//			ui_rec_stop_req = false;
 			// Clear TS flag
 			current_ts.ts_valid = false;
 			sdc_chunk_counter = 0;
@@ -1468,7 +1485,13 @@ int main(void)
 #else
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
+				while(ui_rec_stop_req) {};
+				ui_rec_running = false;
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
+			}
+			else {
+				ui_rec_stop_req = false;
+				ui_rec_running = false;
 			}
 			// Write WAV header & close SD card file
 			sdc_close();
@@ -1582,6 +1605,9 @@ int main(void)
 #ifdef DUMMY_MODE
 			//
 #else
+			// Clear the audio samples counters
+			adc_samples_counter = 0;
+			adc_total_samples = 0;
 			// Enable audio synchronisation IF NO MON ALREADY RUNNING!!
 			if(!ui_mon_running) {
 				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
