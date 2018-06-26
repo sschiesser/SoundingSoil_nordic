@@ -801,9 +801,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			ui_ble_advertising = false;
 			LED_OFF(LED_BLE);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
-			if(ui_mon_running) {
-				ui_mon_stop_req = true;
-			}
 			// Not advertising here: function called in ble_advertising->on_disconnected(), LED notification in on_adv_event()
             break;
 
@@ -899,8 +896,7 @@ static void on_adv_event(ble_adv_evt_t ble_adv_evt)
 	{
 		case BLE_ADV_EVT_FAST:
 			ui_ble_advertising = true;
-//			NRF_LOG_DEBUG("Fast advertising");
-//			LED_ON(LED_BLE);
+			app_timer_start(led_advertising_timer, APP_TIMER_TICKS(500), NULL);
 			break;
 		
 		case BLE_ADV_EVT_IDLE:
@@ -943,7 +939,6 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				if(ui_rec_running || ui_rec_start_req) {
 					ui_rec_stop_req = true;
 					ui_rec_start_req = false;
-					ui_rec_running = false;
 					ui_rec_stop_restart = false;
 				}
 				// REC stopped and restarting -> stop REC and disable restart
@@ -955,27 +950,27 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 				else {
 					ui_rec_start_req = true;
 				}
-				// In any case of pressing REC button, run counter is reset
-				rec_run_cnt = 0;
 				break;
 				
 			case BUTTON_MONITOR:
-//				NRF_LOG_DEBUG("MON: state = %d", ui_mon_running);
+				// MON running or starting -> stop MON
 				if(ui_mon_running || ui_mon_start_req) {
 					ui_mon_stop_req = true;
 					ui_mon_start_req = false;
 					ui_mon_running = false;
 				}
+				// MON stopped -> start MON
 				else {
 					ui_mon_start_req = true;
 				}
 				break;
 
 			case BUTTON_BLE:
-//				NRF_LOG_DEBUG("BLE button pressed. adv = %d, oon = %d", ui_ble_advertising, ui_ble_connected);
+				// BLE stopped -> start advertising
 				if(!ui_ble_advertising && !ui_ble_connected) {
 					advertising_start();
 				}
+				// BLE advertising -> stop advertising
 				else if(ui_ble_advertising) {
 					err_code = sd_ble_gap_adv_stop();
 					if(err_code != NRF_ERROR_INVALID_STATE) {
@@ -985,6 +980,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 					LED_OFF(LED_BLE);
 					ui_ble_advertising = false;
 				}
+				// BLE connected -> disconnect BLE
 				else if(ui_ble_connected) {
 					err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
 					APP_ERROR_CHECK(err_code);
@@ -1016,22 +1012,25 @@ static void led_advertising_handler(void * p_context)
 // LED REC
 static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
+	// LED ON -> REC start request
 	if(led_state) {
-//		NRF_LOG_DEBUG("REC START requested");
+		// REC stopped -> start REC
 		if(!ui_rec_running && !ui_rec_start_req) {
 			ui_rec_start_req = true;
 		}
+		// REC running -> do nothing
 		else {
 			NRF_LOG_DEBUG("REC already running...");
 		}
 	}
+	// LED OFF -> REC stop request
 	else {
-//		NRF_LOG_DEBUG("REC STOP requested");
+		// REC running or starting -> stop REC
 		if(ui_rec_running || ui_rec_start_req) {
 			ui_rec_stop_req = true;
-			ui_rec_start_req = false;
-			ui_rec_running = false;
+			ui_rec_stop_restart = false;
 		}
+		// REC stopped -> do nothing
 		else {
 			NRF_LOG_DEBUG("No REC running...");
 		}
@@ -1040,22 +1039,24 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 // LED MON
 static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led_state)
 {
+	// LED ON -> MON start request
 	if(led_state) {
-//		NRF_LOG_DEBUG("MON START requested");
+		// MON stopped -> start MON
 		if(!ui_mon_running && !ui_mon_start_req) {
 			ui_mon_start_req = true;
 		}
+		// MON running -> do nothing
 		else {
 			NRF_LOG_DEBUG("MON already running...");
 		}
 	}
+	// LED OFF -> MON stop request
 	else {
-//		NRF_LOG_DEBUG("MON STOP requested");
+		// MON running or starting -> stop MON
 		if(ui_mon_running || ui_mon_start_req) {
 			ui_mon_stop_req = true;
-			ui_mon_start_req = false;
-			ui_mon_running = false;
 		}
+		// MON stopped -> do nothing
 		else {
 			NRF_LOG_DEBUG("No MON running...");
 		}
@@ -1440,8 +1441,12 @@ int main(void)
 			// Clear flags
 			ui_rec_start_req = false;
 			// Comment (deferred)
-			NRF_LOG_INFO("REC request started");
-			if(!ui_mon_running) {
+			NRF_LOG_INFO("REC start requested: MON - %d, BLE - %d/%d", ui_mon_running, ui_ble_connected, ui_ble_advertising);
+			// REC can start if NO BLE MON is currently running
+			if((ui_ble_connected && ui_mon_running)) {
+				NRF_LOG_INFO("Cannot start REC when monitoring over BLE!");
+			}
+			else {
 				/* Initialize REC state:
 				   - get GPS tag for date, time, location
 				   - test & mount SD card
@@ -1453,7 +1458,6 @@ int main(void)
 #else
 				gps_poll_data();
 				if(sdc_start() == 0) {
-//					app_timer_stop(sdc_init_timer);
 					nrf_delay_ms(1000);
 					// Set flags
 					sdc_init_ok = true;
@@ -1465,18 +1469,15 @@ int main(void)
 				}
 #endif
 			}
-			else {
-				NRF_LOG_INFO("Can't run REC when MON active!");
-			}
 		}
 		
 		/* REC STOP request
 		 * ---------------- */
 		if(ui_rec_stop_req) {
 			// Clear flags
-			ui_rec_start_req = false;
-//			ui_rec_running = false;
-//			ui_rec_stop_req = false;
+//			ui_rec_start_req = false;
+			// Comment (deferred)
+			NRF_LOG_INFO("REC stop requested: MON - %d, BLE - %d/%d", ui_mon_running, ui_ble_connected, ui_ble_advertising);
 			// Clear TS flag
 			current_ts.ts_valid = false;
 			sdc_chunk_counter = 0;
@@ -1485,6 +1486,7 @@ int main(void)
 #else
 			// Disable audio syncronisation IF NO MON STILL RUNNING!!
 			if(!ui_mon_running) {
+				// Waiting for next audio sync. ui_rec_stop_rec will be cleared there.
 				while(ui_rec_stop_req) {};
 				ui_rec_running = false;
 				nrf_drv_timer_disable(&ADC_SYNC_TIMER);
@@ -1514,6 +1516,7 @@ int main(void)
 			}
 			else {
 				app_timer_stop(rec_window_timer);
+				rec_run_cnt = 0;
 				NRF_LOG_INFO("REC stopped definetly");
 			}
 		}
@@ -1523,23 +1526,24 @@ int main(void)
 		if(ui_mon_start_req) {
 			// Clear flags
 			ui_mon_start_req = false;
-//			if(ui_ble_connected)
-//			if(!ui_rec_running && !ui_rec_start_req) {
+			// Comment (deferred)
+			NRF_LOG_INFO("MON start requested: REC - %d, BLE - %d/%d", ui_rec_running, ui_ble_connected, ui_ble_advertising);
 #ifdef DUMMY_MODE
-				app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
-				app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
+			app_timer_create(&dummy_mon_timer, APP_TIMER_MODE_REPEATED, dummy_mon_handler);
+			app_timer_start(dummy_mon_timer, APP_TIMER_TICKS(100), NULL);
 #else 
-				// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
-				if(!ui_rec_running) {
-					nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
-					nrf_drv_timer_enable(&ADC_SYNC_TIMER);
-				}
+			// Enable audio synchronisation IF NO REC ALREADY RUNNING!!
+			if(!ui_rec_running) {
+				nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
+				nrf_drv_timer_enable(&ADC_SYNC_TIMER);
+			}
 #endif
-				// Enable MON outupt
-				MON_ENABLE();
+			// Enable MON outupt
+			MON_ENABLE();
 				
-				// Notify MON START
-				LED_ON(LED_MONITOR);
+			// Notify MON START
+			LED_ON(LED_MONITOR);
+			if(!ui_rec_running) {
 				if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
 					err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
 					if (err_code != NRF_SUCCESS &&
@@ -1549,14 +1553,12 @@ int main(void)
 							APP_ERROR_CHECK(err_code);
 					}
 				}
-				// Set flags
-				ui_mon_running = true;
-				NRF_LOG_DEBUG("MON started: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
-				NRF_LOG_INFO("MON started");
-//			}
-//			else {
-//				NRF_LOG_INFO("Can't run MON if REC active!");
-//			}
+			}
+			else {
+				NRF_LOG_INFO("Cannot send audio to BLE while recording");
+			}
+			// Set flags
+			ui_mon_running = true;
 		}
 		
 		/* MON STOP request
@@ -1566,6 +1568,7 @@ int main(void)
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
 			ui_mon_running = false;
+			NRF_LOG_INFO("MON stop requested: REC - %d, BLE - %d/%d", ui_rec_running, ui_ble_connected, ui_ble_advertising);
 			ble_chunk_counter = 0;
 #ifdef DUMMY_MODE
 			app_timer_stop(dummy_mon_timer);
@@ -1600,7 +1603,7 @@ int main(void)
 		 * ----------------------- */
 		if(sdc_init_ok) {
 			sdc_init_ok = false;
-			NRF_LOG_DEBUG("SDC init OK");
+			NRF_LOG_INFO("SDC OK... starting REC: MON - %d, BLE - %d/%d", ui_mon_running, ui_ble_connected, ui_ble_advertising);
 			app_timer_stop(led_blink_timer);
 #ifdef DUMMY_MODE
 			//
@@ -1642,12 +1645,12 @@ int main(void)
 		 * ------------- */
 		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
 			if(!ui_rec_running) {
-			uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
-			uint8_t temp_buf[BLE_MAX_MTU_SIZE];
-			app_fifo_read(&ble_fifo, temp_buf, &len);
-			DBG_TOGGLE(DBG1_PIN);
-			uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
-			ble_chunk_counter--;
+				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
+				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
+				app_fifo_read(&ble_fifo, temp_buf, &len);
+				DBG_TOGGLE(DBG1_PIN);
+				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
+				ble_chunk_counter--;
 			}
 		}
 
