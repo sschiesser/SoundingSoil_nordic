@@ -72,8 +72,8 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
-static TCHAR							sdc_foldername[13] = "000000";
-static TCHAR							sdc_folderpath[14] = "/000000";
+static TCHAR							sdc_foldername[7] = "000000";
+static TCHAR							sdc_folderpath[8] = "/000000";
 static TCHAR							sdc_filename[12] = "R000000.WAV";
 static FATFS 							sdc_fs;
 static DIR 								sdc_dir;
@@ -254,7 +254,7 @@ static uint32_t sdc_start()
 						uint32_t dir_cnt = strtol((const char *)sdc_foldername, NULL, 10) + 1;
 						sprintf(sdc_foldername, "%06d", dir_cnt);
 						sprintf(sdc_folderpath, "/%s", sdc_foldername);
-						NRF_LOG_DEBUG("Increasing dir name to %s", sdc_foldername);
+						NRF_LOG_INFO("Increasing dir name to %s", sdc_foldername);
 					}
 					else {
 						dir_found = true;
@@ -322,17 +322,17 @@ static uint32_t sdc_start()
 				else
 				{
 					NRF_LOG_DEBUG("        %s (%lu)", (uint32_t)sdc_fno.fname, sdc_fno.fsize);
-					uint8_t res = strcmp(sdc_fno.fname, sdc_filename);
+					uint8_t res = strncmp(sdc_fno.fname, sdc_filename, 12);
 					NRF_LOG_DEBUG("Comparing %s to %s... res %d", sdc_fno.fname, sdc_filename, res);
 					if(res == 0) {
 						if(ts_source == TS_SOURCE_NONE) {
-							char temp_str[6];
-							strncat(temp_str, &sdc_filename[1], 6);
+							char temp_str[7] = "000000";
+							strncpy(temp_str, &sdc_filename[1], 6);
 							file_cnt = strtol((const char *)temp_str, NULL, 10);
 							NRF_LOG_DEBUG("        temp str: %s, file_cnt: %ld", temp_str, file_cnt);
 							file_cnt++;
 							sprintf(sdc_filename, "R%06d.WAV", file_cnt);
-							NRF_LOG_DEBUG("        FILE FOUND! Increasing filename to %s", sdc_filename);
+							NRF_LOG_INFO("        FILE FOUND! Increasing filename to %s", sdc_filename);
 						}
 					}
 				}
@@ -647,35 +647,59 @@ static struct gps_rmc_tag gps_get_rmc_geotag(void)
 	
 	if(tag.status_active) {
 		NRF_LOG_DEBUG("Valid GPS tag");
-//		memcpy(&gps_backup_tag, &tag, sizeof(struct gps_rmc_tag));
 		ts_source = TS_SOURCE_GPS;
 	}
 	else {
-		NRF_LOG_DEBUG("No valid GPS tag... trying with timestamp");
-		if(current_ts.ts_valid) {
-			NRF_LOG_DEBUG("TS valid... filling date/time");
-			memcpy(&tag.date, &current_ts.date, sizeof(struct gps_date));
-			memcpy(&tag.time, &current_ts.time, sizeof(struct gps_time));
-			memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
-			memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
-//			memcpy(&gps_backup_tag.date, &current_ts.date, sizeof(struct gps_date));
-//			memcpy(&gps_backup_tag.time, &current_ts.time, sizeof(struct gps_time));
-			ts_source = TS_SOURCE_PHONE;
-		}
-		else{
-			NRF_LOG_DEBUG("No valid TS!");
-			if(gps_backup_tag.date.month != 0) {
+		NRF_LOG_DEBUG("No valid GPS tag... trying with other sources");
+		switch(ts_source) {
+			case TS_SOURCE_BLE:
+				NRF_LOG_INFO("TS valid... filling date/time");
+				memcpy(&tag.date, &current_ts.date, sizeof(struct gps_date));
+				memcpy(&tag.time, &current_ts.time, sizeof(struct gps_time));
+				memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
+				memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
+				break;
+			
+			case TS_SOURCE_BACKUP:
+				NRF_LOG_INFO("Fetching backup TS value");
 				memcpy(&tag.date, &gps_backup_tag.date, sizeof(struct gps_date));
 				memcpy(&tag.time, &gps_backup_tag.time, sizeof(struct gps_time));
 				memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
 				memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
-				ts_source = TS_SOURCE_BACKUP;
-			}
-			else {
+				break;
+			
+			case TS_SOURCE_NONE:
+				NRF_LOG_INFO("No valid source... setting to 0");
 				memset(&tag, 0, sizeof(struct gps_rmc_tag));
-				ts_source = TS_SOURCE_NONE;
-			}				
+				break;
+			
+			default:
+				break;
 		}
+//		if(current_ts.ts_valid) {
+//			NRF_LOG_DEBUG("TS valid... filling date/time");
+//			memcpy(&tag.date, &current_ts.date, sizeof(struct gps_date));
+//			memcpy(&tag.time, &current_ts.time, sizeof(struct gps_time));
+//			memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
+//			memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
+////			memcpy(&gps_backup_tag.date, &current_ts.date, sizeof(struct gps_date));
+////			memcpy(&gps_backup_tag.time, &current_ts.time, sizeof(struct gps_time));
+//			ts_source = TS_SOURCE_BLE;
+//		}
+//		else{
+//			NRF_LOG_DEBUG("No valid TS!");
+//			if(gps_backup_tag.date.month != 0) {
+//				memcpy(&tag.date, &gps_backup_tag.date, sizeof(struct gps_date));
+//				memcpy(&tag.time, &gps_backup_tag.time, sizeof(struct gps_time));
+//				memcpy(&tag.latitude, &gps_backup_tag.latitude, sizeof(struct gps_long));
+//				memcpy(&tag.longitude, &gps_backup_tag.longitude, sizeof(struct gps_lat));
+//				ts_source = TS_SOURCE_BACKUP;
+//			}
+//			else {
+//				memset(&tag, 0, sizeof(struct gps_rmc_tag));
+//				ts_source = TS_SOURCE_NONE;
+//			}				
+//		}
 	}
 	
 	return tag;
@@ -691,6 +715,7 @@ static void gps_poll_data(void)
 	memset(&gps_cur_tag, 0, sizeof(struct gps_rmc_tag));
 	gps_cur_tag = gps_get_rmc_geotag();
 	
+	NRF_LOG_INFO("TS source: %d", ts_source);
 	switch(ts_source) {
 		case TS_SOURCE_BACKUP:
 			// Write the GPS backup time to time_t value
@@ -713,11 +738,13 @@ static void gps_poll_data(void)
 			gps_cur_tag.time.min = temp_tm.tm_min;
 			gps_cur_tag.time.sec = temp_tm.tm_sec;
 		case TS_SOURCE_GPS:
-		case TS_SOURCE_PHONE:
+		case TS_SOURCE_BLE:
 			// Generate 'sdc_foldername' and 'sdc_filename' from the GPS current tag
 			// The modulo-100 trick is used to get only the last 2 digits of the year value
 			sprintf(temp_dir, "%02d%02d%02d", (gps_cur_tag.date.year%100), gps_cur_tag.date.month, gps_cur_tag.date.day);
 			sprintf(temp_file, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
+			NRF_LOG_INFO("temp_dir: %s", temp_dir);
+			NRF_LOG_INFO("temp_file: %s", temp_file);
 			// Copy generated string to 'sdc_foldername'
 			memcpy(sdc_foldername, temp_dir, 6);
 			sprintf(sdc_folderpath, "/%s", sdc_foldername);
@@ -726,6 +753,15 @@ static void gps_poll_data(void)
 			break;
 		
 		case TS_SOURCE_NONE:
+			if(first_rec) {
+				sprintf(temp_dir, "%02d%02d%02d", (gps_cur_tag.date.year%100), gps_cur_tag.date.month, gps_cur_tag.date.day);
+				sprintf(temp_file, "%02d%02d%02d", gps_cur_tag.time.h, gps_cur_tag.time.min, gps_cur_tag.time.sec);
+				memcpy(sdc_foldername, temp_dir, 6);
+				sprintf(sdc_folderpath, "/%s", sdc_foldername);
+				memcpy(&sdc_filename[1], temp_file, 6);
+			}
+			break;
+		
 		default:
 			break;
 	}
@@ -733,8 +769,8 @@ static void gps_poll_data(void)
 	// Backup the current GPS tag
 	memcpy(&gps_backup_tag, &gps_cur_tag, sizeof(struct gps_rmc_tag));
 
-	NRF_LOG_DEBUG("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
-	NRF_LOG_DEBUG("File name: %s", sdc_filename);
+	NRF_LOG_INFO("Folder name %s, folder path %s", sdc_foldername, sdc_folderpath);
+	NRF_LOG_INFO("File name: %s", sdc_filename);
 }
 /* ========================================================================== */
 /*                              EVENT HANDLERS                                */
@@ -793,7 +829,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			ui_ble_advertising = false;
 			ui_ble_connected = true;
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-//            APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -1021,7 +1056,7 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 		// REC running -> do nothing
 		else {
-			NRF_LOG_DEBUG("REC already running...");
+//			NRF_LOG_DEBUG("REC already running...");
 		}
 	}
 	// LED OFF -> REC stop request
@@ -1033,7 +1068,7 @@ static void led_rec_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 		// REC stopped -> do nothing
 		else {
-			NRF_LOG_DEBUG("No REC running...");
+//			NRF_LOG_DEBUG("No REC running...");
 		}
 	}
 }
@@ -1048,7 +1083,7 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 		// MON running -> do nothing
 		else {
-			NRF_LOG_DEBUG("MON already running...");
+//			NRF_LOG_DEBUG("MON already running...");
 		}
 	}
 	// LED OFF -> MON stop request
@@ -1059,7 +1094,7 @@ static void led_mon_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t led
 		}
 		// MON stopped -> do nothing
 		else {
-			NRF_LOG_DEBUG("No MON running...");
+//			NRF_LOG_DEBUG("No MON running...");
 		}
 	}
 }
@@ -1094,7 +1129,6 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 		case 3:
 			cur_time |= (time_t)timestamp;
 			byte_cnt = 0;
-			NRF_LOG_DEBUG("UNIX time: 0x%08x",cur_time);
 			cur_tm = *localtime(&cur_time);
 //			c_time_string = asctime(&p_read_time);
 //			NRF_LOG_DEBUG("Current time: %s", c_time_string);
@@ -1105,8 +1139,7 @@ static void ts_write_handler(uint16_t conn_handle, ble_sss_t * p_sss, uint8_t ti
 			current_ts.time.min = cur_tm.tm_min;
 			current_ts.time.sec = cur_tm.tm_sec;
 			current_ts.ts_valid = true;
-			NRF_LOG_DEBUG("Received TS: %02d.%02d.%d, %02dh%02dm%02ds", current_ts.date.day, current_ts.date.month,
-							current_ts.date.year, current_ts.time.h, current_ts.time.min, current_ts.time.sec);
+			ts_source = TS_SOURCE_BLE;
 			break;
 		default:
 			break;
@@ -1511,14 +1544,20 @@ int main(void)
 				}
 			}
 			if(ui_rec_stop_restart) {
+				// On REC restart, set TS source to backup or none. Can be overwritten by GPS.
+				ts_source = (ts_source != TS_SOURCE_NONE) ? TS_SOURCE_BACKUP : TS_SOURCE_NONE;
 //				ui_rec_stop_restart = false;
 				app_timer_start(rec_window_timer, APP_TIMER_TICKS((REC_PERIODE_IN_S - REC_DURATION_IN_S) * 1000), NULL);
 				NRF_LOG_INFO("REC stopped and restarting in %d seconds", (REC_PERIODE_IN_S - REC_DURATION_IN_S));
 			}
 			else {
+				// On REC stop, reset TS source.
+				ts_source = TS_SOURCE_NONE;
 				app_timer_stop(rec_window_timer);
 				rec_run_cnt = 0;
-				NRF_LOG_INFO("REC stopped definetly");
+				first_rec = true;
+//				current_ts.ts_valid = false;
+				NRF_LOG_DEBUG("REC stopped definetly");
 			}
 		}
 		
@@ -1628,7 +1667,7 @@ int main(void)
 			app_timer_start(rec_window_timer, APP_TIMER_TICKS(REC_DURATION_IN_S * 1000), NULL);
 			// Set flags
 			ui_rec_running = true;
-			NRF_LOG_INFO("REC #%d started for %d seconds", rec_run_cnt, REC_DURATION_IN_S);
+			NRF_LOG_DEBUG("REC #%d started for %d seconds", rec_run_cnt, REC_DURATION_IN_S);
 		}
 		
 		/* CHUNKS TO SDC

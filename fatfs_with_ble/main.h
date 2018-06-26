@@ -96,7 +96,7 @@
 #define BUTTON_BLE						(BSP_BUTTON_3)
 #define BUTTON_RECORD					(BSP_BUTTON_2)
 #define BUTTON_MONITOR					(BSP_BUTTON_1)
-#define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(50) // Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
+#define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(80) // Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -235,7 +235,7 @@ struct timestamp_tag {
 };
 enum timestamp_source {
 	TS_SOURCE_GPS = 0x0,
-	TS_SOURCE_PHONE,
+	TS_SOURCE_BLE,
 	TS_SOURCE_BACKUP,
 	TS_SOURCE_NONE
 };
