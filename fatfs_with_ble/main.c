@@ -767,6 +767,7 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
 			if(ui_rec_stop_req) {
+				sdc_chunk_counter = 0;
 				ui_rec_stop_req = false;
 			}
 		}
@@ -1543,19 +1544,14 @@ int main(void)
 				
 			// Notify MON START
 			LED_ON(LED_MONITOR);
-			if(!ui_rec_running) {
-				if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
-					err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
-					if (err_code != NRF_SUCCESS &&
-						err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-						err_code != NRF_ERROR_INVALID_STATE &&
-						err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-							APP_ERROR_CHECK(err_code);
-					}
+			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+				err_code = ble_sss_on_button2_change(m_conn_handle, &m_sss, 1);
+				if (err_code != NRF_SUCCESS &&
+					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+					err_code != NRF_ERROR_INVALID_STATE &&
+					err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+						APP_ERROR_CHECK(err_code);
 				}
-			}
-			else {
-				NRF_LOG_INFO("Cannot send audio to BLE while recording");
 			}
 			// Set flags
 			ui_mon_running = true;
@@ -1594,8 +1590,8 @@ int main(void)
 						APP_ERROR_CHECK(err_code);
 				}
 			}
-			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
-			NRF_LOG_INFO("MON stopped");
+//			NRF_LOG_DEBUG("MON stopped: mon_running %d, chunk_counter %d, fifo pos %d", ui_mon_running, ble_chunk_counter, (ble_fifo.read_pos - ble_fifo.write_pos));
+//			NRF_LOG_INFO("MON stopped");
 			app_fifo_flush(&ble_fifo);
 		}
 		
