@@ -395,9 +395,6 @@ static FRESULT sdc_close(void)
 	((uint32_t *)&wave_header)[WAVE_FORMAT_SUBCHUNK2_SIZE_OFFSET/4] = (adc_total_samples/2) * (AUDIO_BITS_PER_SAMPLE/8);//adc_total_samples * AUDIO_BITS_PER_SAMPLE/8;
 	((uint32_t *)&wave_header)[WAVE_FORMAT_CHUNK_SIZE_OFFSET/4] = ((adc_total_samples/2) * AUDIO_BITS_PER_SAMPLE/8) + 36;//(adc_total_samples * AUDIO_BITS_PER_SAMPLE/8) + 36;
 	
-//	NRF_LOG_INFO("adc_total_sambles/2: %ld", adc_total_samples/2);
-//	NRF_LOG_INFO("Wave header:");
-//	NRF_LOG_HEXDUMP_INFO(wave_header, sizeof(wave_header));
 	
 	ff_result = f_lseek(&sdc_file, 0);
 	if(ff_result != FR_OK) {
@@ -411,11 +408,6 @@ static FRESULT sdc_close(void)
 		return ff_result;
 	}
 	
-//	char line[256];
-//	f_lseek(&sdc_file, 0);
-//	while(f_gets(line, sizeof(line), &sdc_file)) {
-//		NRF_LOG_HEXDUMP_INFO(line, sizeof(line));
-//	}
 	
     (void)f_close(&sdc_file);
 	if(ff_result != FR_OK) {
@@ -426,8 +418,7 @@ static FRESULT sdc_close(void)
 	
 	// Writing metadata
 	char meta_filename[13];
-	char temp[6];
-	memset(&temp, '\0', sizeof(temp));
+	char temp[7] = "000000";
 	strncpy(temp, (const char *)&sdc_filename[1], 6);
 	sprintf(meta_filename, "T%06s.TXT", temp);
 	
@@ -443,10 +434,6 @@ static FRESULT sdc_close(void)
         NRF_LOG_DEBUG("Unable to open or create file: %s", meta_filename);
         return ff_result;
     }
-//	ff_result = f_lseek(&sdc_file, sizeof(sdc_file));
-//	if(ff_result != FR_OK) {
-//		NRF_LOG_DEBUG("Unable to find the end of the file");
-//	}
 	
 	NRF_LOG_DEBUG("Writing GPS header...");
 	int res = f_printf(&sdc_file, "GPS information:\n\r----------------\n\r" \
@@ -778,6 +765,8 @@ static void gps_poll_data(void)
 // ADC SPI
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
+	NRF_LOG_INFO("SPI event");
+//	NRF_LOG_INFO("0x%02x%02x", adc_spi_rxbuf[1], adc_spi_rxbuf[0]);
 	if(ui_rec_running) {
 		static uint32_t size = 1;
 		app_fifo_write(&sdc_fifo, &adc_spi_rxbuf[1], &size);
@@ -797,6 +786,7 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	if(adc_spi_xfer_done) {
+		NRF_LOG_INFO("SYNC event");
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
 			adc_total_samples += SDC_BLOCK_SIZE;
@@ -1683,6 +1673,7 @@ int main(void)
 				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 				app_fifo_read(&ble_fifo, temp_buf, &len);
+//				NRF_LOG_HEXDUMP_INFO(temp_buf, len);
 				DBG_TOGGLE(DBG1_PIN);
 				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 				ble_chunk_counter--;
