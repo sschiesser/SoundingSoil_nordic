@@ -765,7 +765,6 @@ static void gps_poll_data(void)
 // ADC SPI
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
-	NRF_LOG_INFO("SPI event");
 //	NRF_LOG_INFO("0x%02x%02x", adc_spi_rxbuf[1], adc_spi_rxbuf[0]);
 	if(ui_rec_running) {
 		static uint32_t size = 1;
@@ -786,7 +785,6 @@ void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	if(adc_spi_xfer_done) {
-		NRF_LOG_INFO("SYNC event");
 		adc_spi_xfer_done = false;
 		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
 			adc_total_samples += SDC_BLOCK_SIZE;
@@ -834,9 +832,11 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			app_timer_stop(led_advertising_timer);
 			LED_OFF(LED_BLE);
 			err_code = sd_ble_gap_adv_stop();
-			if(err_code != NRF_ERROR_INVALID_STATE) {
-				APP_ERROR_CHECK(err_code);
-			}
+			NRF_LOG_DEBUG("Adv. timeout. err code: 0x%04x", err_code);
+//			if((err_code != NRF_ERROR_INVALID_STATE) && 
+//				(err_code != NRF_SUCCESS)) {
+//				APP_ERROR_CHECK(err_code);
+//			}
 			ui_ble_advertising = false;
 			break;
 		
@@ -1446,9 +1446,12 @@ int main(void)
 	
 	/* Starting application */
 	/* -------------------- */
-    NRF_LOG_INFO("===========")
-	NRF_LOG_INFO("FATFS + BLE");
-    NRF_LOG_INFO("-----------")
+    NRF_LOG_INFO("=============")
+	NRF_LOG_INFO("SOUNDING SOIL");
+    NRF_LOG_INFO("-------------")
+	NRF_LOG_INFO("Audio shield ");
+	NRF_LOG_INFO("V0.3, R001   ");
+    NRF_LOG_INFO("-------------")
 #ifdef DUMMY_MODE
 	NRF_LOG_INFO("SIMULATION!");
 	NRF_LOG_INFO("-----------");
@@ -1684,7 +1687,8 @@ int main(void)
 		NRF_LOG_PROCESS();
 #endif
 		
-		__WFE();
+		DBG_TOGGLE(DBG0_PIN);
+//		__WFE();
     }
 }
 
