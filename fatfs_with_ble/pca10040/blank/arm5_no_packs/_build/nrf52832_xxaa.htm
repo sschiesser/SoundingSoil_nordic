@@ -3,11 +3,11 @@
 <title>Static Call Graph - [.\_build\nrf52832_xxaa.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\_build\nrf52832_xxaa.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Jun 28 14:13:54 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Jun 28 16:33:41 2018
 <BR><P>
-<H3>Maximum Stack Usage =       8784 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =       8736 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-main &rArr; sdc_write &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+main &rArr; sdc_write &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 <P>
 <H3>
 Mutually Recursive functions
@@ -1435,17 +1435,15 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 1930 bytes, Stack size 248 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 8784<LI>Call Chain = main &rArr; sdc_write &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[31]"></a>main</STRONG> (Thumb, 1812 bytes, Stack size 248 bytes, main.o(i.main))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8736<LI>Call Chain = main &rArr; sdc_write &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
 <BR>[Calls]<UL><LI><a href="#[197]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_3
-<LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[19d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_timer_enable
 <LI><a href="#[19a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_timer_disable
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_spi_transfer
-<LI><a href="#[189]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_toggle
 <LI><a href="#[103]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_set
 <LI><a href="#[102]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_clear
 <LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_sss_on_button2_change
@@ -1518,11 +1516,10 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[170]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gatt_init
 </UL>
 
-<P><STRONG><a name="[5a]"></a>nrf_ble_gatt_on_ble_evt</STRONG> (Thumb, 214 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.nrf_ble_gatt_on_ble_evt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 384<LI>Call Chain = nrf_ble_gatt_on_ble_evt &rArr; on_data_length_update_evt &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[5a]"></a>nrf_ble_gatt_on_ble_evt</STRONG> (Thumb, 190 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.nrf_ble_gatt_on_ble_evt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 352<LI>Call Chain = nrf_ble_gatt_on_ble_evt &rArr; on_connected_evt &rArr; data_length_update &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_rsp_evt
 <LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
 <LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_disconnected_evt
@@ -1624,7 +1621,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[189]"></a>nrf_drv_gpiote_out_toggle</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, nrf_drv_gpiote.o(i.nrf_drv_gpiote_out_toggle))
-<BR><BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<BR><BR>[Called By]<UL><LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_write
 <LI><a href="#[44]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_blink_handler
 <LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_advertising_handler
 </UL>
@@ -1887,9 +1884,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_write
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_start
-<LI><a href="#[19b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_close
 <LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_get_rmc_geotag
 <LI><a href="#[5e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
@@ -1903,14 +1898,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 <LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_start
-<LI><a href="#[19b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_close
 <LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_poll_data
 <LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_get_rmc_geotag
 <LI><a href="#[5e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
 <LI><a href="#[1b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_request_evt
-<LI><a href="#[1af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_evt
 <LI><a href="#[1ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_connected_evt
 </UL>
 
@@ -1919,16 +1912,8 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
-<BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
-<LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_start
-<LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_poll_data
+<BR>[Called By]<UL><LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gps_poll_data
 <LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
-<LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_rsp_evt
-<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
-<LI><a href="#[1b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_request_evt
-<LI><a href="#[1af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_data_length_update_evt
-<LI><a href="#[1ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_connected_evt
 <LI><a href="#[13f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_length_update
 </UL>
 
@@ -1938,8 +1923,6 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;std_n
 </UL>
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sdc_start
-<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_exchange_mtu_request_evt
 </UL>
 
 <P><STRONG><a name="[c6]"></a>nrf_log_frontend_std_4</STRONG> (Thumb, 44 bytes, Stack size 48 bytes, nrf_log_frontend.o(i.nrf_log_frontend_std_4))
@@ -2376,7 +2359,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[174]"></a>gps_get_rmc_geotag</STRONG> (Thumb, 1352 bytes, Stack size 360 bytes, main.o(i.gps_get_rmc_geotag))
+<P><STRONG><a name="[174]"></a>gps_get_rmc_geotag</STRONG> (Thumb, 1274 bytes, Stack size 360 bytes, main.o(i.gps_get_rmc_geotag))
 <BR><BR>[Stack]<UL><LI>Max Depth = 632<LI>Call Chain = gps_get_rmc_geotag &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[175]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_serial_read
@@ -2501,12 +2484,10 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[19b]"></a>sdc_close</STRONG> (Thumb, 440 bytes, Stack size 104 bytes, main.o(i.sdc_close))
+<P><STRONG><a name="[19b]"></a>sdc_close</STRONG> (Thumb, 306 bytes, Stack size 104 bytes, main.o(i.sdc_close))
 <BR><BR>[Stack]<UL><LI>Max Depth = 512<LI>Call Chain = sdc_close &rArr; f_printf &rArr; putc_bfd &rArr;  putc_bfd (Cycle)
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
-<LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
+<BR>[Calls]<UL><LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
 <LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_printf
 <LI><a href="#[160]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_opendir
 <LI><a href="#[15f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_open
@@ -2518,12 +2499,10 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[198]"></a>sdc_start</STRONG> (Thumb, 968 bytes, Stack size 48 bytes, main.o(i.sdc_start))
+<P><STRONG><a name="[198]"></a>sdc_start</STRONG> (Thumb, 580 bytes, Stack size 48 bytes, main.o(i.sdc_start))
 <BR><BR>[Stack]<UL><LI>Max Depth = 392<LI>Call Chain = sdc_start &rArr; f_open &rArr; follow_path &rArr; dir_find &rArr; dir_next &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[197]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_3
-<LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
 <LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
 <LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_readdir
@@ -2543,10 +2522,10 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1a0]"></a>sdc_write</STRONG> (Thumb, 100 bytes, Stack size 8272 bytes, main.o(i.sdc_write))
-<BR><BR>[Stack]<UL><LI>Max Depth = 8536<LI>Call Chain = sdc_write &rArr; nrf_log_frontend_std_0 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[1a0]"></a>sdc_write</STRONG> (Thumb, 88 bytes, Stack size 8272 bytes, main.o(i.sdc_write))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8488<LI>Call Chain = sdc_write &rArr; f_write &rArr; create_chain &rArr; put_fat &rArr; move_window &rArr; sync_window &rArr; disk_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_0
+<BR>[Calls]<UL><LI><a href="#[189]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_drv_gpiote_out_toggle
 <LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;f_write
 <LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_fifo_read
 </UL>
@@ -4607,7 +4586,7 @@ Local Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[112]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_srv_is_notification_enabled
 </UL>
 
-<P><STRONG><a name="[13f]"></a>data_length_update</STRONG> (Thumb, 96 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.data_length_update))
+<P><STRONG><a name="[13f]"></a>data_length_update</STRONG> (Thumb, 70 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.data_length_update))
 <BR><BR>[Stack]<UL><LI>Max Depth = 304<LI>Call Chain = data_length_update &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
@@ -4620,31 +4599,27 @@ Local Symbols
 <LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;on_disconnected_evt
 </UL>
 
-<P><STRONG><a name="[1ab]"></a>on_connected_evt</STRONG> (Thumb, 162 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.on_connected_evt))
+<P><STRONG><a name="[1ab]"></a>on_connected_evt</STRONG> (Thumb, 122 bytes, Stack size 24 bytes, nrf_ble_gatt.o(i.on_connected_evt))
 <BR><BR>[Stack]<UL><LI>Max Depth = 328<LI>Call Chain = on_connected_evt &rArr; data_length_update &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 <LI><a href="#[13f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_length_update
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>
 
-<P><STRONG><a name="[1af]"></a>on_data_length_update_evt</STRONG> (Thumb, 184 bytes, Stack size 80 bytes, nrf_ble_gatt.o(i.on_data_length_update_evt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 360<LI>Call Chain = on_data_length_update_evt &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[1af]"></a>on_data_length_update_evt</STRONG> (Thumb, 78 bytes, Stack size 80 bytes, nrf_ble_gatt.o(i.on_data_length_update_evt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = on_data_length_update_evt
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
-<LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
+<BR>[Calls]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>
 
-<P><STRONG><a name="[1b0]"></a>on_data_length_update_request_evt</STRONG> (Thumb, 130 bytes, Stack size 40 bytes, nrf_ble_gatt.o(i.on_data_length_update_request_evt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 320<LI>Call Chain = on_data_length_update_request_evt &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[1b0]"></a>on_data_length_update_request_evt</STRONG> (Thumb, 88 bytes, Stack size 40 bytes, nrf_ble_gatt.o(i.on_data_length_update_request_evt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 312<LI>Call Chain = on_data_length_update_request_evt &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>
@@ -4657,20 +4632,16 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>
 
-<P><STRONG><a name="[1ae]"></a>on_exchange_mtu_request_evt</STRONG> (Thumb, 170 bytes, Stack size 40 bytes, nrf_ble_gatt.o(i.on_exchange_mtu_request_evt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 328<LI>Call Chain = on_exchange_mtu_request_evt &rArr; nrf_log_frontend_std_3 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
+<P><STRONG><a name="[1ae]"></a>on_exchange_mtu_request_evt</STRONG> (Thumb, 126 bytes, Stack size 40 bytes, nrf_ble_gatt.o(i.on_exchange_mtu_request_evt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 312<LI>Call Chain = on_exchange_mtu_request_evt &rArr; nrf_log_frontend_std_1 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
 </UL>
-<BR>[Calls]<UL><LI><a href="#[197]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_3
-<LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
-<LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
+<BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_1
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>
 
-<P><STRONG><a name="[1ad]"></a>on_exchange_mtu_rsp_evt</STRONG> (Thumb, 114 bytes, Stack size 32 bytes, nrf_ble_gatt.o(i.on_exchange_mtu_rsp_evt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 312<LI>Call Chain = on_exchange_mtu_rsp_evt &rArr; nrf_log_frontend_std_2 &rArr; std_n &rArr; nrf_log_frontend_dequeue &rArr; nrf_memobj_put &rArr; nrf_memobj_free &rArr; nrf_balloc_free &rArr; app_util_critical_region_enter &rArr; sd_nvic_critical_region_enter
-</UL>
-<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_log_frontend_std_2
+<P><STRONG><a name="[1ad]"></a>on_exchange_mtu_rsp_evt</STRONG> (Thumb, 94 bytes, Stack size 32 bytes, nrf_ble_gatt.o(i.on_exchange_mtu_rsp_evt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = on_exchange_mtu_rsp_evt
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nrf_ble_gatt_on_ble_evt
 </UL>

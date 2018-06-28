@@ -72,13 +72,13 @@ NRF_BLOCK_DEV_SDC_DEFINE(
          ),
          NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
-static TCHAR							sdc_foldername[7] = "000000";
-static TCHAR							sdc_folderpath[8] = "/000000";
-static TCHAR							sdc_filename[12] = "R000000.WAV";
-static FATFS 							sdc_fs;
-static DIR 								sdc_dir;
-static FILINFO 							sdc_fno;
-static FIL 								sdc_file;
+TCHAR									sdc_foldername[7] = "000000";
+TCHAR									sdc_folderpath[8] = "/000000";
+TCHAR									sdc_filename[12] = "R000000.WAV";
+FATFS 									sdc_fs;
+DIR 									sdc_dir;
+FILINFO 								sdc_fno;
+FIL 									sdc_file;
 static volatile bool 					sdc_init_ok = false;
 static volatile bool					sdc_rtw = false;
 static volatile bool					sdc_writing = false;
@@ -213,10 +213,10 @@ static uint32_t sdc_start()
     }
     uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
     uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_DEBUG("Capacity: %d MB", capacity);
+//    NRF_LOG_DEBUG("Capacity: %d MB", capacity);
 
 	// Mount disk
-//    NRF_LOG_DEBUG("Mounting volume...");
+    NRF_LOG_DEBUG("Mounting volume...");
     ff_result = f_mount(&sdc_fs, "", 1);
     if (ff_result)
     {
@@ -234,7 +234,8 @@ static uint32_t sdc_start()
     }
 
  	bool dir_found = false;
-	do {
+	do 
+	{
         ff_result = f_readdir(&sdc_dir, &sdc_fno);
         if (ff_result != FR_OK)
         {
@@ -248,63 +249,70 @@ static uint32_t sdc_start()
             {
                 NRF_LOG_DEBUG("<DIR>   %s",(uint32_t)sdc_fno.fname);
 				uint8_t res = strcmp(sdc_fno.fname, sdc_foldername);
-				if(res == 0) {
+				if(res == 0) 
+				{
 					NRF_LOG_DEBUG("        DIR FOUND! Path: %s", sdc_folderpath);
-					if((ts_source == TS_SOURCE_NONE) && (first_rec)) {
+					if((ts_source == TS_SOURCE_NONE) && (first_rec)) 
+					{
 						uint32_t dir_cnt = strtol((const char *)sdc_foldername, NULL, 10) + 1;
 						sprintf(sdc_foldername, "%06d", dir_cnt);
 						sprintf(sdc_folderpath, "/%s", sdc_foldername);
-						NRF_LOG_INFO("Increasing dir name to %s", sdc_foldername);
+						NRF_LOG_DEBUG("Increasing dir name to %s", sdc_foldername);
 					}
-					else {
+					else 
+					{
 						dir_found = true;
 					}
 				}
             }
-//            else
-//            {
-//                NRF_LOG_DEBUG("        %s (%lu)", (uint32_t)sdc_fno.fname, sdc_fno.fsize);
-//            }
         }
     } while (sdc_fno.fname[0]);
-	NRF_LOG_DEBUG("FINALLY got folder name %s", sdc_foldername);
+	NRF_LOG_INFO("Folder name: %s", sdc_foldername);
 	first_rec = false;
 	
 	// Creating current date directory if no exists
-	if(!dir_found) {
+	if(!dir_found) 
+	{
 		NRF_LOG_DEBUG("DIR not found... creating & opening");
 		ff_result = f_mkdir(sdc_folderpath);
-		if(ff_result != FR_OK) {
+		if(ff_result != FR_OK) 
+		{
 			NRF_LOG_DEBUG("Unable to create directory");
 			return (uint32_t)ff_result;
 		}
 		ff_result = f_chdir(sdc_folderpath);
-		if(ff_result != FR_OK) {
+		if(ff_result != FR_OK) 
+		{
 			NRF_LOG_DEBUG("Unable to change directory");
 			return (uint32_t)ff_result;
 		}
 		ff_result = f_opendir(&sdc_dir, sdc_folderpath);
-		if(ff_result != FR_OK) {
+		if(ff_result != FR_OK) 
+		{
 			NRF_LOG_DEBUG("Unable to open directory");
 			return (uint32_t)ff_result;
 		}
 	}
 	// Entering existing directory (with current date)
-	else {
+	else 
+	{
 		NRF_LOG_DEBUG("Dir found... opening & searching");
 		ff_result = f_chdir(sdc_folderpath);
-		if(ff_result != FR_OK) {
+		if(ff_result != FR_OK) 
+		{
 			NRF_LOG_DEBUG("Unable to change directory");
 			return (uint32_t)ff_result;
 		}
 		ff_result = f_opendir(&sdc_dir, sdc_folderpath);
-		if(ff_result != FR_OK) {
+		if(ff_result != FR_OK) 
+		{
 			NRF_LOG_DEBUG("Unable to open directory");
 			return (uint32_t)ff_result;
 		}
 		
 		// Exploring current date directory
-		do {
+		do 
+		{
 			ff_result = f_readdir(&sdc_dir, &sdc_fno);
 //			NRF_LOG_DEBUG("Reading... ");
 			if (ff_result != FR_OK)
@@ -325,7 +333,8 @@ static uint32_t sdc_start()
 					uint8_t res = strncmp(sdc_fno.fname, sdc_filename, 12);
 					NRF_LOG_DEBUG("Comparing %s to %s... res %d", sdc_fno.fname, sdc_filename, res);
 					if(res == 0) {
-						if(ts_source == TS_SOURCE_NONE) {
+						if(ts_source == TS_SOURCE_NONE) 
+						{
 							char temp_str[7] = "000000";
 							strncpy(temp_str, &sdc_filename[1], 6);
 							file_cnt = strtol((const char *)temp_str, NULL, 10);
@@ -340,7 +349,7 @@ static uint32_t sdc_start()
 		} while (sdc_fno.fname[0]);
 	}
 	
-    NRF_LOG_DEBUG("Creating file %s...", sdc_filename);
+    NRF_LOG_INFO("Creating file %s...", sdc_filename);
     ff_result = f_open(&sdc_file, sdc_filename, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
     if (ff_result != FR_OK)
     {
@@ -350,7 +359,8 @@ static uint32_t sdc_start()
 	
 	NRF_LOG_DEBUG("Writing WAV header...");
 	ff_result = f_write(&sdc_file, wave_header, 44, (UINT *) &bytes_written);
-	if (ff_result != FR_OK) {
+	if (ff_result != FR_OK) 
+	{
 		NRF_LOG_DEBUG("Unable to write WAV header");
 		return (uint32_t)ff_result;
 	}
@@ -366,7 +376,7 @@ static FRESULT sdc_write(void)
 	uint32_t buf_size = SDC_BLOCK_SIZE;
 	uint8_t temp_buf[SDC_BLOCK_SIZE];
 
-	
+	DBG_TOGGLE(DBG0_PIN);
 	sdc_writing = true;
 	uint32_t fifo_res = app_fifo_read(&sdc_fifo, temp_buf, &buf_size);
 
@@ -375,6 +385,7 @@ static FRESULT sdc_write(void)
     {
         NRF_LOG_DEBUG("Write failed.");
     }
+	
 	sdc_chunk_counter--;
 	sdc_writing = false;
 
@@ -765,7 +776,6 @@ static void gps_poll_data(void)
 // ADC SPI
 void adc_spi_event_handler(nrf_drv_spi_evt_t const * p_event, void * p_context)
 {
-//	NRF_LOG_INFO("0x%02x%02x", adc_spi_rxbuf[1], adc_spi_rxbuf[0]);
 	if(ui_rec_running) {
 		static uint32_t size = 1;
 		app_fifo_write(&sdc_fifo, &adc_spi_rxbuf[1], &size);
@@ -786,21 +796,23 @@ void adc_sync_timer_handler(nrf_timer_event_t event_type, void * p_context)
 {
 	if(adc_spi_xfer_done) {
 		adc_spi_xfer_done = false;
-		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) {
+		if(ui_rec_running && (adc_samples_counter >= SDC_BLOCK_SIZE)) 
+		{
 			adc_total_samples += SDC_BLOCK_SIZE;
 			adc_samples_counter = 0;
 			sdc_chunk_counter++;
-			if(ui_rec_stop_req) {
+			if(ui_rec_stop_req) 
+			{
 				sdc_chunk_counter = 0;
 				ui_rec_stop_req = false;
 			}
 		}
-		if(ui_mon_running && (ble_samples_counter >= BLE_MAX_MTU_SIZE)) {
+		if(ui_mon_running && (ble_samples_counter >= BLE_MAX_MTU_SIZE)) 
+		{
 			ble_samples_counter = 0;
 			ble_chunk_counter++;
 		}
 		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, 2, adc_spi_rxbuf, 2);
-//		nrf_drv_spi_transfer(&adc_spi, adc_spi_txbuf, adc_spi_len, adc_spi_rxbuf, adc_spi_len);
 	}
 }
 // BLE
@@ -811,7 +823,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            NRF_LOG_DEBUG("Connected");
+            NRF_LOG_INFO("Connected");
 			app_timer_stop(led_advertising_timer);
             LED_ON(LED_BLE);
 			ui_ble_advertising = false;
@@ -820,7 +832,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            NRF_LOG_DEBUG("Disconnected");
+            NRF_LOG_INFO("Disconnected");
 			ui_ble_connected = false;
 			ui_ble_advertising = false;
 			LED_OFF(LED_BLE);
@@ -832,11 +844,11 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			app_timer_stop(led_advertising_timer);
 			LED_OFF(LED_BLE);
 			err_code = sd_ble_gap_adv_stop();
-			NRF_LOG_DEBUG("Adv. timeout. err code: 0x%04x", err_code);
-//			if((err_code != NRF_ERROR_INVALID_STATE) && 
-//				(err_code != NRF_SUCCESS)) {
-//				APP_ERROR_CHECK(err_code);
-//			}
+			NRF_LOG_INFO("Adv. timeout. err code: 0x%04x", err_code);
+			if((err_code != NRF_ERROR_INVALID_STATE) && 
+				(err_code != NRF_SUCCESS)) {
+				APP_ERROR_CHECK(err_code);
+			}
 			ui_ble_advertising = false;
 			break;
 		
@@ -1464,7 +1476,8 @@ int main(void)
     {
 		/* REC START request
 		 * ----------------- */
-		if(ui_rec_start_req) {
+		if(ui_rec_start_req) 
+		{
 			// Clear flags
 			ui_rec_start_req = false;
 			// Comment (deferred)
@@ -1500,7 +1513,8 @@ int main(void)
 		
 		/* REC STOP request
 		 * ---------------- */
-		if(ui_rec_stop_req) {
+		if(ui_rec_stop_req) 
+		{
 			// Clear flags
 //			ui_rec_start_req = false;
 			// Comment (deferred)
@@ -1556,7 +1570,8 @@ int main(void)
 		
 		/* MON START request
 		 * ----------------- */
-		if(ui_mon_start_req) {
+		if(ui_mon_start_req) 
+		{
 			// Clear flags
 			ui_mon_start_req = false;
 			// Comment (deferred)
@@ -1591,7 +1606,8 @@ int main(void)
 		
 		/* MON STOP request
 		 * ---------------- */
-		if(ui_mon_stop_req) {
+		if(ui_mon_stop_req) 
+		{
 			// Clear flags
 			ui_mon_stop_req = false;
 			ui_mon_start_req = false;
@@ -1629,7 +1645,8 @@ int main(void)
 		
 		/* SDC INIT OK (REC READY)
 		 * ----------------------- */
-		if(sdc_init_ok) {
+		if(sdc_init_ok) 
+		{
 			sdc_init_ok = false;
 			NRF_LOG_INFO("SDC OK... starting REC: MON - %d, BLE - %d/%d", ui_mon_running, ui_ble_connected, ui_ble_advertising);
 			app_timer_stop(led_blink_timer);
@@ -1647,7 +1664,8 @@ int main(void)
 #endif
 			// Notify REC START
 			LED_ON(LED_RECORD);
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+//			if(m_conn_handle != BLE_CONN_HANDLE_INVALID) {
+			if(ui_ble_connected) {
 				err_code = ble_sss_on_button1_change(m_conn_handle, &m_sss, 1);
 				if (err_code != NRF_SUCCESS &&
 					err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -1657,7 +1675,7 @@ int main(void)
 				}
 			}
 			// Start window timer
-			app_timer_start(rec_window_timer, APP_TIMER_TICKS(REC_DURATION_IN_S * 1000), NULL);
+			err_code = app_timer_start(rec_window_timer, APP_TIMER_TICKS(REC_DURATION_IN_S * 1000), NULL);
 			// Set flags
 			ui_rec_running = true;
 			NRF_LOG_DEBUG("REC #%d started for %d seconds", rec_run_cnt, REC_DURATION_IN_S);
@@ -1665,19 +1683,19 @@ int main(void)
 		
 		/* CHUNKS TO SDC
 		 * --------------- */
-		if((sdc_chunk_counter > 0) && (!sdc_writing)) {
+		if((sdc_chunk_counter > 0) && (!sdc_writing)) 
+		{
 			sdc_write();
 		}
 		
 		/* CHUNKS TO BLE
 		 * ------------- */
-		if((ble_chunk_counter > 0) && (m_conn_handle != BLE_CONN_HANDLE_INVALID)) {
+		if((ble_chunk_counter > 0) && (ui_ble_connected)) 
+		{
 			if(!ui_rec_running) {
 				uint32_t len = (uint32_t)BLE_MAX_MTU_SIZE;
 				uint8_t temp_buf[BLE_MAX_MTU_SIZE];
 				app_fifo_read(&ble_fifo, temp_buf, &len);
-//				NRF_LOG_HEXDUMP_INFO(temp_buf, len);
-				DBG_TOGGLE(DBG1_PIN);
 				uint32_t err_code = ble_nus_string_send(&m_nus, temp_buf, (uint16_t*)&len);
 				ble_chunk_counter--;
 			}
@@ -1687,8 +1705,7 @@ int main(void)
 		NRF_LOG_PROCESS();
 #endif
 		
-		DBG_TOGGLE(DBG0_PIN);
-//		__WFE();
+		__WFE();
     }
 }
 

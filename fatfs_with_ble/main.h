@@ -64,12 +64,12 @@
 
 /*                                REC PRESET                                  */
 /* -------------------------------------------------------------------------- */
-#define REC_DURATION_IN_S				10//300
-#define REC_PERIODE_IN_S				12//3600
+#define REC_DURATION_IN_S				23//300
+#define REC_PERIODE_IN_S				25//3600
 #if (REC_PERIODE_IN_S <= REC_DURATION_IN_S)
 #error "Cannot use this recording preset!"
 #endif
-#define REC_OCCURENCE_MAX				2//24
+#define REC_OCCURENCE_MAX				1//24
 
 /*                                   DEBUG                                    */
 /* -------------------------------------------------------------------------- */
@@ -96,7 +96,8 @@
 #define BUTTON_BLE						(BSP_BUTTON_3)
 #define BUTTON_RECORD					(BSP_BUTTON_2)
 #define BUTTON_MONITOR					(BSP_BUTTON_1)
-#define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(80) // Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
+// Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks).
+#define BUTTON_DETECTION_DELAY			APP_TIMER_TICKS(80) 
 
 /*                                  SD card                                   */
 /* -------------------------------------------------------------------------- */
@@ -121,12 +122,12 @@
 
 // SYNC TIMER
 #define ADC_SYNC_TIMER_INSTANCE			1	// TIMER0 is blocked by SoftDevice
-#define ADC_SYNC_16KHZ_US				60
+#define ADC_SYNC_16KHZ_US				63
 #define ADC_SYNC_28KHZ_US				36 // <-- currently max usable frequency
 #define ADC_SYNC_44KHZ_US				23
 #define ADC_SYNC_48KHZ_US				20
 //#ifdef DEBUG
-	#define ADC_SYNC_US					ADC_SYNC_16KHZ_US
+	#define ADC_SYNC_US					ADC_SYNC_28KHZ_US
 //#else
 //	#define ADC_SYNC_US					ADC_SYNC_16KHZ_US
 //#endif
@@ -263,7 +264,7 @@ enum timestamp_source {
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define MON_DOWNSAMPLE_FACTOR			8
+#define MON_DOWNSAMPLE_FACTOR			4
 
 
 
